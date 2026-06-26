@@ -129,7 +129,12 @@ echo "Portal:"
 if [ "$ENABLE_HTTPS" = "true" ] && [ "$DOMAIN" != "localhost" ]; then
   echo "  https://$DOMAIN/portal/login"
 else
-  echo "  http://SERVER_IP:$PORT/portal/login"
+  PUBLIC_IP="$(curl -fsSL https://api.ipify.org || true)"
+  if [ -n "$PUBLIC_IP" ]; then
+    echo "  http://$PUBLIC_IP:$PORT/portal/login"
+  else
+    echo "  http://SERVER_IP:$PORT/portal/login"
+  fi
 fi
 
 echo
