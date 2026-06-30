@@ -1,0 +1,42 @@
+
+# Installer repair backups
+pharmacy-ai/backups/
+*.tgz
+*.bak
+*.db
+*.sqlite
+*.sqlite3
+.env
+node_modules/
+
+# Voice agent generated secrets
+pharmacy-ai/voice-agent/*.local.js
+pharmacy-ai/voice-agent/*secret*.js
+
+# Generated local Voice Agent script with install secrets
+pharmacy-ai/voice-agent/*.local.js
+pharmacy-ai/voice-agent/*secret*.js
+
+# Do not package generated/live AI scripts or nested old installers
+pharmacy-ai/app/ai-scripts/
+pharmacy-ai/app/vodia-pharmacy-ai-installer/
+
+# Generated local Voice Agent script with install secrets
+pharmacy-ai/voice-agent/*.local.js
+pharmacy-ai/voice-agent/*secret*.js
+
+# Do not package generated/live AI scripts or nested old installers
+pharmacy-ai/app/ai-scripts/
+pharmacy-ai/app/vodia-pharmacy-ai-installer/
+
+# Generated local Voice Agent script with install secrets
+pharmacy-ai/voice-agent/*.local.js
+pharmacy-ai/voice-agent/*secret*.js
+
+# Do not package copied patch/helper scripts or old local backups
+pharmacy-ai/app/scripts/
+pharmacy-ai/app/*.before-*
+pharmacy-ai/app/**/*.before-*
+pharmacy-ai/app/.env.before-*
+*.before-*
+.env.before-*

@@ -1,333 +1,343 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-APP_VERSION="${APP_VERSION:-0.2.3}"
-INSTALL_DIR="${INSTALL_DIR:-/opt/vodia-pharmacy-ai-demo}"
+APP_VERSION="${APP_VERSION:-1.0.0}"
+APP_NAME="${APP_NAME:-vodia-pharmacy-ai}"
+INSTALL_DIR="${INSTALL_DIR:-/opt/vodia-pharmacy-ai}"
 PORT="${PORT:-3200}"
-DOMAIN="${DOMAIN:-localhost}"
-APP_NAME="${APP_NAME:-vodia-pharmacy-ai-demo}"
+DOMAIN="${DOMAIN:-pharmacyhub.tryvodia.com}"
 ENABLE_HTTPS="${ENABLE_HTTPS:-false}"
+NODE_MAJOR="${NODE_MAJOR:-22}"
+REPO_URL="${REPO_URL:-https://github.com/rebelking/vodia-downloads.git}"
+REPO_BRANCH="${REPO_BRANCH:-main}"
+REPO_TMP="${REPO_TMP:-/tmp/vodia-downloads-install}"
+PACKAGE_APP_SUBDIR="${PACKAGE_APP_SUBDIR:-pharmacy-ai/app}"
+PACKAGE_VOICE_SUBDIR="${PACKAGE_VOICE_SUBDIR:-pharmacy-ai/voice-agent}"
+STAFF_TRANSFER_DESTINATION="${STAFF_TRANSFER_DESTINATION:-700}"
 
-echo "Vodia Pharmacy AI installer"
-echo "Version: $APP_VERSION"
-echo "Install dir: $INSTALL_DIR"
-echo "Port: $PORT"
-echo "Domain: $DOMAIN"
-echo "HTTPS: $ENABLE_HTTPS"
-echo ""
+echo "=================================================="
+echo " Vodia Pharmacy AI Full Ubuntu Installer"
+echo "=================================================="
+echo "Version:       ${APP_VERSION}"
+echo "Install dir:   ${INSTALL_DIR}"
+echo "Port:          ${PORT}"
+echo "Domain:        ${DOMAIN}"
+echo "App name:      ${APP_NAME}"
+echo "HTTPS:         ${ENABLE_HTTPS}"
+echo "Repo:          ${REPO_URL}"
+echo "Branch:        ${REPO_BRANCH}"
+echo "Transfer dest: ${STAFF_TRANSFER_DESTINATION}"
+echo "=================================================="
 
 if [ "$(id -u)" -ne 0 ]; then
   echo "ERROR: Run this installer with sudo."
+  echo ""
   echo "Example:"
-  echo "  curl -fsSL https://get.tryvodia.com/pharmacy-ai/install-ubuntu.sh | sudo bash"
+  echo "  curl -fsSL https://raw.githubusercontent.com/rebelking/vodia-downloads/main/pharmacy-ai/install-ubuntu.sh | sudo bash"
   exit 1
 fi
 
-command_exists() {
-  command -v "$1" >/dev/null 2>&1
-}
+REAL_USER="${SUDO_USER:-ubuntu}"
+REAL_HOME="$(eval echo "~${REAL_USER}")"
 
-get_public_ip() {
-  local ip=""
-  ip="$(curl -4fsSL https://api.ipify.org 2>/dev/null || true)"
-  if [ -z "$ip" ]; then
-    ip="$(curl -4fsSL https://ifconfig.me 2>/dev/null || true)"
-  fi
-  echo "$ip"
-}
-
-resolve_domain_ipv4() {
-  local host="$1"
-
-  if command_exists dig; then
-    dig +short A "$host" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' | sort -u || true
-    return
-  fi
-
-  if command_exists getent; then
-    getent ahostsv4 "$host" | awk '{print $1}' | sort -u || true
-    return
-  fi
-
-  if command_exists host; then
-    host "$host" | awk '/has address/ {print $NF}' | sort -u || true
-    return
-  fi
-
-  echo ""
-}
-
-validate_domain_hostname() {
-  local host="$1"
-
-  if [ -z "$host" ] || [ "$host" = "localhost" ]; then
-    echo "ERROR: HTTPS setup requires a real domain."
-    echo "Example:"
-    echo "  DOMAIN=pharmacy.example.com ENABLE_HTTPS=true"
-    exit 1
-  fi
-
-  if echo "$host" | grep -qiE '^https?://'; then
-    echo "ERROR: DOMAIN must be only the hostname."
-    echo "Use:"
-    echo "  DOMAIN=pharmacy.example.com"
-    echo "Do not use:"
-    echo "  DOMAIN=https://pharmacy.example.com"
-    exit 1
-  fi
-
-  if echo "$host" | grep -q '/'; then
-    echo "ERROR: DOMAIN must not include a path."
-    echo "Use only the hostname, for example:"
-    echo "  DOMAIN=pharmacy.example.com"
-    exit 1
-  fi
-}
-
-check_dns_ready_for_https() {
-  local host="$1"
-  local public_ip=""
-  local dns_ips=""
-
-  validate_domain_hostname "$host"
-
-  echo "Checking DNS before HTTPS setup..."
-  echo "Domain: $host"
-
-  public_ip="$(get_public_ip)"
-  if [ -z "$public_ip" ]; then
-    echo "ERROR: Could not detect this server public IPv4 address."
-    echo "Check outbound internet access and run the installer again."
-    exit 1
-  fi
-
-  dns_ips="$(resolve_domain_ipv4 "$host")"
-
-  echo "Server public IP:"
-  echo "  $public_ip"
-  echo "DNS result for $host:"
-  if [ -n "$dns_ips" ]; then
-    echo "$dns_ips" | sed 's/^/  /'
-  else
-    echo "  No IPv4 A record found."
-  fi
-  echo ""
-
-  if ! echo "$dns_ips" | grep -qx "$public_ip"; then
-    echo "ERROR: DNS is not ready."
-    echo ""
-    echo "$host must point to this server public IP before HTTPS setup can continue."
-    echo ""
-    echo "Create or update this DNS record:"
-    echo "  Type:  A"
-    echo "  Name:  $host"
-    echo "  Value: $public_ip"
-    echo ""
-    echo "After DNS updates, run the installer again:"
-    echo "  curl -fsSL https://get.tryvodia.com/pharmacy-ai/install-ubuntu.sh | sudo env DOMAIN=$host ENABLE_HTTPS=true bash"
-    echo ""
-    echo "Tip: If DNS was just changed, wait for propagation and try again."
-    exit 1
-  fi
-
-  echo "DNS check passed."
-  echo ""
-}
-
-if [ "$ENABLE_HTTPS" = "true" ]; then
-  check_dns_ready_for_https "$DOMAIN"
+if ! id "${REAL_USER}" >/dev/null 2>&1; then
+  echo "ERROR: Could not find user ${REAL_USER}"
+  exit 1
 fi
 
-echo "Updating apt packages..."
-apt-get update -y
+echo "[1/14] Installing system packages..."
+apt update
+DEBIAN_FRONTEND=noninteractive apt install -y \
+  curl git rsync build-essential nginx sqlite3 ufw ca-certificates gnupg unzip openssl
 
-echo "Installing required packages..."
-apt-get install -y curl ca-certificates gnupg lsb-release unzip
-
-if [ "$ENABLE_HTTPS" = "true" ]; then
-  apt-get install -y nginx certbot python3-certbot-nginx dnsutils
+echo "[2/14] Installing Node.js ${NODE_MAJOR}.x if needed..."
+if ! command -v node >/dev/null 2>&1; then
+  curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash -
+  DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
 else
-  apt-get install -y dnsutils || true
+  echo "Node already installed: $(node -v)"
 fi
 
-if ! command_exists node; then
-  echo "Installing Node.js 20..."
-  curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-  apt-get install -y nodejs
+echo "Node: $(node -v)"
+echo "npm:  $(npm -v)"
+
+echo "[3/14] Installing PM2..."
+npm install -g pm2
+
+echo "[4/14] Downloading installer repo..."
+rm -rf "${REPO_TMP}"
+git clone --branch "${REPO_BRANCH}" "${REPO_URL}" "${REPO_TMP}"
+
+SRC_APP_DIR="${REPO_TMP}/${PACKAGE_APP_SUBDIR}"
+SRC_VOICE_DIR="${REPO_TMP}/${PACKAGE_VOICE_SUBDIR}"
+
+if [ ! -f "${SRC_APP_DIR}/server.js" ]; then
+  echo "ERROR: Missing ${SRC_APP_DIR}/server.js"
+  echo "The GitHub installer package does not contain the full app."
+  exit 1
 fi
 
-if ! command_exists pm2; then
-  echo "Installing PM2..."
-  npm install -g pm2
+if [ ! -f "${SRC_APP_DIR}/package.json" ]; then
+  echo "ERROR: Missing ${SRC_APP_DIR}/package.json"
+  exit 1
 fi
 
-echo "Preparing install directory..."
-mkdir -p "$INSTALL_DIR"
-cd "$INSTALL_DIR"
-
-echo "Installing Vodia Pharmacy AI from NPM..."
-npm init -y >/dev/null 2>&1 || true
-npm install "vodia-pharmacy-ai@$APP_VERSION"
-
-echo "Writing environment file..."
-if [ "$ENABLE_HTTPS" = "true" ]; then
-  PUBLIC_URL="https://$DOMAIN"
-else
-  if [ "$DOMAIN" = "localhost" ]; then
-    PUBLIC_URL="http://$(get_public_ip):$PORT"
-  else
-    PUBLIC_URL="http://$DOMAIN:$PORT"
-  fi
+echo "[5/14] Backing up existing install if present..."
+mkdir -p /opt/backups
+if [ -d "${INSTALL_DIR}" ]; then
+  BACKUP="/opt/backups/${APP_NAME}-backup-$(date +%F-%H%M%S).tgz"
+  tar -czf "${BACKUP}" "${INSTALL_DIR}" --exclude="${INSTALL_DIR}/node_modules" || true
+  echo "Backup created: ${BACKUP}"
 fi
 
-EXISTING_SECRET=""
-if [ -f "$INSTALL_DIR/.env" ]; then
-  EXISTING_SECRET="$(grep '^PHARMACY_API_SECRET=' "$INSTALL_DIR/.env" | cut -d= -f2- || true)"
+echo "[6/14] Installing full app files..."
+mkdir -p "${INSTALL_DIR}"
+
+rsync -av --delete \
+  --exclude ".env" \
+  --exclude "pharmacy.db" \
+  --exclude "pharmacy.db-*" \
+  --exclude "node_modules" \
+  "${SRC_APP_DIR}/" \
+  "${INSTALL_DIR}/"
+
+if [ -d "${SRC_VOICE_DIR}" ]; then
+  mkdir -p "${INSTALL_DIR}/voice-agent"
+  rsync -av --delete \
+    --exclude "*.local.js" \
+    --exclude "*secret*.js" \
+    "${SRC_VOICE_DIR}/" \
+    "${INSTALL_DIR}/voice-agent/"
 fi
 
-if [ -z "$EXISTING_SECRET" ]; then
-  EXISTING_SECRET="$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")"
-fi
+chown -R "${REAL_USER}:${REAL_USER}" "${INSTALL_DIR}"
 
-cat > "$INSTALL_DIR/.env" <<EOF
+echo "[7/14] Creating .env if missing..."
+PUBLIC_BASE_URL="http://${DOMAIN}"
+
+if [ ! -f "${INSTALL_DIR}/.env" ]; then
+  SESSION_SECRET="$(openssl rand -hex 32)"
+  PHARMACY_SECRET="$(openssl rand -hex 32)"
+
+  cat > "${INSTALL_DIR}/.env" <<ENVEOF
 NODE_ENV=production
-PORT=$PORT
-DOMAIN=$DOMAIN
-APP_DOMAIN=$DOMAIN
-ENABLEproduction
-PORT=$PORT
-DOMAIN=$DOMAIN
-APP_DOMAIN=$DOMAIN
-PUBLIC_URL=$PUBLIC_URL
-PHARMACY_API_SECRET=$EXISTING_HTTPS=$ENABLE_HTTPS
-PUBLIC_URL=$PUBLIC_URL
-PHARMACY_API_SECRET=$EXISTING_SECRET
-DATABASE_PATH=./pharmacy.db
-EOF
+APP_MODE=demo
+PORT=${PORT}
+PUBLIC_BASE_URL=${PUBLIC_BASE_URL}
 
-chmod 600 "$INSTALL_DIR/.env"
+PORTAL_SESSION_SECRET=${SESSION_SECRET}
+PHARMACY_SECRET=${PHARMACY_SECRET}
+PHARMACY_API_SECRET=${PHARMACY_SECRET}
+VODIA_PHARMACY_SECRET=${PHARMACY_SECRET}
 
-cat > "$INSTALL_DIR/vodia-script-values.sh" <<'VODIA_VALUES_EOF'
-#!/usr/bin/env bash
-set -euo pipefail
+SQLITE_PATH=${INSTALL_DIR}/pharmacy.db
 
-DIR="$(cd "$(dirname "$0")" && pwd)"
-ENV_FILE="$DIR/.env"
+PBX_BASE_URL=
+PBX_ADMIN_USER=
+PBX_ADMIN_PASS=
 
-if [ ! -f "$ENV_FILE" ]; then
-  echo "ERROR: Missing .env file: $ENV_FILE"
-  exit 1
+SMARTY_AUTH_ID=
+SMARTY_AUTH_TOKEN=
+
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_USER=
+SMTP_PASS=
+SMTP_FROM=no-reply@${DOMAIN}
+ENVEOF
+
+  chmod 600 "${INSTALL_DIR}/.env"
+  chown "${REAL_USER}:${REAL_USER}" "${INSTALL_DIR}/.env"
+
+  echo ""
+  echo "Generated PHARMACY_SECRET:"
+  echo "${PHARMACY_SECRET}"
+  echo ""
+  echo "Save this secret. It is required for Vodia PBX / AI webhook calls."
+else
+  echo ".env already exists. Keeping existing .env."
 fi
 
-set -a
-. "$ENV_FILE"
-set +a
+echo "[8/14] Loading install environment values..."
+PHARMACY_SECRET_VALUE="$(grep -E '^(PHARMACY_SECRET|PHARMACY_API_SECRET)=' "${INSTALL_DIR}/.env" | head -1 | cut -d= -f2- || true)"
+PUBLIC_URL_VALUE="$(grep '^PUBLIC_BASE_URL=' "${INSTALL_DIR}/.env" | cut -d= -f2- || true)"
 
-BASE_URL="${PUBLIC_URL:-}"
+if [ -z "${PHARMACY_SECRET_VALUE}" ]; then
+  PHARMACY_SECRET_VALUE="$(openssl rand -hex 32)"
+  cat >> "${INSTALL_DIR}/.env" <<ENVEOF
+PHARMACY_SECRET=${PHARMACY_SECRET_VALUE}
+PHARMACY_API_SECRET=${PHARMACY_SECRET_VALUE}
+VODIA_PHARMACY_SECRET=${PHARMACY_SECRET_VALUE}
+ENVEOF
+fi
 
-if [ -z "$BASE_URL" ]; then
-  if [ "${ENABLE_HTTPS:-false}" = "true" ] && [ "${APP_DOMAIN:-localhost}" != "localhost" ]; then
-    BASE_URL="https://${APP_DOMAIN}"
-  elif [ "${APP_DOMAIN:-localhost}" != "localhost" ]; then
-    BASE_URL="http://${APP_DOMAIN}:${PORT:-3200}"
+if [ -z "${PUBLIC_URL_VALUE}" ]; then
+  PUBLIC_URL_VALUE="${PUBLIC_BASE_URL}"
+  echo "PUBLIC_BASE_URL=${PUBLIC_URL_VALUE}" >> "${INSTALL_DIR}/.env"
+fi
+
+echo "[9/14] Creating clean empty database if missing..."
+if [ ! -f "${INSTALL_DIR}/pharmacy.db" ]; then
+  if [ -s "${INSTALL_DIR}/schema.sql" ]; then
+    sqlite3 "${INSTALL_DIR}/pharmacy.db" < "${INSTALL_DIR}/schema.sql"
+    sqlite3 "${INSTALL_DIR}/pharmacy.db" "PRAGMA journal_mode=WAL;" >/dev/null || true
+    echo "Created DB from schema.sql: ${INSTALL_DIR}/pharmacy.db"
   else
-    BASE_URL="http://localhost:${PORT:-3200}"
+    echo "WARNING: No schema.sql found. Creating blank DB."
+    sqlite3 "${INSTALL_DIR}/pharmacy.db" "PRAGMA journal_mode=WAL;" >/dev/null || true
   fi
+
+  chown "${REAL_USER}:${REAL_USER}" "${INSTALL_DIR}/pharmacy.db" 2>/dev/null || true
+  chmod 600 "${INSTALL_DIR}/pharmacy.db" 2>/dev/null || true
+else
+  echo "Database already exists. Keeping ${INSTALL_DIR}/pharmacy.db"
 fi
 
-BASE_URL="${BASE_URL%/}"
+echo "[10/14] Generating local Vodia Voice Agent script..."
+VOICE_TEMPLATE="${INSTALL_DIR}/voice-agent/vodia-pharmacy-ai-voice-agent.template.js"
+VOICE_LOCAL="${INSTALL_DIR}/voice-agent/vodia-pharmacy-ai-voice-agent.local.js"
 
-cat <<VALUES
-// Generated values for Vodia AI script
+if [ -f "${VOICE_TEMPLATE}" ]; then
+  mkdir -p "${INSTALL_DIR}/voice-agent"
 
-var pharmacyApiSecret = "${PHARMACY_API_SECRET}"
+  sed \
+    -e "s|__PHARMACY_API_SECRET__|${PHARMACY_SECRET_VALUE}|g" \
+    -e "s|__PHARMACY_BASE_URL__|${PUBLIC_URL_VALUE}|g" \
+    -e "s|__STAFF_TRANSFER_DESTINATION__|${STAFF_TRANSFER_DESTINATION}|g" \
+    "${VOICE_TEMPLATE}" \
+    > "${VOICE_LOCAL}"
 
-var pharmacyRequestUrl = "${BASE_URL}/api/ai/refill-intake"
-var customerLookupUrl = "${BASE_URL}/api/ai/customer-lookup"
-var customerEnrichUrl = "${BASE_URL}/api/ai/refill-request-enrich"
-var fulfillmentUrl = "${BASE_URL}/api/ai/request-fulfillment"
-var pharmacyLocationSearchUrl = "${BASE_URL}/api/ai/pharmacy-location-search"
-var previousRequestLookupUrl = "${BASE_URL}/api/ai/previous-request-lookup"
-var statusCallbackNoteUrl = "${BASE_URL}/api/ai/status-callback-note"
-VALUES
-VODIA_VALUES_EOF
+  chmod 600 "${VOICE_LOCAL}"
+  chown "${REAL_USER}:${REAL_USER}" "${VOICE_LOCAL}"
 
-chmod 700 "$INSTALL_DIR/vodia-script-values.sh"
+  echo "Voice Agent script generated:"
+  echo "  ${VOICE_LOCAL}"
+else
+  echo "WARNING: Voice Agent template not found:"
+  echo "  ${VOICE_TEMPLATE}"
+fi
 
+echo "[11/14] Installing npm dependencies..."
+cd "${INSTALL_DIR}"
+sudo -u "${REAL_USER}" npm install --omit=dev
 
-echo "Starting app with PM2..."
-pm2 stop "$APP_NAME" >/dev/null 2>&1 || true
-pm2 delete "$APP_NAME" >/dev/null 2>&1 || true
+echo "[12/14] Starting PM2 app..."
+sudo -u "${REAL_USER}" pm2 delete "${APP_NAME}" >/dev/null 2>&1 || true
+sudo -u "${REAL_USER}" bash -lc "cd '${INSTALL_DIR}' && pm2 start server.js --name '${APP_NAME}' --update-env"
+sudo -u "${REAL_USER}" pm2 save
 
-PORT="$PORT" pm2 start "$INSTALL_DIR/node_modules/.bin/vodia-pharmacy-ai" --name "$APP_NAME" --update-env
-pm2 save || true
+echo "[13/14] Configuring PM2 startup..."
+pm2 startup systemd -u "${REAL_USER}" --hp "${REAL_HOME}" >/dev/null 2>&1 || true
+sudo -u "${REAL_USER}" pm2 save >/dev/null 2>&1 || true
 
-echo "Waiting for app..."
-sleep 4
+echo "[14/14] Configuring Nginx..."
+cat > /etc/nginx/conf.d/vodia-websocket-map.conf <<'NGINXMAPEOF'
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    '' close;
+}
+NGINXMAPEOF
 
-if [ "$ENABLE_HTTPS" = "true" ]; then
-  echo "Configuring nginx reverse proxy..."
-
-  cat > "/etc/nginx/sites-available/$APP_NAME" <<EOF
+cat > /etc/nginx/sites-available/vodia-pharmacy-ai <<NGINXEOF
 server {
     listen 80;
-    server_name $DOMAIN;
+    server_name ${DOMAIN};
 
     location / {
-        proxy_pass http://127.0.0.1:$PORT;
+        proxy_pass http://127.0.0.1:${PORT};
         proxy_http_version 1.1;
+
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection \$connection_upgrade;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
+
+        proxy_read_timeout 180s;
+        proxy_send_timeout 180s;
     }
 }
-EOF
+NGINXEOF
 
-  ln -sf "/etc/nginx/sites-available/$APP_NAME" "/etc/nginx/sites-enabled/$APP_NAME"
-  nginx -t
-  systemctl reload nginx
+ln -sf /etc/nginx/sites-available/vodia-pharmacy-ai /etc/nginx/sites-enabled/vodia-pharmacy-ai
 
-  echo "Requesting Let's Encrypt certificate..."
-  certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos -m "admin@$DOMAIN" --redirect || {
-    echo ""
-    echo "ERROR: Certbot failed."
-    echo "DNS passed, but certificate issuance failed."
-    echo "Check ports 80/443, firewall, and nginx logs."
-    exit 1
+if [ -L /etc/nginx/sites-enabled/default ]; then
+  rm -f /etc/nginx/sites-enabled/default
+fi
+
+nginx -t
+systemctl reload nginx
+
+ufw allow OpenSSH >/dev/null 2>&1 || true
+ufw allow 'Nginx Full' >/dev/null 2>&1 || true
+
+if [ "${ENABLE_HTTPS}" = "true" ]; then
+  echo "Installing Certbot and requesting HTTPS certificate..."
+  DEBIAN_FRONTEND=noninteractive apt install -y certbot python3-certbot-nginx
+
+  certbot --nginx -d "${DOMAIN}" --non-interactive --agree-tos -m "admin@${DOMAIN}" --redirect || {
+    echo "WARNING: Certbot failed. HTTP install still completed."
+    echo "Retry later:"
+    echo "  sudo certbot --nginx -d ${DOMAIN}"
   }
+
+  if grep -q "PUBLIC_BASE_URL=http://${DOMAIN}" "${INSTALL_DIR}/.env"; then
+    sed -i "s|PUBLIC_BASE_URL=http://${DOMAIN}|PUBLIC_BASE_URL=https://${DOMAIN}|g" "${INSTALL_DIR}/.env"
+
+    if [ -f "${VOICE_TEMPLATE}" ]; then
+      PHARMACY_SECRET_VALUE="$(grep -E '^(PHARMACY_SECRET|PHARMACY_API_SECRET)=' "${INSTALL_DIR}/.env" | head -1 | cut -d= -f2- || true)"
+      PUBLIC_URL_VALUE="https://${DOMAIN}"
+
+      sed \
+        -e "s|__PHARMACY_API_SECRET__|${PHARMACY_SECRET_VALUE}|g" \
+        -e "s|__PHARMACY_BASE_URL__|${PUBLIC_URL_VALUE}|g" \
+        -e "s|__STAFF_TRANSFER_DESTINATION__|${STAFF_TRANSFER_DESTINATION}|g" \
+        "${VOICE_TEMPLATE}" \
+        > "${VOICE_LOCAL}"
+
+      chmod 600 "${VOICE_LOCAL}"
+      chown "${REAL_USER}:${REAL_USER}" "${VOICE_LOCAL}"
+    fi
+
+    sudo -u "${REAL_USER}" pm2 restart "${APP_NAME}" --update-env
+  fi
 fi
 
 echo ""
-echo "Checking port $PORT..."
-ss -ltnp | grep ":$PORT" || true
-
+echo "=================================================="
+echo " Install complete"
+echo "=================================================="
+echo "Local health:"
+echo "  curl http://127.0.0.1:${PORT}/health"
 echo ""
-echo "Health check:"
-if [ "$ENABLE_HTTPS" = "true" ]; then
-  curl -fsSL "https://$DOMAIN/health" || true
+echo "Public health:"
+if [ "${ENABLE_HTTPS}" = "true" ]; then
+  echo "  curl https://${DOMAIN}/health"
+  echo "  https://${DOMAIN}/portal"
 else
-  curl -fsSL "http://127.0.0.1:$PORT/health" || true
+  echo "  curl http://${DOMAIN}/health"
+  echo "  http://${DOMAIN}/portal"
 fi
 echo ""
-
+echo "App folder:"
+echo "  ${INSTALL_DIR}"
 echo ""
-echo "Vodia Pharmacy AI install complete ✅"
+echo "Database:"
+echo "  ${INSTALL_DIR}/pharmacy.db"
 echo ""
-
-if [ "$ENABLE_HTTPS" = "true" ]; then
-  echo "Portal:"
-  echo "  https://$DOMAIN/portal"
-else
-  echo "Portal:"
-  echo "  $PUBLIC_URL/portal"
-fi
-
+echo "Voice Agent template:"
+echo "  ${INSTALL_DIR}/voice-agent/vodia-pharmacy-ai-voice-agent.template.js"
 echo ""
-echo "Generate Vodia Audio AI script values AFTER this install:"
-echo "  sudo $INSTALL_DIR/vodia-script-values.sh"
+echo "Voice Agent ready-to-copy local script:"
+echo "  ${INSTALL_DIR}/voice-agent/vodia-pharmacy-ai-voice-agent.local.js"
 echo ""
 echo "Important:"
-echo "  Paste the generated values into the top customer configuration section of:"
-echo "  https://get.tryvodia.com/pharmacy-ai/audio-ai-script.js"
+echo "  Copy the local script into the Vodia Voice Agent JavaScript field."
+echo "  Add the OpenAI API key in the Vodia Voice Agent OpenAI key field."
+echo "  Do NOT paste the OpenAI key into the script."
 echo ""
+echo "PM2:"
+echo "  pm2 status"
+echo "  pm2 logs ${APP_NAME} --lines 80"
+echo "=================================================="

@@ -1,0 +1,219 @@
+:root {
+  --pharma-bg: #f4f8f7;
+  --pharma-surface: #ffffff;
+  --pharma-surface-2: #eef7f5;
+  --pharma-text: #12202f;
+  --pharma-muted: #64748b;
+  --pharma-border: #d7e3e0;
+  --pharma-primary: #0f766e;
+  --pharma-primary-2: #14b8a6;
+  --pharma-header: #102033;
+  --pharma-button: #0f766e;
+  --pharma-button-text: #ffffff;
+  --pharma-input: #ffffff;
+  --pharma-table-head: #e8f3f1;
+  --pharma-link: #0f766e;
+  --pharma-shadow: rgba(15, 23, 42, 0.10);
+}
+
+html[data-theme="dark"] {
+  --pharma-bg: #071318;
+  --pharma-surface: #0f1f28;
+  --pharma-surface-2: #122b34;
+  --pharma-text: #f8fafc;
+  --pharma-muted: #cbd5e1;
+  --pharma-border: #284653;
+  --pharma-primary: #2dd4bf;
+  --pharma-primary-2: #5eead4;
+  --pharma-header: #020617;
+  --pharma-button: #0f766e;
+  --pharma-button-text: #ffffff;
+  --pharma-input: #0b1820;
+  --pharma-table-head: #172a35;
+  --pharma-link: #5eead4;
+  --pharma-shadow: rgba(0, 0, 0, 0.35);
+}
+
+body {
+  background:
+    radial-gradient(circle at top left, rgba(20, 184, 166, 0.10), transparent 28%),
+    linear-gradient(135deg, var(--pharma-bg), var(--pharma-surface-2)) !important;
+  color: var(--pharma-text) !important;
+}
+
+body.portal-login,
+body.portal-forgot {
+  background:
+    linear-gradient(90deg, rgba(244, 248, 247, 0.08), rgba(244, 248, 247, 0.96)),
+    url('/assets/images/pharmacy-login.png') !important;
+  background-size: cover !important;
+  background-position: center !important;
+}
+
+html[data-theme="dark"] body.portal-login,
+html[data-theme="dark"] body.portal-forgot {
+  background:
+    linear-gradient(90deg, rgba(2, 6, 23, 0.35), rgba(2, 6, 23, 0.96)),
+    url('/assets/images/pharmacy-login.png') !important;
+  background-size: cover !important;
+  background-position: center !important;
+}
+
+header {
+  background:
+    linear-gradient(90deg, var(--pharma-header), #0f766e) !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 24px var(--pharma-shadow) !important;
+}
+
+header h2 {
+  color: #ffffff !important;
+}
+
+header a {
+  color: #ffffff !important;
+}
+
+main {
+  color: var(--pharma-text) !important;
+}
+
+.card,
+.login,
+.box,
+table {
+  background: var(--pharma-surface) !important;
+  color: var(--pharma-text) !important;
+  border: 1px solid var(--pharma-border) !important;
+  box-shadow: 0 8px 28px var(--pharma-shadow) !important;
+}
+
+th {
+  background: var(--pharma-table-head) !important;
+  color: var(--pharma-text) !important;
+}
+
+td {
+  color: var(--pharma-text) !important;
+  border-color: var(--pharma-border) !important;
+}
+
+tr {
+  border-color: var(--pharma-border) !important;
+}
+
+input,
+textarea,
+select {
+  background: var(--pharma-input) !important;
+  color: var(--pharma-text) !important;
+  border-color: var(--pharma-border) !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--pharma-muted) !important;
+}
+
+button,
+.button {
+  background: var(--pharma-button) !important;
+  color: var(--pharma-button-text) !important;
+}
+
+a {
+  color: var(--pharma-link) !important;
+}
+
+.muted {
+  color: var(--pharma-muted) !important;
+}
+
+.filter {
+  background: var(--pharma-surface-2) !important;
+  color: var(--pharma-text) !important;
+}
+
+.filter.active {
+  background: var(--pharma-primary) !important;
+  color: #ffffff !important;
+}
+
+.status,
+.pill {
+  color: #0f172a !important;
+}
+
+html[data-theme="dark"] .status,
+html[data-theme="dark"] .pill {
+  color: #ffffff !important;
+}
+
+.note-box,
+pre {
+  background: var(--pharma-surface-2) !important;
+  color: var(--pharma-text) !important;
+  border: 1px solid var(--pharma-border) !important;
+}
+
+.message {
+  color: var(--pharma-text) !important;
+}
+
+.message.mine {
+  background: rgba(20, 184, 166, 0.22) !important;
+}
+
+.message.other {
+  background: rgba(59, 130, 246, 0.20) !important;
+}
+
+.pharma-controls {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  margin-left: 14px;
+  flex-wrap: wrap;
+}
+
+.pharma-small-button {
+  border: 1px solid rgba(255,255,255,0.35) !important;
+  background: rgba(255,255,255,0.14) !important;
+  color: #ffffff !important;
+  border-radius: 999px !important;
+  padding: 6px 10px !important;
+  font-size: 13px !important;
+  cursor: pointer !important;
+}
+
+.chat-unread-badge {
+  display: none;
+  background: #ef4444;
+  color: white;
+  border-radius: 999px;
+  padding: 2px 7px;
+  margin-left: 5px;
+  font-size: 12px;
+  font-weight: bold;
+  line-height: 1.4;
+}
+
+.chat-unread-badge.show {
+  display: inline-block;
+}
+
+html[data-theme="dark"] .login,
+html[data-theme="dark"] .box {
+  background: rgba(15, 31, 40, 0.94) !important;
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] .login h2,
+html[data-theme="dark"] .box h2,
+html[data-theme="dark"] h1,
+html[data-theme="dark"] h2,
+html[data-theme="dark"] h3,
+html[data-theme="dark"] strong,
+html[data-theme="dark"] label {
+  color: #ffffff !important;
+}

@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Vodia Agent Softphone</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --card: #1f2937;
+      --text: #f9fafb;
+      --muted: #9ca3af;
+      --line: #374151;
+      --good: #22c55e;
+      --bad: #ef4444;
+      --warn: #f59e0b;
+      --blue: #2563eb;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .softphone {
+      width: 360px;
+      max-width: calc(100vw - 32px);
+      margin: 24px auto;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: 0 18px 60px rgba(0,0,0,.35);
+      overflow: hidden;
+    }
+
+    .softphone-header {
+      padding: 18px;
+      background: linear-gradient(135deg, #111827, #1e3a8a);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .softphone-title {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .softphone-status {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: var(--bad);
+    }
+
+    .dot.connected { background: var(--good); }
+    .dot.warning { background: var(--warn); }
+
+    .softphone-body { padding: 18px; }
+
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      background: #030712;
+      color: var(--text);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 16px;
+      outline: none;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    button {
+      flex: 1;
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 10px;
+      color: white;
+      font-weight: 800;
+      cursor: pointer;
+      background: #374151;
+    }
+
+    button:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+    }
+
+    .btn-connect { background: var(--blue); }
+    .btn-call { background: var(--good); }
+    .btn-hangup { background: var(--bad); }
+    .btn-warn { background: var(--warn); color: #111827; }
+
+    .call-card {
+      margin-top: 16px;
+      padding: 14px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      min-height: 74px;
+    }
+
+    .call-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .call-line strong { color: var(--text); }
+
+    .incoming {
+      display: none;
+      margin-top: 14px;
+      padding: 14px;
+      border: 1px solid var(--warn);
+      border-radius: 14px;
+      background: rgba(245, 158, 11, .1);
+    }
+
+    .incoming.show { display: block; }
+
+    .log {
+      margin-top: 14px;
+      height: 130px;
+      overflow: auto;
+      background: #030712;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="softphone">
+    <div class="softphone-header">
+      <h1 class="softphone-title">Vodia Agent Softphone</h1>
+      <div class="softphone-status">
+        <span id="statusDot" class="dot"></span>
+        <span id="statusText">Disconnected</span>
+      </div>
+    </div>
+
+    <div class="softphone-body">
+      <label for="agentExtension">Agent extension</label>
+      <input id="agentExtension" value="501" />
+
+      <div class="row">
+        <button id="connectBtn" class="btn-connect">Connect</button>
+        <button id="disconnectBtn">Disconnect</button>
+      </div>
+
+      <div style="height:14px"></div>
+
+      <label for="destinationNumber">Destination</label>
+      <input id="destinationNumber" placeholder="+15555550199 or 500" />
+
+      <div class="row">
+        <button id="callBtn" class="btn-call">Call</button>
+        <button id="hangupBtn" class="btn-hangup">Hang Up</button>
+      </div>
+
+      <div class="row">
+        <button id="muteBtn">Mute</button>
+        <button id="holdBtn">Hold</button>
+        <button id="recordBtn" class="btn-warn">Record</button>
+      </div>
+
+      <div id="incomingBox" class="incoming">
+        <div class="call-line"><span>Incoming</span><strong id="incomingFrom">Unknown</strong></div>
+        <div class="row">
+          <button id="answerBtn" class="btn-call">Answer</button>
+          <button id="rejectBtn" class="btn-hangup">Reject</button>
+        </div>
+      </div>
+
+      <div class="call-card">
+        <div class="call-line"><span>Call ID</span><strong id="callIdLabel">-</strong></div>
+        <div class="call-line"><span>State</span><strong id="callStateLabel">idle</strong></div>
+        <div class="call-line"><span>Remote</span><strong id="remoteLabel">-</strong></div>
+      </div>
+
+      <div id="log" class="log"></div>
+
+      <audio id="remoteAudio" autoplay></audio>
+    </div>
+  </div>
+
+  <script src="/js/vodia-softphone.js"></script>
+  <script>
+    const ui = {
+      statusDot: document.getElementById("statusDot"),
+      statusText: document.getElementById("statusText"),
+      connectBtn: document.getElementById("connectBtn"),
+      disconnectBtn: document.getElementById("disconnectBtn"),
+      callBtn: document.getElementById("callBtn"),
+      hangupBtn: document.getElementById("hangupBtn"),
+      muteBtn: document.getElementById("muteBtn"),
+      holdBtn: document.getElementById("holdBtn"),
+      recordBtn: document.getElementById("recordBtn"),
+      answerBtn: document.getElementById("answerBtn"),
+      rejectBtn: document.getElementById("rejectBtn"),
+      agentExtension: document.getElementById("agentExtension"),
+      destinationNumber: document.getElementById("destinationNumber"),
+      incomingBox: document.getElementById("incomingBox"),
+      incomingFrom: document.getElementById("incomingFrom"),
+      callIdLabel: document.getElementById("callIdLabel"),
+      callStateLabel: document.getElementById("callStateLabel"),
+      remoteLabel: document.getElementById("remoteLabel"),
+      log: document.getElementById("log"),
+      remoteAudio: document.getElementById("remoteAudio")
+    };
+
+    const phone = new VodiaSoftphone({
+      sessionEndpoint: "/api/vodia/softphone/session",
+      remoteAudio: ui.remoteAudio,
+      onStatus: (status, detail) => {
+        ui.statusText.textContent = detail || status;
+        ui.statusDot.className = "dot" + (
+          status === "registered" ? " connected" :
+          status === "connecting" ? " warning" : ""
+        );
+      },
+      onIncoming: (call) => {
+        ui.incomingBox.classList.add("show");
+        ui.incomingFrom.textContent = call.fromDisplay || call.fromUser || call.from || "Unknown";
+      },
+      onCallState: (state) => {
+        ui.callIdLabel.textContent = state.callid || "-";
+        ui.callStateLabel.textContent = state.state || "idle";
+        ui.remoteLabel.textContent = state.remote || "-";
+      },
+      onLog: (line) => {
+        ui.log.textContent += line + "\n";
+        ui.log.scrollTop = ui.log.scrollHeight;
+      }
+    });
+
+    ui.connectBtn.onclick = () => {
+      phone.connect({
+        extension: ui.agentExtension.value.trim()
+      }).catch(err => alert(err.message));
+    };
+
+    ui.disconnectBtn.onclick = () => phone.disconnect();
+
+    ui.callBtn.onclick = () => {
+      phone.makeCall(ui.destinationNumber.value.trim()).catch(err => alert(err.message));
+    };
+
+    ui.hangupBtn.onclick = () => phone.hangup();
+
+    ui.muteBtn.onclick = async () => {
+      const muted = await phone.toggleMute();
+      ui.muteBtn.textContent = muted ? "Unmute" : "Mute";
+    };
+
+    ui.holdBtn.onclick = async () => {
+      const held = await phone.toggleHold();
+      ui.holdBtn.textContent = held ? "Resume" : "Hold";
+    };
+
+    ui.recordBtn.onclick = () => phone.toggleRecord();
+
+    ui.answerBtn.onclick = async () => {
+      ui.incomingBox.classList.remove("show");
+      await phone.acceptIncoming();
+    };
+
+    ui.rejectBtn.onclick = () => {
+      ui.incomingBox.classList.remove("show");
+      phone.rejectIncoming();
+    };
+  </script>
+</body>
+</html>

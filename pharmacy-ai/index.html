@@ -85,15 +85,15 @@
 
   <section>
     <h2>Only Change These Script Values</h2>
-    <pre>var pharmacyApiSecret = "PASTE_GENERATED_PHARMACY_SECRET_HERE"
+    <pre>var pharmacyApiSecret = "__PHARMACY_API_SECRET__"
 
-var pharmacyRequestUrl = "PASTE_GENERATED_PHARMACY_REQUEST_URL_HERE"
-var customerLookupUrl = "PASTE_GENERATED_CUSTOMER_LOOKUP_URL_HERE"
-var customerEnrichUrl = "PASTE_GENERATED_CUSTOMER_ENRICH_URL_HERE"
-var fulfillmentUrl = "PASTE_GENERATED_FULFILLMENT_URL_HERE"
-var pharmacyLocationSearchUrl = "PASTE_GENERATED_PHARMACY_LOCATION_SEARCH_URL_HERE"
+var pharmacyRequestUrl = "__PHARMACY_BASE_URL__/api/ai/refill-intake"
+var customerLookupUrl = "__PHARMACY_BASE_URL__/api/ai/customer-lookup"
+var customerEnrichUrl = "__PHARMACY_BASE_URL__/api/ai/refill-request-enrich"
+var fulfillmentUrl = "__PHARMACY_BASE_URL__/api/ai/request-fulfillment"
+var pharmacyLocationSearchUrl = "__PHARMACY_BASE_URL__/api/ai/pharmacy-location-search"
 
-var staffTransferDestination = "2005"
+var staffTransferDestination = "__STAFF_TRANSFER_DESTINATION__"
 
 var allowDemoPharmacyFallback = true</pre>
 

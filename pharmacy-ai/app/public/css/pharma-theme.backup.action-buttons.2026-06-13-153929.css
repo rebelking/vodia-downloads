@@ -1,0 +1,403 @@
+:root {
+  --pharma-bg: #f4f8f7;
+  --pharma-surface: #ffffff;
+  --pharma-surface-2: #eef7f5;
+  --pharma-text: #12202f;
+  --pharma-muted: #64748b;
+  --pharma-border: #d7e3e0;
+  --pharma-primary: #0f766e;
+  --pharma-primary-2: #14b8a6;
+  --pharma-header: #102033;
+  --pharma-button: #0f766e;
+  --pharma-button-text: #ffffff;
+  --pharma-input: #ffffff;
+  --pharma-table-head: #e8f3f1;
+  --pharma-link: #0f766e;
+  --pharma-shadow: rgba(15, 23, 42, 0.10);
+}
+
+html[data-theme="dark"] {
+  --pharma-bg: #071318;
+  --pharma-surface: #0f1f28;
+  --pharma-surface-2: #122b34;
+  --pharma-text: #f8fafc;
+  --pharma-muted: #cbd5e1;
+  --pharma-border: #284653;
+  --pharma-primary: #2dd4bf;
+  --pharma-primary-2: #5eead4;
+  --pharma-header: #020617;
+  --pharma-button: #0f766e;
+  --pharma-button-text: #ffffff;
+  --pharma-input: #0b1820;
+  --pharma-table-head: #172a35;
+  --pharma-link: #5eead4;
+  --pharma-shadow: rgba(0, 0, 0, 0.35);
+}
+
+body {
+  background:
+    radial-gradient(circle at top left, rgba(20, 184, 166, 0.10), transparent 28%),
+    linear-gradient(135deg, var(--pharma-bg), var(--pharma-surface-2)) !important;
+  color: var(--pharma-text) !important;
+}
+
+body.portal-login,
+body.portal-forgot {
+  background:
+    linear-gradient(90deg, rgba(244, 248, 247, 0.08), rgba(244, 248, 247, 0.96)),
+    url('/assets/images/pharmacy-login.png') !important;
+  background-size: cover !important;
+  background-position: center !important;
+}
+
+html[data-theme="dark"] body.portal-login,
+html[data-theme="dark"] body.portal-forgot {
+  background:
+    linear-gradient(90deg, rgba(2, 6, 23, 0.35), rgba(2, 6, 23, 0.96)),
+    url('/assets/images/pharmacy-login.png') !important;
+  background-size: cover !important;
+  background-position: center !important;
+}
+
+header {
+  background:
+    linear-gradient(90deg, var(--pharma-header), #0f766e) !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 24px var(--pharma-shadow) !important;
+}
+
+header h2 {
+  color: #ffffff !important;
+}
+
+header a {
+  color: #ffffff !important;
+}
+
+main {
+  color: var(--pharma-text) !important;
+}
+
+.card,
+.login,
+.box,
+table {
+  background: var(--pharma-surface) !important;
+  color: var(--pharma-text) !important;
+  border: 1px solid var(--pharma-border) !important;
+  box-shadow: 0 8px 28px var(--pharma-shadow) !important;
+}
+
+th {
+  background: var(--pharma-table-head) !important;
+  color: var(--pharma-text) !important;
+}
+
+td {
+  color: var(--pharma-text) !important;
+  border-color: var(--pharma-border) !important;
+}
+
+tr {
+  border-color: var(--pharma-border) !important;
+}
+
+input,
+textarea,
+select {
+  background: var(--pharma-input) !important;
+  color: var(--pharma-text) !important;
+  border-color: var(--pharma-border) !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--pharma-muted) !important;
+}
+
+button,
+.button {
+  background: var(--pharma-button) !important;
+  color: var(--pharma-button-text) !important;
+}
+
+a {
+  color: var(--pharma-link) !important;
+}
+
+.muted {
+  color: var(--pharma-muted) !important;
+}
+
+.filter {
+  background: var(--pharma-surface-2) !important;
+  color: var(--pharma-text) !important;
+}
+
+.filter.active {
+  background: var(--pharma-primary) !important;
+  color: #ffffff !important;
+}
+
+.status,
+.pill {
+  color: #0f172a !important;
+}
+
+html[data-theme="dark"] .status,
+html[data-theme="dark"] .pill {
+  color: #ffffff !important;
+}
+
+.note-box,
+pre {
+  background: var(--pharma-surface-2) !important;
+  color: var(--pharma-text) !important;
+  border: 1px solid var(--pharma-border) !important;
+}
+
+.message {
+  color: var(--pharma-text) !important;
+}
+
+.message.mine {
+  background: rgba(20, 184, 166, 0.22) !important;
+}
+
+.message.other {
+  background: rgba(59, 130, 246, 0.20) !important;
+}
+
+.pharma-controls {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  margin-left: 14px;
+  flex-wrap: wrap;
+}
+
+.pharma-small-button {
+  border: 1px solid rgba(255,255,255,0.35) !important;
+  background: rgba(255,255,255,0.14) !important;
+  color: #ffffff !important;
+  border-radius: 999px !important;
+  padding: 6px 10px !important;
+  font-size: 13px !important;
+  cursor: pointer !important;
+}
+
+.chat-unread-badge {
+  display: none;
+  background: #ef4444;
+  color: white;
+  border-radius: 999px;
+  padding: 2px 7px;
+  margin-left: 5px;
+  font-size: 12px;
+  font-weight: bold;
+  line-height: 1.4;
+}
+
+.chat-unread-badge.show {
+  display: inline-block;
+}
+
+html[data-theme="dark"] .login,
+html[data-theme="dark"] .box {
+  background: rgba(15, 31, 40, 0.94) !important;
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] .login h2,
+html[data-theme="dark"] .box h2,
+html[data-theme="dark"] h1,
+html[data-theme="dark"] h2,
+html[data-theme="dark"] h3,
+html[data-theme="dark"] strong,
+html[data-theme="dark"] label {
+  color: #ffffff !important;
+}
+
+/* =========================================================
+   Dark Mode Contrast Fix
+   Added to make all letters visible in dark mode.
+   ========================================================= */
+
+html[data-theme="dark"] body {
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] main,
+html[data-theme="dark"] .card,
+html[data-theme="dark"] table,
+html[data-theme="dark"] td,
+html[data-theme="dark"] th,
+html[data-theme="dark"] label,
+html[data-theme="dark"] p,
+html[data-theme="dark"] span,
+html[data-theme="dark"] strong,
+html[data-theme="dark"] h1,
+html[data-theme="dark"] h2,
+html[data-theme="dark"] h3,
+html[data-theme="dark"] h4 {
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .muted {
+  color: #cbd5e1 !important;
+}
+
+html[data-theme="dark"] input,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] select,
+html[data-theme="dark"] option {
+  background: #06141b !important;
+  color: #f8fafc !important;
+  border-color: #355464 !important;
+}
+
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Fix status pills that were too light with white text */
+html[data-theme="dark"] .status {
+  color: #ffffff !important;
+  border: 1px solid rgba(255,255,255,0.18) !important;
+}
+
+html[data-theme="dark"] .status-pending {
+  background: #92400e !important;
+  color: #fff7ed !important;
+}
+
+html[data-theme="dark"] .status-called_back {
+  background: #1d4ed8 !important;
+  color: #eff6ff !important;
+}
+
+html[data-theme="dark"] .status-fulfilled {
+  background: #166534 !important;
+  color: #f0fdf4 !important;
+}
+
+html[data-theme="dark"] .status-needs_follow_up {
+  background: #b45309 !important;
+  color: #fff7ed !important;
+}
+
+html[data-theme="dark"] .status-out_of_stock {
+  background: #991b1b !important;
+  color: #fef2f2 !important;
+}
+
+/* Fix medication/inventory pills */
+html[data-theme="dark"] .pill,
+html[data-theme="dark"] .pill-green,
+html[data-theme="dark"] .pill-red {
+  color: #ffffff !important;
+  border: 1px solid rgba(255,255,255,0.18) !important;
+}
+
+html[data-theme="dark"] .pill-green {
+  background: #166534 !important;
+}
+
+html[data-theme="dark"] .pill-red {
+  background: #991b1b !important;
+}
+
+/* Buttons and links */
+html[data-theme="dark"] button,
+html[data-theme="dark"] .button,
+html[data-theme="dark"] .btn-small {
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] a {
+  color: #5eead4 !important;
+}
+
+html[data-theme="dark"] header a {
+  color: #ffffff !important;
+}
+
+/* Filter tabs */
+html[data-theme="dark"] .filter {
+  background: #102a33 !important;
+  color: #f8fafc !important;
+  border: 1px solid #284653 !important;
+}
+
+html[data-theme="dark"] .filter.active {
+  background: #14b8a6 !important;
+  color: #06231f !important;
+  font-weight: bold !important;
+}
+
+/* Tables */
+html[data-theme="dark"] table {
+  background: #0b1820 !important;
+}
+
+html[data-theme="dark"] th {
+  background: #142833 !important;
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] td {
+  background: #0b1820 !important;
+  color: #f8fafc !important;
+  border-color: #284653 !important;
+}
+
+html[data-theme="dark"] tr {
+  border-color: #284653 !important;
+}
+
+/* Notes and code/history boxes */
+html[data-theme="dark"] .note-box,
+html[data-theme="dark"] pre {
+  background: #06141b !important;
+  color: #f8fafc !important;
+  border: 1px solid #284653 !important;
+}
+
+/* Chat messages */
+html[data-theme="dark"] .message {
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] .message .meta {
+  color: #dbeafe !important;
+}
+
+html[data-theme="dark"] .message.mine {
+  background: #115e59 !important;
+}
+
+html[data-theme="dark"] .message.other {
+  background: #1e3a8a !important;
+}
+
+/* Login forgot/error boxes */
+html[data-theme="dark"] .error,
+html[data-theme="dark"] .warning,
+html[data-theme="dark"] .success,
+html[data-theme="dark"] .message {
+  color: #ffffff !important;
+}
+
+/* Fix inline blue/edit buttons if browser overrides them */
+html[data-theme="dark"] a[style*="background:#1d4ed8"],
+html[data-theme="dark"] a[style*="background:#0f766e"] {
+  color: #ffffff !important;
+}
+
+/* Red unread badge should stay readable */
+html[data-theme="dark"] .chat-unread-badge {
+  background: #ef4444 !important;
+  color: #ffffff !important;
+}
+

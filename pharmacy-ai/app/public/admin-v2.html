@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vodia Pharmacy AI — Admin Portal V2</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --font-sans:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --bg:#eef0f3;--card:#fff;--soft:#f4f5f7;--line:#e0e0e0;
+  --text:#1a1a2e;--muted:#555;--faint:#888;
+  --info-bg:#e8f0fe;--info:#1a73e8;
+  --ok-bg:#e6f4ea;--ok:#1e8e3e;
+  --warn-bg:#fef9e7;--warn:#9a5a00;
+  --bad-bg:#fce8e6;--bad:#c5221f;
+  --radius:10px;
+}
+body{font-family:var(--font-sans);background:var(--bg);font-size:13px;color:var(--text)}
+button{font-family:var(--font-sans);border:1px solid #ccc;border-radius:7px;background:#fff;cursor:pointer;color:var(--text)}
+button:disabled{opacity:.45;cursor:not-allowed}
+input{font-family:var(--font-sans);border:1px solid var(--line);border-radius:7px;background:#fff;padding:7px 9px;color:var(--text);outline:none}
+.topnav{background:#fff;border-bottom:1px solid var(--line);padding:0 16px;height:54px;display:flex;align-items:center;justify-content:space-between}
+.brand{font-weight:650;font-size:15px;display:flex;align-items:center;gap:8px}
+.navlinks{display:flex;gap:6px}
+.navlink{padding:8px 20px;border-radius:9px;cursor:pointer;font-size:13px;color:var(--muted);background:#fff;border:1px solid #d4d4d4}
+.navlink.active{background:var(--info-bg);color:var(--info);font-weight:600;border-color:#b9d2ff}
+.layout{display:grid;grid-template-columns:330px 1fr;gap:14px;padding:16px}
+.queue{background:#fff;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;min-height:calc(100vh - 86px)}
+.qhead{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+.qitem{padding:13px 16px;border-top:1px solid var(--line);cursor:pointer;transition:background .1s}
+.qitem:hover{background:var(--soft)}
+.qitem.selected{background:#dfeeff;border-left:4px solid #378ADD}
+.detail{display:flex;flex-direction:column;gap:12px}
+.card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:15px 18px}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.metric{background:var(--soft);border-radius:9px;padding:14px 16px}
+.metric-label{font-size:12px;color:var(--muted);margin-bottom:6px}
+.metric-val{font-size:20px;font-weight:650;color:var(--text)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.sec-title{font-size:15px;font-weight:650;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field-label{font-size:12px;color:var(--faint)}
+.field-val{font-size:15px;color:var(--text)}
+.transcript-box{font-size:15px;color:var(--muted);background:var(--soft);border-radius:9px;padding:12px 14px;line-height:1.65;margin-bottom:10px}
+.pill{font-size:12px;padding:4px 10px;border-radius:999px;font-weight:600;white-space:nowrap}
+.pill-warn{background:var(--warn-bg);color:var(--warn)}
+.pill-danger{background:var(--bad-bg);color:var(--bad)}
+.pill-success{background:var(--ok-bg);color:var(--ok)}
+.pill-info{background:var(--info-bg);color:var(--info)}
+.pill-gray{background:var(--soft);color:var(--muted)}
+.flag{font-size:13px;padding:8px 10px;border-radius:9px;margin-bottom:7px}
+.actionbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.btn-approve{font-size:15px;padding:10px 22px;background:#fff;color:#111;border:1px solid #bbb;border-radius:9px;font-weight:600}
+.btn-reject{font-size:15px;padding:10px 22px;color:#111;border:1px solid #bbb;border-radius:9px;background:#fff}
+.btn-hold{font-size:15px;padding:10px 22px;color:#111;border:1px solid #bbb;border-radius:9px;background:#fff}
+.avatar{width:44px;height:44px;border-radius:50%;background:var(--info-bg);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--info);flex-shrink:0}
+.toast{position:fixed;top:16px;right:16px;padding:10px 16px;border-radius:9px;font-size:13px;font-weight:600;opacity:0;transition:opacity .25s;pointer-events:none;z-index:100}
+.toast-success{background:var(--ok-bg);color:var(--ok);border:1px solid #a8d5b5}
+.toast-danger{background:var(--bad-bg);color:var(--bad);border:1px solid #f5b7b1}
+.toast-warn{background:var(--warn-bg);color:var(--warn);border:1px solid #f0c040}
+.nav-view{display:none}
+.nav-view.active{display:block}
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+.tbl{width:100%;border-collapse:collapse;font-size:14px}
+.tbl th{text-align:left;padding:9px 10px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--line);font-weight:650}
+.tbl td{padding:11px 10px;border-bottom:1px solid var(--line);color:var(--text)}
+.tbl tr:hover td{background:var(--soft)}
+.smallbtn{font-size:13px;padding:7px 12px}
+@media(max-width:900px){
+  .layout{grid-template-columns:1fr}
+  .metrics,.row2,.stat-grid{grid-template-columns:1fr}
+  .navlinks{overflow:auto}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<div id="toast" class="toast"></div>
+
+<div class="topnav">
+  <div style="display:flex;align-items:center;gap:24px">
+    <span class="brand">💊 Vodia Pharmacy AI</span>
+    <div class="navlinks">
+      <button class="navlink active" onclick="switchView('orders',this)">Orders</button>
+      <button class="navlink" onclick="switchView('patients',this)">Patients</button>
+      <button class="navlink" onclick="switchView('callbacks',this)">Callbacks</button>
+      <button class="navlink" onclick="switchView('dashboard',this)">Dashboard</button>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <span id="clock" style="font-size:12px;color:var(--faint)"></span>
+    <div class="avatar" style="width:34px;height:34px;font-size:12px">JR</div>
+  </div>
+</div>
+
+<div id="view-orders" class="nav-view active">
+  <div class="layout">
+    <div class="queue">
+      <div class="qhead">
+        <span style="font-weight:650;font-size:16px">Order queue</span>
+        <span id="pending-count" class="pill pill-danger">0 pending</span>
+      </div>
+      <div id="queue-list"></div>
+    </div>
+    <div class="detail" id="order-detail"></div>
+  </div>
+</div>
+
+<div id="view-patients" class="nav-view">
+  <div style="padding:16px">
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:12px;flex-wrap:wrap">
+        <span style="font-weight:650;font-size:18px">Patient records</span>
+        <input type="text" placeholder="Search patients…" style="width:260px" id="pt-search" oninput="filterPatients()">
+      </div>
+      <table class="tbl">
+        <thead><tr><th>Name</th><th>DOB</th><th>Phone</th><th>Requests</th><th>Last request</th><th>Status</th></tr></thead>
+        <tbody id="pt-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="view-callbacks" class="nav-view">
+  <div style="padding:16px">
+    <div class="card">
+      <div style="font-weight:650;font-size:18px;margin-bottom:16px">Callback queue</div>
+      <table class="tbl">
+        <thead><tr><th>Patient</th><th>Reason</th><th>AI note</th><th>Time</th><th>Action</th></tr></thead>
+        <tbody id="cb-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="view-dashboard" class="nav-view">
+  <div style="padding:16px">
+    <div class="stat-grid">
+      <div class="metric"><div class="metric-label">Orders today</div><div class="metric-val" id="d-orders">0</div></div>
+      <div class="metric"><div class="metric-label">Approved</div><div class="metric-val" style="color:var(--ok)" id="d-approved">0</div></div>
+      <div class="metric"><div class="metric-label">Pending review</div><div class="metric-val" style="color:var(--warn)" id="d-pending">0</div></div>
+      <div class="metric"><div class="metric-label">AI calls handled</div><div class="metric-val" id="d-calls">0</div></div>
+    </div>
+    <div class="card">
+      <div class="sec-title">Recent activity</div>
+      <table class="tbl">
+        <thead><tr><th>Time</th><th>Event</th><th>Patient</th><th>Drug</th></tr></thead>
+        <tbody id="activity-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+let orders = [];
+let patients = [];
+let callbacks = [];
+let activity = [];
+let selectedOrder = 0;
+let orderStatuses = {};
+
+async function apiGet(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(await res.text());
+  return await res.json();
+}
+
+async function apiPost(url, body) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(body || {})
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return await res.json();
+}
+
+function pillForType(t){
+  if(String(t).toLowerCase().includes('refill')) return '<span class="pill pill-warn">Refill</span>';
+  if(String(t).toLowerCase().includes('new')) return '<span class="pill pill-danger">New Rx</span>';
+  if(String(t).toLowerCase().includes('pickup')) return '<span class="pill pill-success">Pickup</span>';
+  if(String(t).toLowerCase().includes('stock')) return '<span class="pill pill-info">Stock</span>';
+  return '<span class="pill pill-gray">' + escapeHtml(t || 'Request') + '</span>';
+}
+
+function pillForOrderStatus(id){
+  const s = orderStatuses[id] || 'pending';
+  if(s === 'approved') return '<span class="pill pill-success">Approved</span>';
+  if(s === 'rejected') return '<span class="pill pill-danger">Rejected</span>';
+  if(s === 'hold') return '<span class="pill pill-warn">On hold</span>';
+  if(s === 'ready') return '<span class="pill pill-success">Ready</span>';
+  return '<span class="pill pill-gray">Pending</span>';
+}
+
+function renderQueue(){
+  const list=document.getElementById('queue-list');
+  const pending=orders.filter(o => (orderStatuses[o.raw_id] || o.status) === 'pending').length;
+  document.getElementById('pending-count').textContent = pending + ' pending';
+
+  if (!orders.length) {
+    list.innerHTML = '<div style="padding:18px;color:var(--muted)">No pharmacy requests found.</div>';
+    document.getElementById('order-detail').innerHTML = '';
+    return;
+  }
+
+  list.innerHTML = orders.map((o,i)=>`
+    <div class="qitem${i===selectedOrder?' selected':''}" onclick="selectOrder(${i})">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;gap:8px">
+        <span style="font-weight:650">${escapeHtml(o.name)}</span>
+        ${pillForType(o.type)}
+      </div>
+      <div style="color:var(--muted);font-size:13px;margin-bottom:3px">${escapeHtml(o.drug)} · #${escapeHtml(o.id)}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <span style="color:var(--faint);font-size:12px">AI call ${escapeHtml(o.callTime || '—')}</span>
+        ${pillForOrderStatus(o.raw_id)}
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderDetail(i){
+  const o=orders[i];
+  if (!o) return;
+
+  const st=orderStatuses[o.raw_id] || o.status;
+  const locked=st !== 'pending' && st !== 'ready' && st !== 'hold';
+
+  const tel = phoneToTel(o.phone_raw || o.phone);
+
+  document.getElementById('order-detail').innerHTML=`
+    <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:14px">
+        <div class="avatar">${escapeHtml(o.initials)}</div>
+        <div>
+          <div style="font-weight:650;font-size:20px">${escapeHtml(o.name)}</div>
+          <div style="font-size:14px;color:var(--muted)">DOB: ${escapeHtml(o.dob)} · MRN: ${escapeHtml(o.mrn)} · ${escapeHtml(o.phone || '')}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <a href="tel:${tel}" style="text-decoration:none"><button class="smallbtn">☎ Call</button></a>
+        <button class="smallbtn" onclick="showToast('Message function coming next','warn')">💬 Message</button>
+      </div>
+    </div>
+
+    <div class="metrics">
+      <div class="metric"><div class="metric-label">Order type</div><div class="metric-val">${escapeHtml(o.type)}</div></div>
+      <div class="metric"><div class="metric-label">Refills remaining</div><div class="metric-val">${escapeHtml(String(o.refillsLeft))} of ${escapeHtml(String(o.refillsTotal))}</div></div>
+      <div class="metric"><div class="metric-label">Last filled</div><div class="metric-val">${escapeHtml(o.lastFilled)}</div></div>
+    </div>
+
+    <div class="card">
+      <div class="sec-title">💊 Prescription detail</div>
+      <div class="field-grid">
+        <div class="field"><div class="field-label">Drug</div><div class="field-val">${escapeHtml(o.drug)}</div></div>
+        <div class="field"><div class="field-label">Qty</div><div class="field-val">${escapeHtml(String(o.qty))}</div></div>
+        <div class="field"><div class="field-label">Sig</div><div class="field-val">${escapeHtml(o.sig)}</div></div>
+        <div class="field"><div class="field-label">Prescriber</div><div class="field-val">${escapeHtml(o.prescriber)}</div></div>
+        <div class="field"><div class="field-label">Rx written</div><div class="field-val">${escapeHtml(o.written)}</div></div>
+        <div class="field"><div class="field-label">Controlled substance</div><div class="field-val">${escapeHtml(o.controlled)}</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sec-title">🎙 AI call summary</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+        <span class="pill pill-success">Inbound · ${escapeHtml(o.callTime || '—')}</span>
+        <span class="pill pill-gray">Duration: ${escapeHtml(o.callDur || '—')}</span>
+      </div>
+      <div class="transcript-box">${escapeHtml(o.transcript)}</div>
+      <button class="smallbtn" onclick="showToast('Recording playback can be connected next','warn')">▶ Play recording</button>
+    </div>
+
+    <div class="row2">
+      <div class="card">
+        <div class="sec-title">🛡 Insurance</div>
+        <div style="display:flex;flex-direction:column;gap:7px;font-size:15px">
+          <div><span style="color:var(--faint)">Plan: </span>${escapeHtml(o.insurance)}</div>
+          <div><span style="color:var(--faint)">Member ID: </span>${escapeHtml(o.memberId)}</div>
+          <div><span style="color:var(--faint)">Group: </span>${escapeHtml(o.group)}</div>
+          <div><span style="color:var(--faint)">Copay: </span>${escapeHtml(o.copay)}</div>
+          <div style="margin-top:4px">
+            ${String(o.insStatus).toLowerCase()==='verified'
+              ?'<span class="pill pill-success">Eligibility verified ✓</span>'
+              :'<span class="pill pill-warn">Verification pending</span>'}
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="sec-title">⚠️ Flags & alerts</div>
+        ${(o.flags || []).map(f=>`<div class="flag pill-${f.type==='gray'?'gray':f.type}">${escapeHtml(f.msg)}</div>`).join('')}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="actionbar">
+        <div style="font-size:15px;color:var(--muted)">
+          Order <strong>#${escapeHtml(o.id)}</strong> ·
+          ${st==='pending'?'Awaiting pharmacist review':st==='approved'?'Approved — queued for fill':st==='rejected'?'Rejected':st==='hold'?'On hold':'Ready for pickup'}
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn-reject" onclick="handleAction('${o.raw_id}','reject')" ${locked?'disabled':''}>Reject</button>
+          <button class="btn-hold" onclick="handleAction('${o.raw_id}','hold')" ${locked?'disabled':''}>Hold</button>
+          <button class="btn-approve" onclick="handleAction('${o.raw_id}','approve')" ${locked?'disabled':''}>Approve & queue for fill ↗</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function selectOrder(i){selectedOrder=i;renderQueue();renderDetail(i)}
+
+async function handleAction(id, action){
+  try {
+    const result = await apiPost('/api/admin-v2/orders/' + encodeURIComponent(id) + '/action', {action});
+    if (!result.success) throw new Error(result.error || 'Action failed');
+
+    orderStatuses[id] = result.status;
+
+    if(action==='approve') showToast('Order approved and queued for fill','success');
+    else if(action==='reject') showToast('Order rejected','danger');
+    else showToast('Order placed on hold','warn');
+
+    await loadDashboard();
+    renderQueue();
+    renderDetail(selectedOrder);
+  } catch (err) {
+    showToast(err.message || 'Action failed','danger');
+  }
+}
+
+function showToast(msg,type){
+  const t=document.getElementById('toast');
+  t.className='toast toast-'+(type==='success'?'success':type==='danger'?'danger':'warn');
+  t.textContent=msg;t.style.opacity='1';
+  setTimeout(()=>t.style.opacity='0',2600);
+}
+
+function switchView(v,btn){
+  document.querySelectorAll('.nav-view').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.navlink').forEach(el=>el.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  btn.classList.add('active');
+}
+
+function renderPatients(list){
+  document.getElementById('pt-body').innerHTML=(list||patients).map(p=>`
+    <tr>
+      <td><div style="display:flex;align-items:center;gap:9px">
+        <div class="avatar" style="width:30px;height:30px;font-size:11px">${escapeHtml(initials(p.name))}</div>
+        ${escapeHtml(p.name)}</div></td>
+      <td style="color:var(--muted)">${escapeHtml(p.dob)}</td>
+      <td style="color:var(--muted)">${escapeHtml(p.phone)}</td>
+      <td>${escapeHtml(String(p.rx))}</td>
+      <td style="color:var(--muted)">${escapeHtml(p.lastOrder)}</td>
+      <td><span class="pill ${p.status==='Active'?'pill-success':p.status==='Review'?'pill-warn':'pill-gray'}">${escapeHtml(p.status)}</span></td>
+    </tr>
+  `).join('');
+}
+
+function filterPatients(){
+  const q=document.getElementById('pt-search').value.toLowerCase();
+  renderPatients(patients.filter(p=>
+    String(p.name).toLowerCase().includes(q) ||
+    String(p.phone).toLowerCase().includes(q) ||
+    String(p.dob).toLowerCase().includes(q)
+  ));
+}
+
+function renderCallbacks(){
+  document.getElementById('cb-body').innerHTML=callbacks.map(c=>`
+    <tr>
+      <td style="font-weight:650">${escapeHtml(c.name)}</td>
+      <td>${escapeHtml(c.reason)}</td>
+      <td style="color:var(--muted);font-size:13px">${escapeHtml(c.note)}</td>
+      <td style="color:var(--faint)">${escapeHtml(c.time)}</td>
+      <td><a href="tel:${phoneToTel(c.phone_raw || c.phone)}" style="text-decoration:none"><button class="smallbtn">Call back</button></a></td>
+    </tr>
+  `).join('');
+}
+
+function renderActivity(){
+  document.getElementById('activity-body').innerHTML=activity.map(a=>`
+    <tr>
+      <td style="color:var(--faint)">${escapeHtml(a.time)}</td>
+      <td>${escapeHtml(a.event)}</td>
+      <td>${escapeHtml(a.patient)}</td>
+      <td style="color:var(--muted)">${escapeHtml(a.drug)}</td>
+    </tr>
+  `).join('');
+}
+
+function updateClock(){
+  document.getElementById('clock').textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, function (m) {
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m];
+  });
+}
+
+function initials(name) {
+  return String(name || 'PT').split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0].toUpperCase()).join('') || 'PT';
+}
+
+function phoneToTel(phone) {
+  const digits = String(phone || '').replace(/\D/g, '');
+  if (digits.length === 10) return '+1' + digits;
+  if (digits.length === 11 && digits[0] === '1') return '+' + digits;
+  return digits ? '+' + digits : '';
+}
+
+async function loadOrders() {
+  const data = await apiGet('/api/admin-v2/orders');
+  orders = data.orders || [];
+  orderStatuses = {};
+  orders.forEach(o => orderStatuses[o.raw_id] = o.status || 'pending');
+  selectedOrder = 0;
+  renderQueue();
+  renderDetail(0);
+}
+
+async function loadPatients() {
+  const data = await apiGet('/api/admin-v2/patients');
+  patients = data.patients || [];
+  renderPatients();
+}
+
+async function loadCallbacks() {
+  const data = await apiGet('/api/admin-v2/callbacks');
+  callbacks = data.callbacks || [];
+  renderCallbacks();
+}
+
+async function loadDashboard() {
+  const data = await apiGet('/api/admin-v2/dashboard');
+  const stats = data.stats || {};
+  activity = data.activity || [];
+
+  document.getElementById('d-orders').textContent = stats.ordersToday ?? 0;
+  document.getElementById('d-approved').textContent = stats.approved ?? 0;
+  document.getElementById('d-pending').textContent = stats.pending ?? 0;
+  document.getElementById('d-calls').textContent = stats.callsHandled ?? 0;
+
+  renderActivity();
+}
+
+async function boot() {
+  updateClock();
+  setInterval(updateClock,10000);
+
+  try {
+    await Promise.all([
+      loadOrders(),
+      loadPatients(),
+      loadCallbacks(),
+      loadDashboard()
+    ]);
+  } catch (err) {
+    showToast('Failed to load admin portal data: ' + err.message, 'danger');
+    console.error(err);
+  }
+}
+
+boot();
+</script>
+</body>
+</html>
