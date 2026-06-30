@@ -193,12 +193,67 @@ cat > "$INSTALL_DIR/.env" <<EOF
 NODE_ENV=production
 PORT=$PORT
 DOMAIN=$DOMAIN
+APP_DOMAIN=$DOMAIN
+ENABLEproduction
+PORT=$PORT
+DOMAIN=$DOMAIN
+APP_DOMAIN=$DOMAIN
+PUBLIC_URL=$PUBLIC_URL
+PHARMACY_API_SECRET=$EXISTING_HTTPS=$ENABLE_HTTPS
 PUBLIC_URL=$PUBLIC_URL
 PHARMACY_API_SECRET=$EXISTING_SECRET
 DATABASE_PATH=./pharmacy.db
 EOF
 
 chmod 600 "$INSTALL_DIR/.env"
+
+cat > "$INSTALL_DIR/vodia-script-values.sh" <<'VODIA_VALUES_EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+DIR="$(cd "$(dirname "$0")" && pwd)"
+ENV_FILE="$DIR/.env"
+
+if [ ! -f "$ENV_FILE" ]; then
+  echo "ERROR: Missing .env file: $ENV_FILE"
+  exit 1
+fi
+
+set -a
+. "$ENV_FILE"
+set +a
+
+BASE_URL="${PUBLIC_URL:-}"
+
+if [ -z "$BASE_URL" ]; then
+  if [ "${ENABLE_HTTPS:-false}" = "true" ] && [ "${APP_DOMAIN:-localhost}" != "localhost" ]; then
+    BASE_URL="https://${APP_DOMAIN}"
+  elif [ "${APP_DOMAIN:-localhost}" != "localhost" ]; then
+    BASE_URL="http://${APP_DOMAIN}:${PORT:-3200}"
+  else
+    BASE_URL="http://localhost:${PORT:-3200}"
+  fi
+fi
+
+BASE_URL="${BASE_URL%/}"
+
+cat <<VALUES
+// Generated values for Vodia AI script
+
+var pharmacyApiSecret = "${PHARMACY_API_SECRET}"
+
+var pharmacyRequestUrl = "${BASE_URL}/api/ai/refill-intake"
+var customerLookupUrl = "${BASE_URL}/api/ai/customer-lookup"
+var customerEnrichUrl = "${BASE_URL}/api/ai/refill-request-enrich"
+var fulfillmentUrl = "${BASE_URL}/api/ai/request-fulfillment"
+var pharmacyLocationSearchUrl = "${BASE_URL}/api/ai/pharmacy-location-search"
+var previousRequestLookupUrl = "${BASE_URL}/api/ai/previous-request-lookup"
+var statusCallbackNoteUrl = "${BASE_URL}/api/ai/status-callback-note"
+VALUES
+VODIA_VALUES_EOF
+
+chmod 700 "$INSTALL_DIR/vodia-script-values.sh"
+
 
 echo "Starting app with PM2..."
 pm2 stop "$APP_NAME" >/dev/null 2>&1 || true
@@ -270,7 +325,7 @@ fi
 
 echo ""
 echo "Generate Vodia Audio AI script values AFTER this install:"
-echo "  sudo npx -y vodia-pharmacy-ai@$APP_VERSION vodia-script --dir $INSTALL_DIR"
+echo "  sudo $INSTALL_DIR/vodia-script-values.sh"
 echo ""
 echo "Important:"
 echo "  Paste the generated values into the top customer configuration section of:"

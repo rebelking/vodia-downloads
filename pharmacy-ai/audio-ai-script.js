@@ -8,12 +8,7 @@ var secret = typeof secret !== "undefined" ? secret : ""
 }
 
 // Pharmacy backend settings
-var pharmacyApiSecret = "PASTE_GENER Step 2 — Replace real values with customer placeholders
-
-Run this whole block:
-
-```bash
-perl -ATED_PHARMACY_SECRET_HERE"
+var pharmacyApiSecret = "PASTE_GENERATED_PHARMACY_SECRET_HERE"
 
 var pharmacyRequestUrl = "PASTE_GENERATED_PHARMACY_REQUEST_URL_HERE"
 var customerLookupUrl = "PASTE_GENERATED_CUSTOMER_LOOKUP_URL_HERE"
