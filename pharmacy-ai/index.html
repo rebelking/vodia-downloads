@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Vodia Pharmacy AI</title>
+  <style>
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      margin: 0;
+      background: #f6f8fb;
+      color: #172033;
+      line-height: 1.55;
+    }
+    main {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 36px 20px 60px;
+    }
+    section {
+      background: #fff;
+      border: 1px solid #d9e1ee;
+      border-radius: 14px;
+      padding: 24px;
+      margin: 18px 0;
+      box-shadow: 0 2px 10px rgba(20,35,60,.06);
+    }
+    pre {
+      background: #101827;
+      color: #e6edf7;
+      padding: 16px;
+      border-radius: 9px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+    }
+    code {
+      background: #eef3fb;
+      padding: 2px 5px;
+      border-radius: 5px;
+    }
+    a {
+      color: #0b62d6;
+      font-weight: 700;
+    }
+    .warn {
+      background: #fff4d6;
+      border-left: 5px solid #f3b51b;
+      padding: 14px 16px;
+      border-radius: 9px;
+    }
+    .ok {
+      background: #eaf8ef;
+      border-left: 5px solid #28a745;
+      padding: 14px 16px;
+      border-radius: 9px;
+    }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Vodia Pharmacy AI</h1>
+  <p>DNS-enforced installer and full Audio AI script package.</p>
+
+  <section>
+    <h2>Package Files</h2>
+    <ul>
+      <li><a href="./install-ubuntu.sh">install-ubuntu.sh</a></li>
+      <li><a href="./install-guide.md">install-guide.md</a></li>
+      <li><a href="./audio-ai-script.js">audio-ai-script.js</a></li>
+      <li><a href="./npm">NPM package link</a></li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>HTTPS Install</h2>
+    <p>DNS must point to this server before the installer continues.</p>
+    <pre>curl -fsSL https://get.tryvodia.com/pharmacy-ai/install-ubuntu.sh | sudo env DOMAIN=pharmacytest.audiomercy.com ENABLE_HTTPS=true bash</pre>
+  </section>
+
+  <section>
+    <h2>Generate Audio AI Script Values</h2>
+    <p>Run this only after the HTTPS installer completes successfully.</p>
+    <pre>sudo npx -y vodia-pharmacy-ai@0.2.3 vodia-script --dir /opt/vodia-pharmacy-ai-demo</pre>
+  </section>
+
+  <section>
+    <h2>Only Change These Script Values</h2>
+    <pre>var pharmacyApiSecret = "PASTE_GENERATED_PHARMACY_SECRET_HERE"
+
+var pharmacyRequestUrl = "PASTE_GENERATED_PHARMACY_REQUEST_URL_HERE"
+var customerLookupUrl = "PASTE_GENERATED_CUSTOMER_LOOKUP_URL_HERE"
+var customerEnrichUrl = "PASTE_GENERATED_CUSTOMER_ENRICH_URL_HERE"
+var fulfillmentUrl = "PASTE_GENERATED_FULFILLMENT_URL_HERE"
+var pharmacyLocationSearchUrl = "PASTE_GENERATED_PHARMACY_LOCATION_SEARCH_URL_HERE"
+
+var staffTransferDestination = "2005"
+
+var allowDemoPharmacyFallback = true</pre>
+
+    <div class="warn">
+      Do not paste the OpenAI API key into the script. Enter it in the Vodia Audio AI / Voice Agent OpenAI key field.
+    </div>
+  </section>
+
+  <section>
+    <h2>Production Reminder</h2>
+    <div class="ok">
+      For production, set <code>allowDemoPharmacyFallback</code> to <code>false</code>, rotate the secret, remove demo data, and review PHI/HIPAA requirements.
+    </div>
+  </section>
+</main>
+</body>
+</html>

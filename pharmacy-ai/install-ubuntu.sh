@@ -8,140 +8,271 @@ DOMAIN="${DOMAIN:-localhost}"
 APP_NAME="${APP_NAME:-vodia-pharmacy-ai-demo}"
 ENABLE_HTTPS="${ENABLE_HTTPS:-false}"
 
-if [ "$EUID" -ne 0 ]; then
-  echo "Please run this installer with sudo:"
-  echo "curl -fsSL https://get.vodia.com/pharmacy-ai/install-ubuntu.sh | sudo bash"
-  exit 1
-fi
-
-echo "Vodia Pharmacy AI Ubuntu installer"
-echo "App version: $APP_VERSION"
+echo "Vodia Pharmacy AI installer"
+echo "Version: $APP_VERSION"
 echo "Install dir: $INSTALL_DIR"
 echo "Port: $PORT"
 echo "Domain: $DOMAIN"
-echo "App name: $APP_NAME"
 echo "HTTPS: $ENABLE_HTTPS"
-echo
+echo ""
 
-echo "Installing Ubuntu prerequisites..."
-apt-get update
-apt-get install -y curl ca-certificates gnupg build-essential sqlite3 dnsutils
-
-if ! command -v node >/dev/null 2>&1; then
-  echo "Installing Node.js..."
-  curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
-  apt-get install -y nodejs
-else
-  echo "Node.js already installed: $(node -v)"
-fi
-
-if ! command -v npm >/dev/null 2>&1; then
-  echo "npm was not found after Node.js installation."
+if [ "$(id -u)" -ne 0 ]; then
+  echo "ERROR: Run this installer with sudo."
+  echo "Example:"
+  echo "  curl -fsSL https://get.tryvodia.com/pharmacy-ai/install-ubuntu.sh | sudo bash"
   exit 1
 fi
 
-echo "npm: $(npm -v)"
-echo "npx: $(npx -v)"
+command_exists() {
+  command -v "$1" >/dev/null 2>&1
+}
 
-if ! command -v pm2 >/dev/null 2>&1; then
+get_public_ip() {
+  local ip=""
+  ip="$(curl -4fsSL https://api.ipify.org 2>/dev/null || true)"
+  if [ -z "$ip" ]; then
+    ip="$(curl -4fsSL https://ifconfig.me 2>/dev/null || true)"
+  fi
+  echo "$ip"
+}
+
+resolve_domain_ipv4() {
+  local host="$1"
+
+  if command_exists dig; then
+    dig +short A "$host" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' | sort -u || true
+    return
+  fi
+
+  if command_exists getent; then
+    getent ahostsv4 "$host" | awk '{print $1}' | sort -u || true
+    return
+  fi
+
+  if command_exists host; then
+    host "$host" | awk '/has address/ {print $NF}' | sort -u || true
+    return
+  fi
+
+  echo ""
+}
+
+validate_domain_hostname() {
+  local host="$1"
+
+  if [ -z "$host" ] || [ "$host" = "localhost" ]; then
+    echo "ERROR: HTTPS setup requires a real domain."
+    echo "Example:"
+    echo "  DOMAIN=pharmacy.example.com ENABLE_HTTPS=true"
+    exit 1
+  fi
+
+  if echo "$host" | grep -qiE '^https?://'; then
+    echo "ERROR: DOMAIN must be only the hostname."
+    echo "Use:"
+    echo "  DOMAIN=pharmacy.example.com"
+    echo "Do not use:"
+    echo "  DOMAIN=https://pharmacy.example.com"
+    exit 1
+  fi
+
+  if echo "$host" | grep -q '/'; then
+    echo "ERROR: DOMAIN must not include a path."
+    echo "Use only the hostname, for example:"
+    echo "  DOMAIN=pharmacy.example.com"
+    exit 1
+  fi
+}
+
+check_dns_ready_for_https() {
+  local host="$1"
+  local public_ip=""
+  local dns_ips=""
+
+  validate_domain_hostname "$host"
+
+  echo "Checking DNS before HTTPS setup..."
+  echo "Domain: $host"
+
+  public_ip="$(get_public_ip)"
+  if [ -z "$public_ip" ]; then
+    echo "ERROR: Could not detect this server public IPv4 address."
+    echo "Check outbound internet access and run the installer again."
+    exit 1
+  fi
+
+  dns_ips="$(resolve_domain_ipv4 "$host")"
+
+  echo "Server public IP:"
+  echo "  $public_ip"
+  echo "DNS result for $host:"
+  if [ -n "$dns_ips" ]; then
+    echo "$dns_ips" | sed 's/^/  /'
+  else
+    echo "  No IPv4 A record found."
+  fi
+  echo ""
+
+  if ! echo "$dns_ips" | grep -qx "$public_ip"; then
+    echo "ERROR: DNS is not ready."
+    echo ""
+    echo "$host must point to this server public IP before HTTPS setup can continue."
+    echo ""
+    echo "Create or update this DNS record:"
+    echo "  Type:  A"
+    echo "  Name:  $host"
+    echo "  Value: $public_ip"
+    echo ""
+    echo "After DNS updates, run the installer again:"
+    echo "  curl -fsSL https://get.tryvodia.com/pharmacy-ai/install-ubuntu.sh | sudo env DOMAIN=$host ENABLE_HTTPS=true bash"
+    echo ""
+    echo "Tip: If DNS was just changed, wait for propagation and try again."
+    exit 1
+  fi
+
+  echo "DNS check passed."
+  echo ""
+}
+
+if [ "$ENABLE_HTTPS" = "true" ]; then
+  check_dns_ready_for_https "$DOMAIN"
+fi
+
+echo "Updating apt packages..."
+apt-get update -y
+
+echo "Installing required packages..."
+apt-get install -y curl ca-certificates gnupg lsb-release unzip
+
+if [ "$ENABLE_HTTPS" = "true" ]; then
+  apt-get install -y nginx certbot python3-certbot-nginx dnsutils
+else
+  apt-get install -y dnsutils || true
+fi
+
+if ! command_exists node; then
+  echo "Installing Node.js 20..."
+  curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+  apt-get install -y nodejs
+fi
+
+if ! command_exists pm2; then
   echo "Installing PM2..."
   npm install -g pm2
+fi
+
+echo "Preparing install directory..."
+mkdir -p "$INSTALL_DIR"
+cd "$INSTALL_DIR"
+
+echo "Installing Vodia Pharmacy AI from NPM..."
+npm init -y >/dev/null 2>&1 || true
+npm install "vodia-pharmacy-ai@$APP_VERSION"
+
+echo "Writing environment file..."
+if [ "$ENABLE_HTTPS" = "true" ]; then
+  PUBLIC_URL="https://$DOMAIN"
 else
-  echo "PM2 already installed: $(pm2 -v)"
+  if [ "$DOMAIN" = "localhost" ]; then
+    PUBLIC_URL="http://$(get_public_ip):$PORT"
+  else
+    PUBLIC_URL="http://$DOMAIN:$PORT"
+  fi
 fi
 
-INSTALL_ARGS=(
-  install
-  --demo
-  --dir "$INSTALL_DIR"
-  --port "$PORT"
-  --domain "$DOMAIN"
-  --app-name "$APP_NAME"
-  --force
-)
-
-if [ "$ENABLE_HTTPS" = "true" ] && [ "$DOMAIN" != "localhost" ]; then
-  echo "HTTPS requested for $DOMAIN"
-
-  PUBLIC_IP="$(curl -fsSL https://api.ipify.org || true)"
-  DNS_IP="$(dig +short "$DOMAIN" A | tail -n1 || true)"
-
-  echo "Server public IP: $PUBLIC_IP"
-  echo "DNS IP for $DOMAIN: $DNS_IP"
-
-  if [ -z "$DNS_IP" ]; then
-    echo
-    echo "DNS does not resolve yet."
-    echo "Create this DNS record first:"
-    echo "$DOMAIN A $PUBLIC_IP"
-    exit 1
-  fi
-
-  if [ -n "$PUBLIC_IP" ] && [ "$PUBLIC_IP" != "$DNS_IP" ]; then
-    echo
-    echo "DNS does not point to this server yet."
-    echo "Create or update this DNS record:"
-    echo "$DOMAIN A $PUBLIC_IP"
-    exit 1
-  fi
-
-  echo "Installing Caddy..."
-  apt-get install -y debian-keyring debian-archive-keyring apt-transport-https
-  curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-  curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' > /etc/apt/sources.list.d/caddy-stable.list
-  apt-get update
-  apt-get install -y caddy
-
-  INSTALL_ARGS+=(--caddy)
+EXISTING_SECRET=""
+if [ -f "$INSTALL_DIR/.env" ]; then
+  EXISTING_SECRET="$(grep '^PHARMACY_API_SECRET=' "$INSTALL_DIR/.env" | cut -d= -f2- || true)"
 fi
 
-echo
-echo "Installing Vodia Pharmacy AI from npm..."
+if [ -z "$EXISTING_SECRET" ]; then
+  EXISTING_SECRET="$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")"
+fi
 
-npx -y "vodia-pharmacy-ai@$APP_VERSION" "${INSTALL_ARGS[@]}"
+cat > "$INSTALL_DIR/.env" <<EOF
+NODE_ENV=production
+PORT=$PORT
+DOMAIN=$DOMAIN
+PUBLIC_URL=$PUBLIC_URL
+PHARMACY_API_SECRET=$EXISTING_SECRET
+DATABASE_PATH=./pharmacy.db
+EOF
 
-echo
-echo "Restarting app with port preserved..."
+chmod 600 "$INSTALL_DIR/.env"
 
-PORT="$PORT" pm2 restart "$APP_NAME" --update-env || true
+echo "Starting app with PM2..."
+pm2 stop "$APP_NAME" >/dev/null 2>&1 || true
+pm2 delete "$APP_NAME" >/dev/null 2>&1 || true
+
+PORT="$PORT" pm2 start "$INSTALL_DIR/node_modules/.bin/vodia-pharmacy-ai" --name "$APP_NAME" --update-env
 pm2 save || true
 
-sleep 2
+echo "Waiting for app..."
+sleep 4
 
-echo
-echo "Checking PM2..."
-pm2 list
+if [ "$ENABLE_HTTPS" = "true" ]; then
+  echo "Configuring nginx reverse proxy..."
 
-echo
+  cat > "/etc/nginx/sites-available/$APP_NAME" <<EOF
+server {
+    listen 80;
+    server_name $DOMAIN;
+
+    location / {
+        proxy_pass http://127.0.0.1:$PORT;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+}
+EOF
+
+  ln -sf "/etc/nginx/sites-available/$APP_NAME" "/etc/nginx/sites-enabled/$APP_NAME"
+  nginx -t
+  systemctl reload nginx
+
+  echo "Requesting Let's Encrypt certificate..."
+  certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos -m "admin@$DOMAIN" --redirect || {
+    echo ""
+    echo "ERROR: Certbot failed."
+    echo "DNS passed, but certificate issuance failed."
+    echo "Check ports 80/443, firewall, and nginx logs."
+    exit 1
+  }
+fi
+
+echo ""
 echo "Checking port $PORT..."
 ss -ltnp | grep ":$PORT" || true
 
-echo
+echo ""
 echo "Health check:"
-curl -fsS "http://127.0.0.1:$PORT/health" || true
+if [ "$ENABLE_HTTPS" = "true" ]; then
+  curl -fsSL "https://$DOMAIN/health" || true
+else
+  curl -fsSL "http://127.0.0.1:$PORT/health" || true
+fi
+echo ""
 
-echo
-echo
+echo ""
 echo "Vodia Pharmacy AI install complete ✅"
-echo
+echo ""
 
-echo "Portal:"
-if [ "$ENABLE_HTTPS" = "true" ] && [ "$DOMAIN" != "localhost" ]; then
+if [ "$ENABLE_HTTPS" = "true" ]; then
+  echo "Portal:"
   echo "  https://$DOMAIN/portal"
 else
-  PUBLIC_IP="$(curl -fsSL https://api.ipify.org || true)"
-  if [ -n "$PUBLIC_IP" ]; then
-    echo "  http://$PUBLIC_IP:$PORT/portal"
-  else
-    echo "  http://SERVER_IP:$PORT/portal"
-  fi
+  echo "Portal:"
+  echo "  $PUBLIC_URL/portal"
 fi
 
-echo
-echo "Health:"
-echo "  curl http://127.0.0.1:$PORT/health"
-
-echo
-echo "Vodia script values:"
-echo "  npx -y vodia-pharmacy-ai@$APP_VERSION vodia-script --dir $INSTALL_DIR"
-echo
+echo ""
+echo "Generate Vodia Audio AI script values AFTER this install:"
+echo "  sudo npx -y vodia-pharmacy-ai@$APP_VERSION vodia-script --dir $INSTALL_DIR"
+echo ""
+echo "Important:"
+echo "  Paste the generated values into the top customer configuration section of:"
+echo "  https://get.tryvodia.com/pharmacy-ai/audio-ai-script.js"
+echo ""
