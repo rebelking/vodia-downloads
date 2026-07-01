@@ -45,12 +45,12 @@ if ! id "${REAL_USER}" >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "[1/14] Installing system packages..."
+echo "[1/15] Installing system packages..."
 apt update
 DEBIAN_FRONTEND=noninteractive apt install -y \
   curl git rsync build-essential nginx sqlite3 ufw ca-certificates gnupg unzip openssl
 
-echo "[2/14] Installing Node.js ${NODE_MAJOR}.x if needed..."
+echo "[2/15] Installing Node.js ${NODE_MAJOR}.x if needed..."
 if ! command -v node >/dev/null 2>&1; then
   curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash -
   DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
@@ -61,10 +61,10 @@ fi
 echo "Node: $(node -v)"
 echo "npm:  $(npm -v)"
 
-echo "[3/14] Installing PM2..."
+echo "[3/15] Installing PM2..."
 npm install -g pm2
 
-echo "[4/14] Downloading installer repo..."
+echo "[4/15] Downloading installer repo..."
 rm -rf "${REPO_TMP}"
 git clone --branch "${REPO_BRANCH}" "${REPO_URL}" "${REPO_TMP}"
 
@@ -82,7 +82,7 @@ if [ ! -f "${SRC_APP_DIR}/package.json" ]; then
   exit 1
 fi
 
-echo "[5/14] Backing up existing install if present..."
+echo "[5/15] Backing up existing install if present..."
 mkdir -p /opt/backups
 if [ -d "${INSTALL_DIR}" ]; then
   BACKUP="/opt/backups/${APP_NAME}-backup-$(date +%F-%H%M%S).tgz"
@@ -90,7 +90,7 @@ if [ -d "${INSTALL_DIR}" ]; then
   echo "Backup created: ${BACKUP}"
 fi
 
-echo "[6/14] Installing full app files..."
+echo "[6/15] Installing full app files..."
 mkdir -p "${INSTALL_DIR}"
 
 rsync -av --delete \
@@ -112,7 +112,7 @@ fi
 
 chown -R "${REAL_USER}:${REAL_USER}" "${INSTALL_DIR}"
 
-echo "[7/14] Creating .env if missing..."
+echo "[7/15] Creating .env if missing..."
 PUBLIC_BASE_URL="http://${DOMAIN}"
 
 if [ ! -f "${INSTALL_DIR}/.env" ]; then
@@ -158,7 +158,7 @@ else
   echo ".env already exists. Keeping existing .env."
 fi
 
-echo "[8/14] Loading install environment values..."
+echo "[8/15] Loading install environment values..."
 PHARMACY_SECRET_VALUE="$(grep -E '^(PHARMACY_SECRET|PHARMACY_API_SECRET)=' "${INSTALL_DIR}/.env" | head -1 | cut -d= -f2- || true)"
 PUBLIC_URL_VALUE="$(grep '^PUBLIC_BASE_URL=' "${INSTALL_DIR}/.env" | cut -d= -f2- || true)"
 
@@ -176,7 +176,7 @@ if [ -z "${PUBLIC_URL_VALUE}" ]; then
   echo "PUBLIC_BASE_URL=${PUBLIC_URL_VALUE}" >> "${INSTALL_DIR}/.env"
 fi
 
-echo "[9/14] Creating clean empty database if missing..."
+echo "[9/15] Creating clean empty database if missing..."
 if [ ! -f "${INSTALL_DIR}/pharmacy.db" ]; then
   if [ -s "${INSTALL_DIR}/schema.sql" ]; then
     sqlite3 "${INSTALL_DIR}/pharmacy.db" < "${INSTALL_DIR}/schema.sql"
@@ -193,7 +193,7 @@ else
   echo "Database already exists. Keeping ${INSTALL_DIR}/pharmacy.db"
 fi
 
-echo "[10/14] Generating local Vodia Voice Agent script..."
+echo "[10/15] Generating local Vodia Voice Agent script..."
 VOICE_TEMPLATE="${INSTALL_DIR}/voice-agent/vodia-pharmacy-ai-voice-agent.template.js"
 VOICE_LOCAL="${INSTALL_DIR}/voice-agent/vodia-pharmacy-ai-voice-agent.local.js"
 
@@ -217,20 +217,133 @@ else
   echo "  ${VOICE_TEMPLATE}"
 fi
 
-echo "[11/14] Installing npm dependencies..."
+echo "[11/15] Installing npm dependencies..."
 cd "${INSTALL_DIR}"
 sudo -u "${REAL_USER}" npm install --omit=dev
 
-echo "[12/14] Starting PM2 app..."
+echo "[12/15] Creating/resetting portal admin login..."
+PORTAL_ADMIN_USERNAME="${PORTAL_ADMIN_USERNAME:-admin@vodia.local}"
+PORTAL_ADMIN_PASSWORD="${PORTAL_ADMIN_PASSWORD:-}"
+
+if [ -z "${PORTAL_ADMIN_PASSWORD}" ]; then
+  PORTAL_ADMIN_PASSWORD="$(openssl rand -base64 24 | tr -d '/+=' | cut -c1-20)!A1"
+  PORTAL_ADMIN_PASSWORD_GENERATED="true"
+else
+  PORTAL_ADMIN_PASSWORD_GENERATED="false"
+fi
+
+export PORTAL_ADMIN_USERNAME
+export PORTAL_ADMIN_PASSWORD
+export SQLITE_PATH="${INSTALL_DIR}/pharmacy.db"
+
+cd "${INSTALL_DIR}"
+
+node <<'NODE'
+require("dotenv").config({ path: "/opt/vodia-pharmacy-ai/.env" });
+
+const sqlite3 = require("sqlite3").verbose();
+
+let bcrypt;
+try {
+  bcrypt = require("bcrypt");
+} catch (e) {
+  bcrypt = require("bcryptjs");
+}
+
+const dbPath = process.env.SQLITE_PATH || "/opt/vodia-pharmacy-ai/pharmacy.db";
+const username = process.env.PORTAL_ADMIN_USERNAME || "admin@vodia.local";
+const password = process.env.PORTAL_ADMIN_PASSWORD || "";
+
+if (!password) {
+  console.error("ERROR: Portal admin password missing.");
+  process.exit(1);
+}
+
+const db = new sqlite3.Database(dbPath);
+
+function run(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function (err) {
+      err ? reject(err) : resolve(this);
+    });
+  });
+}
+
+function get(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => err ? reject(err) : resolve(row));
+  });
+}
+
+(async () => {
+  const hash = await bcrypt.hash(password, 10);
+  const now = new Date().toISOString();
+
+  const existing = await get(
+    "SELECT id FROM portal_users WHERE username = ? LIMIT 1",
+    [username]
+  );
+
+  if (existing && existing.id) {
+    await run(
+      `UPDATE portal_users
+       SET name = ?,
+           email = ?,
+           password_hash = ?,
+           role = 'admin',
+           active = 1,
+           revoked_at = NULL,
+           updated_at = ?
+       WHERE id = ?`,
+      ["Portal Admin", username, hash, now, existing.id]
+    );
+
+    console.log("Portal admin updated: " + username);
+  } else {
+    await run(
+      `INSERT INTO portal_users
+       (name, email, username, password_hash, role, active, created_at, updated_at)
+       VALUES (?, ?, ?, ?, 'admin', 1, CURRENT_TIMESTAMP, ?)`,
+      ["Portal Admin", username, username, hash, now]
+    );
+
+    console.log("Portal admin created: " + username);
+  }
+
+  db.close();
+})().catch(err => {
+  console.error("ERROR creating portal admin:", err.message);
+  db.close();
+  process.exit(1);
+});
+NODE
+
+chown "${REAL_USER}:${REAL_USER}" "${INSTALL_DIR}/pharmacy.db" "${INSTALL_DIR}"/pharmacy.db-* 2>/dev/null || true
+chmod 600 "${INSTALL_DIR}/pharmacy.db" 2>/dev/null || true
+
+PORTAL_LOGIN_FILE="/root/vodia-pharmacy-ai-portal-login.txt"
+cat > "${PORTAL_LOGIN_FILE}" <<LOGIN_EOF
+Vodia Pharmacy AI Portal Login
+URL: https://${DOMAIN}/portal
+Username: ${PORTAL_ADMIN_USERNAME}
+Password: ${PORTAL_ADMIN_PASSWORD}
+LOGIN_EOF
+chmod 600 "${PORTAL_LOGIN_FILE}"
+
+echo "Portal admin login saved to:"
+echo "  ${PORTAL_LOGIN_FILE}"
+
+
+echo "[13/15] Starting PM2 app..."
 sudo -u "${REAL_USER}" pm2 delete "${APP_NAME}" >/dev/null 2>&1 || true
 sudo -u "${REAL_USER}" bash -lc "cd '${INSTALL_DIR}' && pm2 start server.js --name '${APP_NAME}' --update-env"
 sudo -u "${REAL_USER}" pm2 save
 
-echo "[13/14] Configuring PM2 startup..."
+echo "[14/15] Configuring PM2 startup..."
 pm2 startup systemd -u "${REAL_USER}" --hp "${REAL_HOME}" >/dev/null 2>&1 || true
 sudo -u "${REAL_USER}" pm2 save >/dev/null 2>&1 || true
 
-echo "[14/14] Configuring Nginx..."
+echo "[15/15] Configuring Nginx..."
 cat > /etc/nginx/conf.d/vodia-websocket-map.conf <<'NGINXMAPEOF'
 map $http_upgrade $connection_upgrade {
     default upgrade;
@@ -319,6 +432,18 @@ else
   echo "  curl http://${DOMAIN}/health"
   echo "  http://${DOMAIN}/portal"
 fi
+echo ""
+echo "Portal:"
+if [ "${ENABLE_HTTPS}" = "true" ]; then
+  echo "  https://${DOMAIN}/portal"
+else
+  echo "  http://${DOMAIN}/portal"
+fi
+echo ""
+echo "Portal admin login:"
+echo "  Username: ${PORTAL_ADMIN_USERNAME}"
+echo "  Password: ${PORTAL_ADMIN_PASSWORD}"
+echo "  Saved to: /root/vodia-pharmacy-ai-portal-login.txt"
 echo ""
 echo "App folder:"
 echo "  ${INSTALL_DIR}"
