@@ -11,6 +11,7 @@ const sqlite3 = require('sqlite3').verbose();
 const nodemailer = require('nodemailer');
 const session = require('express-session');
 const { installPortalRoutes } = require('./portal');
+const { installVoiceAgentPortalRoutes } = require('./voice-agent-portal-routes');
 const { installChatUnreadRoutes } = require('./chat-unread');
 const { installChatRoutes } = require('./chat');
 const { installOrderEditRoutes } = require('./order-edit');
@@ -1241,6 +1242,7 @@ app.get('/api/refill-requests', function (req, res) {
 
 app.use(auditPostMiddleware(openDb));
 installPortalRoutes(app, openDb);
+installVoiceAgentPortalRoutes(app);
 installChatUnreadRoutes(app, openDb);
 installChatRoutes(app, openDb);
 installOrderEditRoutes(app, openDb);

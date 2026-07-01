@@ -457,6 +457,13 @@ echo ""
 echo "Voice Agent ready-to-copy local script:"
 echo "  ${INSTALL_DIR}/voice-agent/vodia-pharmacy-ai-voice-agent.local.js"
 echo ""
+echo "Voice Agent portal copy/download page:"
+if [ "${ENABLE_HTTPS}" = "true" ]; then
+  echo "  https://${DOMAIN}/portal/voice-agent"
+else
+  echo "  http://${DOMAIN}/portal/voice-agent"
+fi
+echo ""
 echo "Important:"
 echo "  Copy the local script into the Vodia Voice Agent JavaScript field."
 echo "  Add the OpenAI API key in the Vodia Voice Agent OpenAI key field."
