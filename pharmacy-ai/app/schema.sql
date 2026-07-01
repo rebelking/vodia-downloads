@@ -7,7 +7,6 @@ CREATE TABLE patients (
       phone TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     , email TEXT, customer_notes TEXT, updated_at TEXT);
-CREATE TABLE sqlite_sequence(name,seq);
 CREATE TABLE medications (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       generic_name TEXT NOT NULL,

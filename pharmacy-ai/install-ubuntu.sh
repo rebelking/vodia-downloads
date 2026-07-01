@@ -179,7 +179,7 @@ fi
 echo "[9/15] Creating clean empty database if missing..."
 if [ ! -f "${INSTALL_DIR}/pharmacy.db" ]; then
   if [ -s "${INSTALL_DIR}/schema.sql" ]; then
-    sqlite3 "${INSTALL_DIR}/pharmacy.db" < "${INSTALL_DIR}/schema.sql"
+    grep -v "sqlite_sequence" "${INSTALL_DIR}/schema.sql" | sqlite3 "${INSTALL_DIR}/pharmacy.db"
     sqlite3 "${INSTALL_DIR}/pharmacy.db" "PRAGMA journal_mode=WAL;" >/dev/null || true
     echo "Created DB from schema.sql: ${INSTALL_DIR}/pharmacy.db"
   else
