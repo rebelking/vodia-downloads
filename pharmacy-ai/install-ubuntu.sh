@@ -45,10 +45,211 @@ if ! id "${REAL_USER}" >/dev/null 2>&1; then
   exit 1
 fi
 
+
+#############################################
+# DNS Preflight Wizard
+#############################################
+
+is_true() {
+  case "${1:-}" in
+    true|TRUE|yes|YES|1|on|ON) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+is_ipv4() {
+  echo "${1:-}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$'
+}
+
+get_public_ipv4() {
+  local ip=""
+
+  ip="$(curl -4 -fsS --max-time 5 https://api.ipify.org 2>/dev/null || true)"
+
+  if [ -z "${ip}" ]; then
+    ip="$(curl -4 -fsS --max-time 5 https://ifconfig.me 2>/dev/null || true)"
+  fi
+
+  if is_ipv4 "${ip}"; then
+    echo "${ip}"
+  fi
+}
+
+resolve_domain_ipv4() {
+  local domain="${1:-}"
+
+  if command -v dig >/dev/null 2>&1; then
+    dig +short A "${domain}" 2>/dev/null | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' || true
+  fi
+
+  getent ahostsv4 "${domain}" 2>/dev/null | awk '{print $1}' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' || true
+}
+
+dns_ipv4_matches() {
+  local domain="${1:-}"
+  local target_ip="${2:-}"
+  local ip=""
+
+  while IFS= read -r ip; do
+    if [ "${ip}" = "${target_ip}" ]; then
+      return 0
+    fi
+  done < <(resolve_domain_ipv4 "${domain}" | sort -u)
+
+  return 1
+}
+
+print_dns_fix_instructions() {
+  local domain="${1:-}"
+  local server_ip="${2:-}"
+  local dns_ips="${3:-none}"
+
+  echo ""
+  echo "=================================================="
+  echo " DNS Preflight Wizard"
+  echo "=================================================="
+  echo "Domain:"
+  echo "  ${domain}"
+  echo ""
+  echo "This server public IP:"
+  echo "  ${server_ip}"
+  echo ""
+  echo "DNS currently points to:"
+  echo "  ${dns_ips}"
+  echo ""
+  echo "DNS does NOT point to this server."
+  echo ""
+  echo "Create or update this DNS record:"
+  echo ""
+  echo "Type:  A"
+  echo "Name:  ${domain}"
+  echo "Value: ${server_ip}"
+  echo "TTL:   300"
+  echo "=================================================="
+  echo ""
+}
+
+dns_preflight_wizard() {
+  DNS_WIZARD="${DNS_WIZARD:-true}"
+  DNS_WAIT_SECONDS="${DNS_WAIT_SECONDS:-600}"
+  DNS_RETRY_INTERVAL="${DNS_RETRY_INTERVAL:-15}"
+  DNS_SKIP_CHECK="${DNS_SKIP_CHECK:-false}"
+
+  if ! is_true "${ENABLE_HTTPS:-false}"; then
+    echo "DNS preflight skipped because HTTPS is disabled."
+    return 0
+  fi
+
+  if is_true "${DNS_SKIP_CHECK}"; then
+    echo "WARNING: DNS preflight skipped because DNS_SKIP_CHECK=true."
+    return 0
+  fi
+
+  if [ -z "${DOMAIN:-}" ] || [ "${DOMAIN}" = "_" ] || [ "${DOMAIN}" = "localhost" ]; then
+    echo "WARNING: DOMAIN is not a valid public hostname. Disabling HTTPS."
+    ENABLE_HTTPS="false"
+    export ENABLE_HTTPS
+    return 0
+  fi
+
+  if is_ipv4 "${DOMAIN}"; then
+    echo "WARNING: DOMAIN is an IP address. Let's Encrypt needs a real DNS name. Disabling HTTPS."
+    ENABLE_HTTPS="false"
+    export ENABLE_HTTPS
+    return 0
+  fi
+
+  local server_ip=""
+  local dns_ips=""
+  local choice=""
+  local elapsed=0
+
+  server_ip="$(get_public_ipv4)"
+
+  if [ -z "${server_ip}" ]; then
+    echo "ERROR: Could not detect this server's public IPv4 address."
+    echo "Fix network access or rerun with ENABLE_HTTPS=false."
+    exit 1
+  fi
+
+  while true; do
+    dns_ips="$(resolve_domain_ipv4 "${DOMAIN}" | sort -u | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
+    dns_ips="${dns_ips:-none}"
+
+    if dns_ipv4_matches "${DOMAIN}" "${server_ip}"; then
+      echo "DNS preflight passed:"
+      echo "  ${DOMAIN} -> ${server_ip}"
+      return 0
+    fi
+
+    print_dns_fix_instructions "${DOMAIN}" "${server_ip}" "${dns_ips}"
+
+    if ! is_true "${DNS_WIZARD}" || [ ! -t 0 ]; then
+      echo "ERROR: DNS mismatch and installer is not running interactively."
+      echo "Fix DNS, rerun with ENABLE_HTTPS=false, or use DNS_SKIP_CHECK=true only if you know what you are doing."
+      exit 1
+    fi
+
+    echo "Choose an option:"
+    echo "  1) I updated DNS, check again"
+    echo "  2) Wait and keep checking"
+    echo "  3) Continue without HTTPS"
+    echo "  4) Exit installer"
+    echo ""
+
+    read -r -p "Select [1-4]: " choice
+
+    case "${choice}" in
+      1|"")
+        continue
+        ;;
+
+      2)
+        elapsed=0
+        echo "Waiting up to ${DNS_WAIT_SECONDS} seconds for DNS to update..."
+
+        while [ "${elapsed}" -lt "${DNS_WAIT_SECONDS}" ]; do
+          sleep "${DNS_RETRY_INTERVAL}"
+          elapsed=$((elapsed + DNS_RETRY_INTERVAL))
+
+          dns_ips="$(resolve_domain_ipv4 "${DOMAIN}" | sort -u | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
+          dns_ips="${dns_ips:-none}"
+
+          if dns_ipv4_matches "${DOMAIN}" "${server_ip}"; then
+            echo "DNS preflight passed:"
+            echo "  ${DOMAIN} -> ${server_ip}"
+            return 0
+          fi
+
+          echo "Still waiting... DNS currently points to: ${dns_ips}"
+        done
+
+        echo "DNS did not update within ${DNS_WAIT_SECONDS} seconds."
+        ;;
+
+      3)
+        echo "Continuing without HTTPS. Public URL will use HTTP."
+        ENABLE_HTTPS="false"
+        export ENABLE_HTTPS
+        return 0
+        ;;
+
+      4)
+        echo "Installer stopped by user."
+        exit 1
+        ;;
+
+      *)
+        echo "Invalid choice."
+        ;;
+    esac
+  done
+}
+
 echo "[1/15] Installing system packages..."
 apt update
 DEBIAN_FRONTEND=noninteractive apt install -y \
-  curl git rsync build-essential nginx sqlite3 ufw ca-certificates gnupg unzip openssl
+  curl git rsync build-essential nginx sqlite3 dnsutils ufw ca-certificates gnupg unzip openssl
 
 echo "[2/15] Installing Node.js ${NODE_MAJOR}.x if needed..."
 if ! command -v node >/dev/null 2>&1; then
@@ -344,6 +545,7 @@ pm2 startup systemd -u "${REAL_USER}" --hp "${REAL_HOME}" >/dev/null 2>&1 || tru
 sudo -u "${REAL_USER}" pm2 save >/dev/null 2>&1 || true
 
 echo "[15/15] Configuring Nginx..."
+dns_preflight_wizard
 cat > /etc/nginx/conf.d/vodia-websocket-map.conf <<'NGINXMAPEOF'
 map $http_upgrade $connection_upgrade {
     default upgrade;
