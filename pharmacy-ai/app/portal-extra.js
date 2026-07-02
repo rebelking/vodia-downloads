@@ -438,7 +438,7 @@ function adminHistoryPage(rows, search) {
     <a href="/admin/patients">Patients</a>
     <a href="/admin/medications">Medications</a>
     <a href="/admin/history">History</a>
-    <a href="/portal/logout">Logout</a>
+    <a href="/portal/voice-agent">Voice Agent</a><a href="/portal/logout">Logout</a>
   </header>
   <main>
     <div class="card">
