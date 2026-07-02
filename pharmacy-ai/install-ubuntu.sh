@@ -5,7 +5,7 @@ APP_VERSION="${APP_VERSION:-1.0.0}"
 APP_NAME="${APP_NAME:-vodia-pharmacy-ai}"
 INSTALL_DIR="${INSTALL_DIR:-/opt/vodia-pharmacy-ai}"
 PORT="${PORT:-3200}"
-DOMAIN="${DOMAIN:-pharmacyhub.tryvodia.com}"
+DOMAIN="${DOMAIN:-_}"
 ENABLE_HTTPS="${ENABLE_HTTPS:-false}"
 NODE_MAJOR="${NODE_MAJOR:-22}"
 REPO_URL="${REPO_URL:-https://github.com/rebelking/vodia-downloads.git}"
@@ -56,6 +56,138 @@ is_true() {
     *) return 1 ;;
   esac
 }
+
+has_interactive_tty() {
+  [ -t 0 ] || [ -r /dev/tty ]
+}
+
+read_from_tty() {
+  local prompt="${1:-}"
+  local value=""
+
+  if [ -r /dev/tty ]; then
+    read -r -p "${prompt}" value </dev/tty
+  else
+    read -r -p "${prompt}" value
+  fi
+
+  echo "${value}"
+}
+
+normalize_hostname() {
+  local value="${1:-}"
+  value="$(printf '%s' "${value}" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
+  value="$(printf '%s' "${value}" | sed -E 's#^https?://##; s#/.*$##; s/:.*$//; s/\.$//')"
+  echo "${value}"
+}
+
+is_valid_public_hostname() {
+  local host=""
+  host="$(normalize_hostname "${1:-}")"
+
+  [ -n "${host}" ] || return 1
+  [ "${host}" != "_" ] || return 1
+  [ "${host}" != "localhost" ] || return 1
+  ! is_ipv4 "${host}" || return 1
+  echo "${host}" | grep -q '\.' || return 1
+  [ "${#host}" -le 253 ] || return 1
+
+  echo "${host}" | grep -Eiq '^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z][a-z0-9-]{1,62}$'
+}
+
+prompt_for_domain() {
+  local entered=""
+
+  while true; do
+    echo ""
+    echo "Enter the public portal hostname/FQDN that you or the customer controls."
+    echo ""
+    echo "Examples:"
+    echo "  ai.customer-domain.com"
+    echo "  refills.mypharmacy.com"
+    echo "  pharmacy.company.org"
+    echo ""
+    echo "Do not enter a hostname unless you can create DNS records for it."
+    echo ""
+
+    entered="$(read_from_tty "Portal hostname/FQDN: ")"
+    entered="$(normalize_hostname "${entered}")"
+
+    if is_valid_public_hostname "${entered}"; then
+      DOMAIN="${entered}"
+      export DOMAIN
+      return 0
+    fi
+
+    echo ""
+    echo "Invalid hostname: ${entered}"
+    echo "Please enter a real public hostname, for example ai.customer-domain.com"
+  done
+}
+
+confirm_domain_control() {
+  local choice=""
+
+  if ! is_true "${DNS_CONFIRM:-true}"; then
+    return 0
+  fi
+
+  if ! has_interactive_tty; then
+    return 0
+  fi
+
+  while true; do
+    echo ""
+    echo "=================================================="
+    echo " Confirm Portal Hostname"
+    echo "=================================================="
+    echo "You entered:"
+    echo "  ${DOMAIN}"
+    echo ""
+    echo "This installer will use:"
+    echo "  https://${DOMAIN}/portal"
+    echo "  https://${DOMAIN}/portal/voice-agent"
+    echo "  https://${DOMAIN}/health"
+    echo ""
+    echo "Do you control DNS for this hostname?"
+    echo ""
+    echo "  1) Yes, continue"
+    echo "  2) No, enter a different hostname/FQDN"
+    echo "  3) Continue without HTTPS"
+    echo "  4) Exit installer"
+    echo "=================================================="
+    echo ""
+
+    choice="$(read_from_tty "Select [1-4]: ")"
+
+    case "${choice}" in
+      1|"")
+        return 0
+        ;;
+
+      2)
+        prompt_for_domain
+        ;;
+
+      3)
+        echo "Continuing without HTTPS. Public URL will use HTTP."
+        ENABLE_HTTPS="false"
+        export ENABLE_HTTPS
+        return 0
+        ;;
+
+      4)
+        echo "Installer stopped by user."
+        exit 1
+        ;;
+
+      *)
+        echo "Invalid choice."
+        ;;
+    esac
+  done
+}
+
 
 is_ipv4() {
   echo "${1:-}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$'
@@ -108,22 +240,22 @@ print_dns_fix_instructions() {
   echo "=================================================="
   echo " DNS Preflight Wizard"
   echo "=================================================="
-  echo "Domain:"
+  echo "Portal hostname / FQDN:"
   echo "  ${domain}"
   echo ""
   echo "This server public IP:"
   echo "  ${server_ip}"
   echo ""
-  echo "DNS currently points to:"
+  echo "DNS currently resolves to:"
   echo "  ${dns_ips}"
   echo ""
-  echo "DNS does NOT point to this server."
+  echo "DNS does NOT point this hostname to this server."
   echo ""
-  echo "Create or update this DNS record:"
+  echo "At the DNS provider for a domain you control, create or update this IPv4 A record:"
   echo ""
   echo "Type:  A"
-  echo "Name:  ${domain}"
-  echo "Value: ${server_ip}"
+  echo "Hostname / FQDN:  ${domain}"
+  echo "Points to / Value: ${server_ip}"
   echo "TTL:   300"
   echo "=================================================="
   echo ""
@@ -145,10 +277,22 @@ dns_preflight_wizard() {
     return 0
   fi
 
-  if [ -z "${DOMAIN:-}" ] || [ "${DOMAIN}" = "_" ] || [ "${DOMAIN}" = "localhost" ]; then
-    echo "WARNING: DOMAIN is not a valid public hostname. Disabling HTTPS."
-    ENABLE_HTTPS="false"
-    export ENABLE_HTTPS
+  DOMAIN="$(normalize_hostname "${DOMAIN:-}")"
+  export DOMAIN
+
+  if ! is_valid_public_hostname "${DOMAIN:-}"; then
+    if is_true "${DNS_WIZARD}" && has_interactive_tty; then
+      prompt_for_domain
+    else
+      echo "ERROR: A public hostname/FQDN is required for HTTPS."
+      echo "Rerun with DOMAIN=ai.customer-domain.com, or set ENABLE_HTTPS=false for HTTP-only testing."
+      exit 1
+    fi
+  fi
+
+  confirm_domain_control
+
+  if ! is_true "${ENABLE_HTTPS:-false}"; then
     return 0
   fi
 
@@ -193,11 +337,13 @@ dns_preflight_wizard() {
     echo "Choose an option:"
     echo "  1) I updated DNS, check again"
     echo "  2) Wait and keep checking"
-    echo "  3) Continue without HTTPS"
-    echo "  4) Exit installer"
+    echo "  3) Re-enter hostname/FQDN"
+    echo "  4) Continue without HTTPS"
+    echo "  5) Exit installer"
     echo ""
 
-    read -r -p "Select [1-4]: " choice
+    choice="$(read_from_tty "Select [1-5]: ")"
+
 
     case "${choice}" in
       1|"")
@@ -228,14 +374,29 @@ dns_preflight_wizard() {
         ;;
 
       3)
+        prompt_for_domain
+        confirm_domain_control
+
+        if ! is_true "${ENABLE_HTTPS:-false}"; then
+          return 0
+        fi
+        ;;
+
+      4)
         echo "Continuing without HTTPS. Public URL will use HTTP."
         ENABLE_HTTPS="false"
         export ENABLE_HTTPS
         return 0
         ;;
 
-      4)
+      5)
         echo "Installer stopped by user."
+        echo ""
+        echo "To rerun only the DNS wizard later:"
+        echo "  sudo DNS_ONLY=true ENABLE_HTTPS=true bash /tmp/install-pharmacy-ai-polish.sh"
+        echo ""
+        echo "Or with a corrected hostname:"
+        echo "  sudo DNS_ONLY=true ENABLE_HTTPS=true DOMAIN=ai.customer-domain.com bash /tmp/install-pharmacy-ai-polish.sh"
         exit 1
         ;;
 
@@ -246,10 +407,27 @@ dns_preflight_wizard() {
   done
 }
 
+if is_true "${DNS_ONLY:-false}"; then
+  ENABLE_HTTPS="${ENABLE_HTTPS:-true}"
+  DNS_WIZARD="${DNS_WIZARD:-true}"
+  export ENABLE_HTTPS
+  export DNS_WIZARD
+
+  echo "Running DNS wizard only. No app files will be installed or changed."
+  dns_preflight_wizard
+  echo ""
+  echo "DNS wizard completed successfully."
+  echo ""
+  exit 0
+fi
+
 echo "[1/15] Installing system packages..."
 apt update
 DEBIAN_FRONTEND=noninteractive apt install -y \
   curl git rsync build-essential nginx sqlite3 dnsutils ufw ca-certificates gnupg unzip openssl
+
+echo "DNS preflight / public hostname check..."
+dns_preflight_wizard
 
 echo "[2/15] Installing Node.js ${NODE_MAJOR}.x if needed..."
 if ! command -v node >/dev/null 2>&1; then
@@ -545,7 +723,6 @@ pm2 startup systemd -u "${REAL_USER}" --hp "${REAL_HOME}" >/dev/null 2>&1 || tru
 sudo -u "${REAL_USER}" pm2 save >/dev/null 2>&1 || true
 
 echo "[15/15] Configuring Nginx..."
-dns_preflight_wizard
 cat > /etc/nginx/conf.d/vodia-websocket-map.conf <<'NGINXMAPEOF'
 map $http_upgrade $connection_upgrade {
     default upgrade;
