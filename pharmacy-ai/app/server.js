@@ -1254,6 +1254,17 @@ require('./pharmacy-location-routes')(app);
 
 
 
+
+// Pharmacy AI admin settings: SMTP, Security, Tenant Binding, CRM placeholders
+try {
+  const adminSettingsRouter = require('./routes/adminSettings');
+  app.use('/admin/settings', adminSettingsRouter);
+  app.get('/settings', (req, res) => res.redirect('/admin/settings'));
+  console.log('Pharmacy AI admin settings mounted at /admin/settings');
+} catch (err) {
+  console.error('Failed to mount Pharmacy AI admin settings:', err.message);
+}
+
 app.listen(PORT, function () {
   console.log(`${PROJECT_NAME} running on port ${PORT}`);
 });
