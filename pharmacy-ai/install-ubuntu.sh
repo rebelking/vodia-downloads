@@ -822,6 +822,104 @@ echo "Portal admin login saved to:"
 echo "  ${PORTAL_LOGIN_FILE}"
 
 
+
+
+# BEGIN SMTP_ADMIN_SETTINGS_DEPLOY_BEFORE_PM2
+echo
+echo "[smtp-settings] Ensuring admin settings route is deployed..."
+
+if [ "${DNS_ONLY:-false}" != "true" ]; then
+  PHARMACY_INSTALLER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  PHARMACY_SOURCE_APP="${PHARMACY_SOURCE_APP:-$PHARMACY_INSTALLER_DIR/app}"
+  PHARMACY_TARGET_APP="${PHARMACY_INSTALL_DIR:-/opt/vodia-pharmacy-ai}"
+
+  echo "[smtp-settings] Source app: $PHARMACY_SOURCE_APP"
+  echo "[smtp-settings] Target app: $PHARMACY_TARGET_APP"
+
+  if [ ! -f "$PHARMACY_SOURCE_APP/routes/adminSettings.js" ]; then
+    echo "[smtp-settings] WARNING: missing source adminSettings.js: $PHARMACY_SOURCE_APP/routes/adminSettings.js"
+  elif [ ! -d "$PHARMACY_TARGET_APP" ]; then
+    echo "[smtp-settings] WARNING: missing installed app dir: $PHARMACY_TARGET_APP"
+  else
+    mkdir -p "$PHARMACY_TARGET_APP/routes"
+
+    echo "[smtp-settings] Copying adminSettings.js..."
+    cp -f "$PHARMACY_SOURCE_APP/routes/adminSettings.js" "$PHARMACY_TARGET_APP/routes/adminSettings.js"
+
+    echo "[smtp-settings] Mounting /admin/settings in installed server.js if needed..."
+    python3 - "$PHARMACY_TARGET_APP/server.js" <<'PYROUTE'
+from pathlib import Path
+import re
+import sys
+
+entry = Path(sys.argv[1])
+
+if not entry.exists():
+    print(f"ERROR: server.js not found: {entry}")
+    sys.exit(1)
+
+txt = entry.read_text()
+
+if "routes/adminSettings" in txt or "adminSettingsRouter" in txt:
+    print("/admin/settings already mounted.")
+    sys.exit(0)
+
+m = re.search(r'\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*express\s*\(\s*\)', txt)
+appvar = m.group(1) if m else "app"
+
+mount = f"""
+// Pharmacy AI admin settings: SMTP, Security, Tenant Binding, CRM placeholders
+try {{
+  const adminSettingsRouter = require('./routes/adminSettings');
+  {appvar}.use('/admin/settings', adminSettingsRouter);
+  {appvar}.get('/settings', (req, res) => res.redirect('/admin/settings'));
+  console.log('Pharmacy AI admin settings mounted at /admin/settings');
+}} catch (err) {{
+  console.error('Failed to mount Pharmacy AI admin settings:', err.message);
+}}
+"""
+
+lines = txt.splitlines(keepends=True)
+insert_at = None
+
+for i, line in enumerate(lines):
+    if ".use" in line and ("404" in line or "Not Found" in line):
+        insert_at = i
+        break
+
+if insert_at is None:
+    for i, line in enumerate(lines):
+        if ".listen(" in line:
+            insert_at = i
+            break
+
+if insert_at is None:
+    txt = txt.rstrip() + "\n\n" + mount + "\n"
+else:
+    lines.insert(insert_at, mount + "\n")
+    txt = "".join(lines)
+
+entry.write_text(txt)
+print("Mounted /admin/settings.")
+PYROUTE
+
+    cd "$PHARMACY_TARGET_APP"
+
+    echo "[smtp-settings] Ensuring nodemailer exists..."
+    npm install nodemailer --save
+
+    echo "[smtp-settings] Syntax check..."
+    node -c "$PHARMACY_TARGET_APP/routes/adminSettings.js"
+    node -c "$PHARMACY_TARGET_APP/server.js"
+
+    chown -R ubuntu:ubuntu "$PHARMACY_TARGET_APP" 2>/dev/null || true
+
+    echo "[smtp-settings] /admin/settings deployed."
+  fi
+fi
+# END SMTP_ADMIN_SETTINGS_DEPLOY_BEFORE_PM2
+
+
 echo "[13/15] Starting PM2 app..."
 sudo -u "${REAL_USER}" pm2 delete "${APP_NAME}" >/dev/null 2>&1 || true
 sudo -u "${REAL_USER}" bash -lc "cd '${INSTALL_DIR}' && pm2 start server.js --name '${APP_NAME}' --update-env"
