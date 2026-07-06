@@ -418,6 +418,115 @@ if is_true "${DNS_ONLY:-false}"; then
   echo ""
   echo "DNS wizard completed successfully."
   echo ""
+
+
+# BEGIN SMTP_ADMIN_SETTINGS_DEPLOY_ASSURANCE
+echo
+echo "[post] Ensuring Pharmacy AI SMTP/admin settings feature is deployed..."
+
+if [ "${DNS_ONLY:-false}" = "true" ]; then
+  echo "[post] DNS_ONLY=true, skipping app deploy assurance."
+else
+  PHARMACY_INSTALL_DIR="${PHARMACY_INSTALL_DIR:-/opt/vodia-pharmacy-ai}"
+  PHARMACY_INSTALLER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  PHARMACY_SOURCE_APP="${PHARMACY_SOURCE_APP:-$PHARMACY_INSTALLER_DIR/app}"
+
+  if [ ! -d "$PHARMACY_INSTALL_DIR" ]; then
+    echo "[post] WARNING: installed app directory missing: $PHARMACY_INSTALL_DIR"
+  elif [ ! -f "$PHARMACY_SOURCE_APP/routes/adminSettings.js" ]; then
+    echo "[post] WARNING: source adminSettings.js missing: $PHARMACY_SOURCE_APP/routes/adminSettings.js"
+  else
+    echo "[post] Source app: $PHARMACY_SOURCE_APP"
+    echo "[post] Installed app: $PHARMACY_INSTALL_DIR"
+
+    mkdir -p "$PHARMACY_INSTALL_DIR/routes"
+
+    echo "[post] Copying adminSettings.js..."
+    install -m 0644 "$PHARMACY_SOURCE_APP/routes/adminSettings.js" "$PHARMACY_INSTALL_DIR/routes/adminSettings.js"
+
+    echo "[post] Mounting /admin/settings in installed server.js if needed..."
+    python3 - "$PHARMACY_INSTALL_DIR/server.js" <<'PYROUTE'
+from pathlib import Path
+import re
+import sys
+
+entry = Path(sys.argv[1])
+
+if not entry.exists():
+    print(f"ERROR: server.js not found: {entry}")
+    sys.exit(1)
+
+txt = entry.read_text()
+
+if "routes/adminSettings" in txt or "adminSettingsRouter" in txt:
+    print("/admin/settings already mounted.")
+    sys.exit(0)
+
+m = re.search(r'\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*express\s*\(\s*\)', txt)
+appvar = m.group(1) if m else "app"
+
+mount = f"""
+// Pharmacy AI admin settings: SMTP, Security, Tenant Binding, CRM placeholders
+try {{
+  const adminSettingsRouter = require('./routes/adminSettings');
+  {appvar}.use('/admin/settings', adminSettingsRouter);
+  {appvar}.get('/settings', (req, res) => res.redirect('/admin/settings'));
+  console.log('Pharmacy AI admin settings mounted at /admin/settings');
+}} catch (err) {{
+  console.error('Failed to mount Pharmacy AI admin settings:', err.message);
+}}
+"""
+
+lines = txt.splitlines(keepends=True)
+insert_at = None
+
+for i, line in enumerate(lines):
+    if ".use" in line and ("404" in line or "Not Found" in line):
+        insert_at = i
+        break
+
+if insert_at is None:
+    for i, line in enumerate(lines):
+        if ".listen(" in line:
+            insert_at = i
+            break
+
+if insert_at is None:
+    txt = txt.rstrip() + "\n\n" + mount + "\n"
+else:
+    lines.insert(insert_at, mount + "\n")
+    txt = "".join(lines)
+
+entry.write_text(txt)
+print("Mounted /admin/settings.")
+PYROUTE
+
+    echo "[post] Ensuring nodemailer dependency exists..."
+    cd "$PHARMACY_INSTALL_DIR"
+    npm install nodemailer --save
+
+    echo "[post] Syntax check..."
+    node -c "$PHARMACY_INSTALL_DIR/routes/adminSettings.js"
+    node -c "$PHARMACY_INSTALL_DIR/server.js"
+
+    echo "[post] Fixing ownership..."
+    chown -R ubuntu:ubuntu "$PHARMACY_INSTALL_DIR" 2>/dev/null || true
+
+    echo "[post] Restarting PM2 app if running..."
+    if command -v pm2 >/dev/null 2>&1; then
+      if id ubuntu >/dev/null 2>&1; then
+        sudo -iu ubuntu pm2 restart vodia-pharmacy-ai 2>/dev/null || true
+        sudo -iu ubuntu pm2 save 2>/dev/null || true
+      fi
+      pm2 restart vodia-pharmacy-ai 2>/dev/null || true
+      pm2 save 2>/dev/null || true
+    fi
+
+    echo "[post] SMTP/admin settings deploy assurance complete."
+  fi
+fi
+# END SMTP_ADMIN_SETTINGS_DEPLOY_ASSURANCE
+
   exit 0
 fi
 
