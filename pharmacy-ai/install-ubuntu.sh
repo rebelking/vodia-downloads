@@ -920,6 +920,67 @@ fi
 # END SMTP_ADMIN_SETTINGS_DEPLOY_BEFORE_PM2
 
 
+
+
+# BEGIN PHARMACY_APP_SOURCE_OVERLAY_BEFORE_PM2
+echo
+echo "[app-overlay] Ensuring installed app matches installer source app..."
+
+if [ "${DNS_ONLY:-false}" != "true" ]; then
+  PHARMACY_INSTALLER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  PHARMACY_SOURCE_APP="${PHARMACY_SOURCE_APP:-$PHARMACY_INSTALLER_DIR/app}"
+  PHARMACY_TARGET_APP="${PHARMACY_INSTALL_DIR:-/opt/vodia-pharmacy-ai}"
+
+  echo "[app-overlay] Source app: $PHARMACY_SOURCE_APP"
+  echo "[app-overlay] Target app: $PHARMACY_TARGET_APP"
+
+  if [ ! -d "$PHARMACY_SOURCE_APP" ]; then
+    echo "[app-overlay] WARNING: source app missing: $PHARMACY_SOURCE_APP"
+  elif [ ! -d "$PHARMACY_TARGET_APP" ]; then
+    echo "[app-overlay] WARNING: target app missing: $PHARMACY_TARGET_APP"
+  else
+    echo "[app-overlay] Overlaying source app code into target app..."
+
+    (
+      cd "$PHARMACY_SOURCE_APP"
+      tar \
+        --exclude='./node_modules' \
+        --exclude='./backups' \
+        --exclude='./.env' \
+        --exclude='./pharmacy.db' \
+        --exclude='./*.db' \
+        --exclude='./*.sqlite' \
+        --exclude='./data/admin-settings.json' \
+        --exclude='./voice-agent/vodia-pharmacy-ai-voice-agent.local.js' \
+        -cf - .
+    ) | (
+      cd "$PHARMACY_TARGET_APP"
+      tar -xf -
+    )
+
+    cd "$PHARMACY_TARGET_APP"
+
+    echo "[app-overlay] Installing/updating npm dependencies..."
+    npm install
+
+    echo "[app-overlay] Syntax check..."
+    node -c "$PHARMACY_TARGET_APP/server.js"
+
+    if [ -f "$PHARMACY_TARGET_APP/routes/adminSettings.js" ]; then
+      node -c "$PHARMACY_TARGET_APP/routes/adminSettings.js"
+    fi
+
+    echo "[app-overlay] Route checks in installed server.js:"
+    grep -n "portal/voice-agent\|admin/settings\|adminSettings" "$PHARMACY_TARGET_APP/server.js" || true
+
+    chown -R ubuntu:ubuntu "$PHARMACY_TARGET_APP" 2>/dev/null || true
+
+    echo "[app-overlay] Installed app overlay complete."
+  fi
+fi
+# END PHARMACY_APP_SOURCE_OVERLAY_BEFORE_PM2
+
+
 echo "[13/15] Starting PM2 app..."
 sudo -u "${REAL_USER}" pm2 delete "${APP_NAME}" >/dev/null 2>&1 || true
 sudo -u "${REAL_USER}" bash -lc "cd '${INSTALL_DIR}' && pm2 start server.js --name '${APP_NAME}' --update-env"

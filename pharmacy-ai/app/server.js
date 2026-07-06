@@ -1255,6 +1255,224 @@ require('./pharmacy-location-routes')(app);
 
 
 
+
+// BEGIN PHARMACY_VOICE_AGENT_PORTAL_ROUTES
+try {
+  const pharmacyVoiceFs = require('fs');
+  const pharmacyVoicePath = require('path');
+
+  function pharmacyVoiceEscape(value) {
+    return String(value ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+  }
+
+  function pharmacyVoiceLoggedIn(req) {
+    const s = req.session || {};
+    return Boolean(
+      s.isAdmin ||
+      s.admin ||
+      s.adminId ||
+      s.adminUser ||
+      s.user ||
+      s.userId ||
+      s.portalUser ||
+      s.portalUserId ||
+      s.username ||
+      s.authenticated ||
+      s.loggedIn ||
+      s.role === 'admin' ||
+      s.user?.role === 'admin' ||
+      s.user?.isAdmin
+    );
+  }
+
+  function pharmacyVoiceRequireLogin(req, res, next) {
+    if (pharmacyVoiceLoggedIn(req)) return next();
+    return res.redirect('/portal/login');
+  }
+
+  function pharmacyVoicePaths() {
+    const base = pharmacyVoicePath.join(__dirname, 'voice-agent');
+    return {
+      dir: base,
+      local: pharmacyVoicePath.join(base, 'vodia-pharmacy-ai-voice-agent.local.js'),
+      template: pharmacyVoicePath.join(base, 'vodia-pharmacy-ai-voice-agent.template.js')
+    };
+  }
+
+  app.get('/portal/voice-agent', pharmacyVoiceRequireLogin, (req, res) => {
+    const paths = pharmacyVoicePaths();
+    let script = '';
+    let fileStatus = '';
+
+    try {
+      script = pharmacyVoiceFs.readFileSync(paths.local, 'utf8');
+      fileStatus = 'Ready-to-copy local script loaded.';
+    } catch (err) {
+      fileStatus = 'Local script not found yet: ' + err.message;
+    }
+
+    res.send(`<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Voice Agent Script</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      margin:0;
+      font-family: Arial, Helvetica, sans-serif;
+      background:#f5f7fb;
+      color:#172033;
+    }
+    header {
+      background:linear-gradient(90deg,#102a43,#087f73);
+      color:white;
+      padding:20px 28px;
+    }
+    header h1 { margin:0; font-size:24px; }
+    nav {
+      display:flex;
+      flex-wrap:wrap;
+      gap:18px;
+      margin-top:14px;
+    }
+    nav a {
+      color:white;
+      font-weight:700;
+      text-decoration:none;
+    }
+    main {
+      max-width:1180px;
+      margin:24px auto;
+      padding:0 18px 50px;
+    }
+    .card {
+      background:white;
+      border:1px solid #e5e7eb;
+      border-radius:18px;
+      padding:22px;
+      box-shadow:0 10px 30px rgba(0,0,0,.06);
+      margin-bottom:18px;
+    }
+    textarea {
+      width:100%;
+      min-height:520px;
+      font-family: Consolas, Monaco, monospace;
+      font-size:13px;
+      border:1px solid #d0d5dd;
+      border-radius:12px;
+      padding:14px;
+      background:#101828;
+      color:#e5e7eb;
+      white-space:pre;
+    }
+    button, .button {
+      display:inline-block;
+      border:0;
+      background:#087f73;
+      color:white;
+      border-radius:10px;
+      padding:11px 16px;
+      font-weight:800;
+      cursor:pointer;
+      text-decoration:none;
+      margin-right:10px;
+    }
+    .warn {
+      background:#fffaeb;
+      border:1px solid #fdb022;
+      border-radius:14px;
+      padding:14px 16px;
+      color:#93370d;
+    }
+    .muted { color:#667085; }
+    code {
+      background:#eef4ff;
+      padding:2px 5px;
+      border-radius:5px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Vodia Pharmacy Voice Agent</h1>
+    <nav>
+      <a href="/portal/orders">Agent Orders</a>
+      <a href="/portal/chat">Chat</a>
+      <a href="/admin/users">Admin Users</a>
+      <a href="/portal/patients">Patients</a>
+      <a href="/portal/medications">Medications</a>
+      <a href="/portal/history">History</a>
+      <a href="/admin/settings">Settings</a>
+      <a href="/logout">Logout</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Ready-to-copy Voice Agent script</h2>
+      <p class="muted">${pharmacyVoiceEscape(fileStatus)}</p>
+
+      <div class="warn">
+        <strong>Important:</strong>
+        Paste this JavaScript into the Vodia Voice Agent JavaScript field.
+        Add the OpenAI API key in the Vodia Voice Agent OpenAI key field.
+        Do <strong>not</strong> paste the OpenAI key into this script.
+      </div>
+
+      <p>
+        <button onclick="copyScript()">Copy Script</button>
+        <a class="button" href="/portal/voice-agent/download/local">Download Local Script</a>
+        <a class="button" href="/portal/voice-agent/download/template">Download Template</a>
+      </p>
+
+      <textarea id="voiceScript" spellcheck="false">${pharmacyVoiceEscape(script)}</textarea>
+    </section>
+  </main>
+
+  <script>
+    async function copyScript() {
+      const el = document.getElementById('voiceScript');
+      el.focus();
+      el.select();
+      try {
+        await navigator.clipboard.writeText(el.value);
+        alert('Voice Agent script copied.');
+      } catch (err) {
+        document.execCommand('copy');
+        alert('Voice Agent script selected/copied.');
+      }
+    }
+  </script>
+</body>
+</html>`);
+  });
+
+  app.get('/admin/voice-agent-script', pharmacyVoiceRequireLogin, (req, res) => {
+    res.redirect('/portal/voice-agent');
+  });
+
+  app.get('/portal/voice-agent/download/local', pharmacyVoiceRequireLogin, (req, res) => {
+    const paths = pharmacyVoicePaths();
+    res.download(paths.local, 'vodia-pharmacy-ai-voice-agent.local.js');
+  });
+
+  app.get('/portal/voice-agent/download/template', pharmacyVoiceRequireLogin, (req, res) => {
+    const paths = pharmacyVoicePaths();
+    res.download(paths.template, 'vodia-pharmacy-ai-voice-agent.template.js');
+  });
+
+  console.log('Pharmacy AI Voice Agent portal mounted at /portal/voice-agent');
+} catch (err) {
+  console.error('Failed to mount Pharmacy AI Voice Agent portal:', err.message);
+}
+// END PHARMACY_VOICE_AGENT_PORTAL_ROUTES
+
 // Pharmacy AI admin settings: SMTP, Security, Tenant Binding, CRM placeholders
 try {
   const adminSettingsRouter = require('./routes/adminSettings');
