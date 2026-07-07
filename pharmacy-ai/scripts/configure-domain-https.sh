@@ -166,6 +166,10 @@ configure_http_only_domain() {
 
   echo "$base_url" | $SUDO tee /root/vodia-pharmacy-ai-public-url.txt >/dev/null
 
+  if [ -f /root/vodia-pharmacy-ai-portal-login.txt ]; then
+    $SUDO sed -i -E "s#^URL: .*#URL: $base_url/portal#" /root/vodia-pharmacy-ai-portal-login.txt
+  fi
+
   echo
   echo "[domain] HTTP public URLs:"
   echo "  $base_url/portal"
@@ -206,6 +210,10 @@ configure_https_domain() {
   update_voice_agent_urls "$base_url"
 
   echo "$base_url" | $SUDO tee /root/vodia-pharmacy-ai-public-url.txt >/dev/null
+
+  if [ -f /root/vodia-pharmacy-ai-portal-login.txt ]; then
+    $SUDO sed -i -E "s#^URL: .*#URL: $base_url/portal#" /root/vodia-pharmacy-ai-portal-login.txt
+  fi
 
   echo
   echo "[domain] HTTPS public URLs:"

@@ -1085,6 +1085,29 @@ if [ "${ENABLE_HTTPS}" = "true" ]; then
   fi
 fi
 
+# BEGIN PHARMACY_FINAL_PUBLIC_URL_HELPER
+PHARMACY_PUBLIC_BASE_URL_DISPLAY="${PHARMACY_PUBLIC_BASE_URL:-}"
+
+if [ -f /root/vodia-pharmacy-ai-public-url.txt ]; then
+  PHARMACY_PUBLIC_BASE_URL_DISPLAY="$(cat /root/vodia-pharmacy-ai-public-url.txt | tr -d '[:space:]')"
+fi
+
+if [ -z "$PHARMACY_PUBLIC_BASE_URL_DISPLAY" ] && [ -n "${PHARMACY_FQDN:-}" ]; then
+  PHARMACY_PUBLIC_BASE_URL_DISPLAY="https://${PHARMACY_FQDN}"
+fi
+
+if [ -z "$PHARMACY_PUBLIC_BASE_URL_DISPLAY" ] && [ -n "${DOMAIN:-}" ] && [ "${DOMAIN:-_}" != "_" ]; then
+  PHARMACY_PUBLIC_BASE_URL_DISPLAY="https://${DOMAIN}"
+fi
+
+if [ -z "$PHARMACY_PUBLIC_BASE_URL_DISPLAY" ]; then
+  PHARMACY_PUBLIC_BASE_URL_DISPLAY="http://_"
+fi
+
+PHARMACY_PUBLIC_BASE_URL_DISPLAY="${PHARMACY_PUBLIC_BASE_URL_DISPLAY%/}"
+# END PHARMACY_FINAL_PUBLIC_URL_HELPER
+
+
 echo ""
 echo "=================================================="
 echo " Install complete"
