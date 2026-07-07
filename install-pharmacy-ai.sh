@@ -226,6 +226,20 @@ else
     ./install-ubuntu.sh
 fi
 
+
+# BEGIN POST_INSTALL_COPY_HELPERS
+echo
+echo "=== Copy helper scripts into installed app ==="
+if [ -d "$WORKDIR/pharmacy-ai/scripts" ]; then
+  sudo mkdir -p /opt/vodia-pharmacy-ai/scripts
+  sudo rsync -a "$WORKDIR/pharmacy-ai/scripts/" /opt/vodia-pharmacy-ai/scripts/
+  sudo chmod +x /opt/vodia-pharmacy-ai/scripts/*.sh 2>/dev/null || true
+  pass "Installer helper scripts copied to /opt/vodia-pharmacy-ai/scripts"
+else
+  warn "Installer helper scripts source folder missing: $WORKDIR/pharmacy-ai/scripts"
+fi
+# END POST_INSTALL_COPY_HELPERS
+
 echo
 echo "=================================================="
 echo " Post-install validation"
