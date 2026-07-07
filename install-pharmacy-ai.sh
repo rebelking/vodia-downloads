@@ -162,19 +162,31 @@ cd "$WORKDIR/pharmacy-ai"
 
 chmod +x install-ubuntu.sh scripts/configure-domain-https.sh 2>/dev/null || true
 
+COMMON_INSTALL_ENV=(
+  REPO_URL="$REPO_URL"
+  BRANCH="$BRANCH"
+  REPO_BRANCH="$BRANCH"
+  INSTALL_BRANCH="$BRANCH"
+  PHARMACY_BRANCH="$BRANCH"
+  PHARMACY_INSTALLER_SOURCE_DIR="$WORKDIR/pharmacy-ai"
+)
+
 if [ -n "${PHARMACY_FQDN:-}" ]; then
   echo "PHARMACY_FQDN was provided: $PHARMACY_FQDN"
-  run sudo env -u DOMAIN -u PUBLIC_BASE_URL -u PHARMACY_PUBLIC_BASE_URL \
-    REPO_URL="$REPO_URL" \
-    BRANCH="$BRANCH" \
-    PHARMACY_INSTALLER_SOURCE_DIR="$WORKDIR/pharmacy-ai" \
+  run sudo env \
+    -u DOMAIN \
+    -u PUBLIC_BASE_URL \
+    -u PHARMACY_PUBLIC_BASE_URL \
+    "${COMMON_INSTALL_ENV[@]}" \
     PHARMACY_FQDN="$PHARMACY_FQDN" \
     ./install-ubuntu.sh
 else
-  run sudo env -u DOMAIN -u PUBLIC_BASE_URL -u PHARMACY_PUBLIC_BASE_URL -u PHARMACY_FQDN \
-    REPO_URL="$REPO_URL" \
-    BRANCH="$BRANCH" \
-    PHARMACY_INSTALLER_SOURCE_DIR="$WORKDIR/pharmacy-ai" \
+  run sudo env \
+    -u DOMAIN \
+    -u PUBLIC_BASE_URL \
+    -u PHARMACY_PUBLIC_BASE_URL \
+    -u PHARMACY_FQDN \
+    "${COMMON_INSTALL_ENV[@]}" \
     ./install-ubuntu.sh
 fi
 

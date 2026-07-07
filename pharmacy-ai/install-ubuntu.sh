@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# BEGIN PHARMACY_BRANCH_ALIAS_FIX
+# Accept branch from bootstrap, direct env, or old variable names.
+BRANCH="${BRANCH:-${REPO_BRANCH:-${INSTALL_BRANCH:-${PHARMACY_BRANCH:-main}}}}"
+REPO_BRANCH="$BRANCH"
+INSTALL_BRANCH="$BRANCH"
+PHARMACY_BRANCH="$BRANCH"
+# END PHARMACY_BRANCH_ALIAS_FIX
+
+
 APP_VERSION="${APP_VERSION:-1.0.0}"
 APP_NAME="${APP_NAME:-vodia-pharmacy-ai}"
 INSTALL_DIR="${INSTALL_DIR:-/opt/vodia-pharmacy-ai}"
@@ -9,7 +18,7 @@ DOMAIN="${DOMAIN:-_}"
 ENABLE_HTTPS="${ENABLE_HTTPS:-false}"
 NODE_MAJOR="${NODE_MAJOR:-22}"
 REPO_URL="${REPO_URL:-https://github.com/rebelking/vodia-downloads.git}"
-REPO_BRANCH="${REPO_BRANCH:-main}"
+REPO_BRANCH="${REPO_BRANCH:-$BRANCH}"
 REPO_TMP="${REPO_TMP:-/tmp/vodia-downloads-install}"
 PACKAGE_APP_SUBDIR="${PACKAGE_APP_SUBDIR:-pharmacy-ai/app}"
 PACKAGE_VOICE_SUBDIR="${PACKAGE_VOICE_SUBDIR:-pharmacy-ai/voice-agent}"
