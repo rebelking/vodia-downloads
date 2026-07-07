@@ -249,6 +249,30 @@ DOMAIN="${DOMAIN%%/*}"
 echo "Using BASE_URL: $BASE_URL"
 echo "Using DOMAIN:   $DOMAIN"
 
+# BEGIN DNS_MATCH_VALIDATION
+SKIP_PUBLIC_CHECKS="false"
+
+if [ -n "${DOMAIN:-}" ] && [ "$DOMAIN" != "_" ] && command -v dig >/dev/null 2>&1; then
+  SERVER_PUBLIC_IP="$(curl -fsS4 https://api.ipify.org 2>/dev/null || curl -fsS4 https://ifconfig.me 2>/dev/null || true)"
+  DNS_A_RECORDS="$(dig +short "$DOMAIN" A | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' | sort -u || true)"
+
+  echo
+  echo "=== DNS ownership check ==="
+  echo "Domain:          $DOMAIN"
+  echo "Server public IP: ${SERVER_PUBLIC_IP:-unknown}"
+  echo "DNS A record(s):"
+  echo "${DNS_A_RECORDS:-none}"
+
+  if [ -n "$SERVER_PUBLIC_IP" ] && ! echo "$DNS_A_RECORDS" | grep -qx "$SERVER_PUBLIC_IP"; then
+    warn "DNS for $DOMAIN does not point to this server yet. Public URL tests may hit another server."
+    SKIP_PUBLIC_CHECKS="true"
+  else
+    pass "DNS points to this server"
+  fi
+fi
+# END DNS_MATCH_VALIDATION
+
+
 echo
 echo "=== Ports ==="
 sudo ss -ltnp | grep -E ':80|:443|:3200' || true
@@ -258,10 +282,14 @@ echo "=== Local health ==="
 curl -s http://127.0.0.1:3200/health || true
 echo
 
-http_check "Public health" "$BASE_URL/health" "200"
-http_check "Portal" "$BASE_URL/portal" "200 301 302"
-http_check "Portal settings" "$BASE_URL/portal/settings" "200 301 302 401"
-http_check "Voice Agent" "$BASE_URL/portal/voice-agent" "200 301 302 401"
+if [ "${SKIP_PUBLIC_CHECKS:-false}" = "true" ]; then
+  warn "Skipping public HTTP checks because DNS is not pointing to this server."
+else
+  http_check "Public health" "$BASE_URL/health" "200 301 302"
+  http_check "Portal" "$BASE_URL/portal" "200 301 302"
+  http_check "Portal settings" "$BASE_URL/portal/settings" "200 301 302 401"
+  http_check "Voice Agent" "$BASE_URL/portal/voice-agent" "200 301 302 401"
+fi
 
 echo
 echo "=== Env URLs ==="
@@ -287,7 +315,11 @@ sudo grep -nE "server_name|ssl_certificate|proxy_pass" /etc/nginx/sites-enabled/
 
 echo
 echo "=== Certbot ==="
-sudo certbot certificates || true
+if command -v certbot >/dev/null 2>&1; then
+  sudo certbot certificates || true
+else
+  warn "certbot is not installed. This is expected when DNS mismatch caused HTTPS to be skipped."
+fi
 
 echo
 echo "=== PM2 ==="

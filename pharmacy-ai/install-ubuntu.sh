@@ -1078,6 +1078,37 @@ if [ "${DNS_ONLY:-false}" != "true" ]; then
   else
     echo "[domain] WARNING: missing HTTPS helper: $PHARMACY_HTTPS_SCRIPT"
   fi
+
+# BEGIN REFRESH_PUBLIC_URL_AFTER_HTTPS_HELPER
+refresh_public_url_from_helper() {
+  local url_file="/root/vodia-pharmacy-ai-public-url.txt"
+
+  if [ -f "$url_file" ]; then
+    local final_url
+    final_url="$(tr -d '[:space:]' < "$url_file" || true)"
+
+    if [ -n "$final_url" ]; then
+      PUBLIC_BASE_URL="$final_url"
+      PHARMACY_PUBLIC_BASE_URL="$final_url"
+
+      DOMAIN="${final_url#https://}"
+      DOMAIN="${DOMAIN#http://}"
+      DOMAIN="${DOMAIN%%/*}"
+
+      if echo "$final_url" | grep -q '^https://'; then
+        HTTPS="true"
+      else
+        HTTPS="false"
+      fi
+
+      echo "[domain] Final public base URL: $PUBLIC_BASE_URL"
+    fi
+  fi
+}
+# END REFRESH_PUBLIC_URL_AFTER_HTTPS_HELPER
+
+refresh_public_url_from_helper
+
 else
   echo "[domain] DNS_ONLY=true, skipping HTTPS setup."
 fi
