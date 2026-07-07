@@ -1029,6 +1029,27 @@ fi
 nginx -t
 systemctl reload nginx
 
+
+# BEGIN PHARMACY_DNS_HTTPS_FLOW
+echo
+echo "[domain] Optional DNS / HTTPS setup..."
+
+if [ "${DNS_ONLY:-false}" != "true" ]; then
+  PHARMACY_INSTALLER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  PHARMACY_HTTPS_SCRIPT="$PHARMACY_INSTALLER_DIR/scripts/configure-domain-https.sh"
+
+  if [ -x "$PHARMACY_HTTPS_SCRIPT" ]; then
+    "$PHARMACY_HTTPS_SCRIPT" || echo "[domain] WARNING: DNS/HTTPS setup did not complete. App is installed; rerun HTTPS helper later if needed."
+  else
+    echo "[domain] WARNING: missing HTTPS helper: $PHARMACY_HTTPS_SCRIPT"
+  fi
+else
+  echo "[domain] DNS_ONLY=true, skipping HTTPS setup."
+fi
+# END PHARMACY_DNS_HTTPS_FLOW
+
+
+
 ufw allow OpenSSH >/dev/null 2>&1 || true
 ufw allow 'Nginx Full' >/dev/null 2>&1 || true
 
