@@ -151,6 +151,42 @@ if [ "$CHECK_ONLY" = "true" ]; then
 fi
 
 echo
+
+# BEGIN PHARMACY_BOOTSTRAP_DNS_PROMPT
+echo
+echo "=================================================="
+echo " DNS / HTTPS selection"
+echo "=================================================="
+
+if [ -z "${PHARMACY_FQDN:-}" ]; then
+  if [ -r /dev/tty ]; then
+    read -r -p "Do you want to use your own DNS/FQDN and configure HTTPS now? [y/N]: " USE_DNS </dev/tty || USE_DNS=""
+
+    case "${USE_DNS:-}" in
+      y|Y|yes|YES)
+        read -r -p "Enter hostname/FQDN, example pharmacy.example.com: " PHARMACY_FQDN </dev/tty || PHARMACY_FQDN=""
+        PHARMACY_FQDN="$(echo "$PHARMACY_FQDN" | tr '[:upper:]' '[:lower:]' | sed -E 's#^https?://##; s#/.*$##; s#:.*$##; s/[[:space:]]//g')"
+
+        if [ -z "$PHARMACY_FQDN" ]; then
+          warn "No hostname entered. Installer will continue HTTP-only."
+        else
+          echo "Using PHARMACY_FQDN: $PHARMACY_FQDN"
+        fi
+        ;;
+      *)
+        echo "DNS/HTTPS skipped. Installer will continue HTTP-only."
+        ;;
+    esac
+  else
+    warn "No interactive terminal detected. To configure HTTPS non-interactively, run:"
+    echo "  curl -fsSL RAW_URL | PHARMACY_FQDN=your.domain.com bash"
+  fi
+else
+  echo "Using PHARMACY_FQDN from environment: $PHARMACY_FQDN"
+fi
+# END PHARMACY_BOOTSTRAP_DNS_PROMPT
+
+
 echo "=================================================="
 echo " Starting Pharmacy AI installer"
 echo "=================================================="
