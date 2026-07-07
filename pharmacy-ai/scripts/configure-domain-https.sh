@@ -61,14 +61,15 @@ PY
 
 update_nginx_server_name() {
   local domain="$1"
-  local conf
+  local conf="/etc/nginx/sites-available/vodia-pharmacy-ai"
 
-  conf="$($SUDO grep -Rsl "proxy_pass http://127.0.0.1:3200" /etc/nginx/sites-available /etc/nginx/sites-enabled 2>/dev/null | head -1 || true)"
+  echo "[domain] Writing active Nginx config: $conf"
 
-  if [ -z "$conf" ]; then
-    conf="/etc/nginx/sites-available/vodia-pharmacy-ai"
+  if [ -f "$conf" ]; then
+    $SUDO cp -a "$conf" "$conf.bak.domain-https.$(date +%Y%m%d-%H%M%S)"
+  fi
 
-    $SUDO tee "$conf" >/dev/null <<EOF_CONF
+  $SUDO tee "$conf" >/dev/null <<EOF_CONF
 server {
     listen 80;
     server_name $domain;
@@ -88,20 +89,15 @@ server {
 }
 EOF_CONF
 
-    $SUDO ln -sf "$conf" /etc/nginx/sites-enabled/vodia-pharmacy-ai
-  else
-    $SUDO cp -a "$conf" "$conf.bak.domain-https.$(date +%Y%m%d-%H%M%S)"
-
-    if $SUDO grep -q "server_name" "$conf"; then
-      $SUDO sed -i -E "s/server_name[[:space:]].*;/server_name $domain;/" "$conf"
-    else
-      $SUDO sed -i "/listen 80/a \    server_name $domain;" "$conf"
-    fi
-  fi
+  $SUDO ln -sf "$conf" /etc/nginx/sites-enabled/vodia-pharmacy-ai
 
   $SUDO nginx -t
   $SUDO systemctl reload nginx
+
+  echo "[domain] Active Nginx server_name:"
+  $SUDO grep -n "server_name\|proxy_pass" /etc/nginx/sites-enabled/vodia-pharmacy-ai || true
 }
+
 
 update_voice_agent_urls() {
   local base_url="$1"
@@ -161,6 +157,7 @@ configure_http_only_domain() {
     set_env_value "$APP_DIR/.env" "PHARMACY_DOMAIN" "$domain"
     set_env_value "$APP_DIR/.env" "PHARMACY_PUBLIC_BASE_URL" "$base_url"
     set_env_value "$APP_DIR/.env" "PUBLIC_BASE_URL" "$base_url"
+    set_env_value "$APP_DIR/.env" "PUBLIC_BASE_URL" "$base_url"
   fi
 
   update_voice_agent_urls "$base_url"
@@ -206,6 +203,7 @@ configure_https_domain() {
   if [ -f "$APP_DIR/.env" ]; then
     set_env_value "$APP_DIR/.env" "PHARMACY_DOMAIN" "$domain"
     set_env_value "$APP_DIR/.env" "PHARMACY_PUBLIC_BASE_URL" "$base_url"
+    set_env_value "$APP_DIR/.env" "PUBLIC_BASE_URL" "$base_url"
     set_env_value "$APP_DIR/.env" "PUBLIC_BASE_URL" "$base_url"
   fi
 
