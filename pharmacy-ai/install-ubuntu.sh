@@ -600,7 +600,24 @@ fi
 
 chown -R "${REAL_USER}:${REAL_USER}" "${INSTALL_DIR}"
 
-echo "[7/15] Creating .env if missing..."
+echo "
+
+# BEGIN COPY_PHARMACY_INSTALLER_SCRIPTS
+echo "[install] Copying installer helper scripts..."
+if [ -n "${PHARMACY_INSTALLER_SOURCE_DIR:-}" ] && [ -d "${PHARMACY_INSTALLER_SOURCE_DIR}/scripts" ]; then
+  mkdir -p "$INSTALL_DIR/scripts"
+  rsync -a "${PHARMACY_INSTALLER_SOURCE_DIR}/scripts/" "$INSTALL_DIR/scripts/"
+  chmod +x "$INSTALL_DIR/scripts/"*.sh 2>/dev/null || true
+elif [ -d "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/scripts" ]; then
+  mkdir -p "$INSTALL_DIR/scripts"
+  rsync -a "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/scripts/" "$INSTALL_DIR/scripts/"
+  chmod +x "$INSTALL_DIR/scripts/"*.sh 2>/dev/null || true
+else
+  echo "[install] WARNING: no installer helper scripts directory found."
+fi
+# END COPY_PHARMACY_INSTALLER_SCRIPTS
+
+[7/15] Creating .env if missing..."
 PUBLIC_BASE_URL="http://${DOMAIN}"
 
 if [ ! -f "${INSTALL_DIR}/.env" ]; then
@@ -1035,8 +1052,17 @@ echo
 echo "[domain] Optional DNS / HTTPS setup..."
 
 if [ "${DNS_ONLY:-false}" != "true" ]; then
-  PHARMACY_INSTALLER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  PHARMACY_INSTALLER_DIR="${PHARMACY_INSTALLER_SOURCE_DIR:-}"
+
+  if [ -z "$PHARMACY_INSTALLER_DIR" ]; then
+    PHARMACY_INSTALLER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  fi
+
   PHARMACY_HTTPS_SCRIPT="$PHARMACY_INSTALLER_DIR/scripts/configure-domain-https.sh"
+
+  if [ ! -x "$PHARMACY_HTTPS_SCRIPT" ] && [ -x "$INSTALL_DIR/scripts/configure-domain-https.sh" ]; then
+    PHARMACY_HTTPS_SCRIPT="$INSTALL_DIR/scripts/configure-domain-https.sh"
+  fi
 
   if [ -x "$PHARMACY_HTTPS_SCRIPT" ]; then
     "$PHARMACY_HTTPS_SCRIPT" || echo "[domain] WARNING: DNS/HTTPS setup did not complete. App is installed; rerun HTTPS helper later if needed."

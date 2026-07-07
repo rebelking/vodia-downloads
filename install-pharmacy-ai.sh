@@ -164,9 +164,18 @@ chmod +x install-ubuntu.sh scripts/configure-domain-https.sh 2>/dev/null || true
 
 if [ -n "${PHARMACY_FQDN:-}" ]; then
   echo "PHARMACY_FQDN was provided: $PHARMACY_FQDN"
-  run sudo env -u DOMAIN -u PUBLIC_BASE_URL -u PHARMACY_PUBLIC_BASE_URL PHARMACY_FQDN="$PHARMACY_FQDN" ./install-ubuntu.sh
+  run sudo env -u DOMAIN -u PUBLIC_BASE_URL -u PHARMACY_PUBLIC_BASE_URL \
+    REPO_URL="$REPO_URL" \
+    BRANCH="$BRANCH" \
+    PHARMACY_INSTALLER_SOURCE_DIR="$WORKDIR/pharmacy-ai" \
+    PHARMACY_FQDN="$PHARMACY_FQDN" \
+    ./install-ubuntu.sh
 else
-  run sudo env -u DOMAIN -u PUBLIC_BASE_URL -u PHARMACY_PUBLIC_BASE_URL -u PHARMACY_FQDN ./install-ubuntu.sh
+  run sudo env -u DOMAIN -u PUBLIC_BASE_URL -u PHARMACY_PUBLIC_BASE_URL -u PHARMACY_FQDN \
+    REPO_URL="$REPO_URL" \
+    BRANCH="$BRANCH" \
+    PHARMACY_INSTALLER_SOURCE_DIR="$WORKDIR/pharmacy-ai" \
+    ./install-ubuntu.sh
 fi
 
 echo
