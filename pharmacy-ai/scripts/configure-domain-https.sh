@@ -7,7 +7,7 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 APP_DIR="${PHARMACY_INSTALL_DIR:-/opt/vodia-pharmacy-ai}"
-DOMAIN="${PHARMACY_FQDN:-${DOMAIN:-${1:-}}}"
+DOMAIN="${PHARMACY_FQDN:-${1:-}}"
 NONINTERACTIVE="${PHARMACY_NONINTERACTIVE:-false}"
 
 normalize_domain() {
@@ -160,6 +160,7 @@ configure_http_only_domain() {
   if [ -f "$APP_DIR/.env" ]; then
     set_env_value "$APP_DIR/.env" "PHARMACY_DOMAIN" "$domain"
     set_env_value "$APP_DIR/.env" "PHARMACY_PUBLIC_BASE_URL" "$base_url"
+    set_env_value "$APP_DIR/.env" "PUBLIC_BASE_URL" "$base_url"
   fi
 
   update_voice_agent_urls "$base_url"
@@ -205,6 +206,7 @@ configure_https_domain() {
   if [ -f "$APP_DIR/.env" ]; then
     set_env_value "$APP_DIR/.env" "PHARMACY_DOMAIN" "$domain"
     set_env_value "$APP_DIR/.env" "PHARMACY_PUBLIC_BASE_URL" "$base_url"
+    set_env_value "$APP_DIR/.env" "PUBLIC_BASE_URL" "$base_url"
   fi
 
   update_voice_agent_urls "$base_url"
