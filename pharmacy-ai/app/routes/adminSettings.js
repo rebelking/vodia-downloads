@@ -226,7 +226,7 @@ function requireAdmin(req, res, next) {
         <div class="card">
           <h1>Admin login required</h1>
           <p>This settings page is restricted to portal admins.</p>
-          <p><a href="/login">Go to login</a> &nbsp; | &nbsp; <a href="/portal">Go to portal</a></p>
+          <p><a href="/portal">Go to login</a> &nbsp; | &nbsp; <a href="/portal">Go to portal</a></p>
         </div>
       </body>
     </html>
@@ -483,7 +483,7 @@ function renderPage(res, options = {}) {
     <div class="topnav">
       <a href="/portal">Portal</a>
       <a href="/admin">Admin</a>
-      <a href="/admin/settings">Settings</a>
+      <a href="/portal/settings">Settings</a>
       <a href="/health">Health</a>
     </div>
 
@@ -513,7 +513,7 @@ function renderPage(res, options = {}) {
       <h2>SMTP / Email</h2>
       <p class="sub">Used for admin invites, password reset, refill alerts, test emails, and future 2FA email workflows.</p>
 
-      <form method="post" action="/admin/settings/smtp">
+      <form method="post" action="/portal/settings/smtp">
         <div class="row">
           <div>
             <label>SMTP Host</label>
@@ -565,7 +565,7 @@ function renderPage(res, options = {}) {
 
       <hr style="border:0;border-top:1px solid var(--line);margin:22px 0;">
 
-      <form method="post" action="/admin/settings/smtp/test">
+      <form method="post" action="/portal/settings/smtp/test">
         <label>Send Test Email To</label>
         <input name="to" placeholder="admin@example.com">
         <div class="actions">
@@ -579,7 +579,7 @@ function renderPage(res, options = {}) {
       <h2>Security Settings</h2>
       <p class="sub">This is the customer-facing control center for 2FA, passkeys, SSO, PHI masking, and audit posture.</p>
 
-      <form method="post" action="/admin/settings/security">
+      <form method="post" action="/portal/settings/security">
         <label class="check"><input type="checkbox" name="maskPhi" ${checked(settings.security.maskPhi)}> Mask PHI by default</label>
         <label class="check"><input type="checkbox" name="requireRevealVerification" ${checked(settings.security.requireRevealVerification)}> Require verification before revealing patient details</label>
         <label class="check"><input type="checkbox" name="auditReveal" ${checked(settings.security.auditReveal)}> Audit every PHI reveal</label>
@@ -608,7 +608,7 @@ function renderPage(res, options = {}) {
         </div>
       ` : ''}
 
-      <form method="post" action="/admin/settings/tenant">
+      <form method="post" action="/portal/settings/tenant">
         <div class="row">
           <div>
             <label>PBX Server FQDN</label>
@@ -641,7 +641,7 @@ function renderPage(res, options = {}) {
         </div>
       </form>
 
-      <form method="post" action="/admin/settings/tenant/rotate-secret">
+      <form method="post" action="/portal/settings/tenant/rotate-secret">
         <div class="actions">
           <button class="warning" type="submit">Generate / Rotate Webhook Secret</button>
         </div>
@@ -652,7 +652,7 @@ function renderPage(res, options = {}) {
       <h2>CRM Integration</h2>
       <p class="sub">Foundation for CRM-first lookup. The safer model is to store external patient IDs locally, not the full patient profile.</p>
 
-      <form method="post" action="/admin/settings/crm">
+      <form method="post" action="/portal/settings/crm">
         <div class="row">
           <div>
             <label>CRM Provider</label>

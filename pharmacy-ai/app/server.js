@@ -1408,7 +1408,7 @@ try {
       <a href="/portal/patients">Patients</a>
       <a href="/portal/medications">Medications</a>
       <a href="/portal/history">History</a>
-      <a href="/admin/settings">Settings</a>
+      <a href="/portal/settings">Settings</a>
       <a href="/logout">Logout</a>
     </nav>
   </header>
@@ -1477,8 +1477,10 @@ try {
 try {
   const adminSettingsRouter = require('./routes/adminSettings');
   app.use('/admin/settings', adminSettingsRouter);
-  app.get('/settings', (req, res) => res.redirect('/admin/settings'));
-  console.log('Pharmacy AI admin settings mounted at /admin/settings');
+  app.use('/portal/settings', adminSettingsRouter);
+  app.use('/portal/settings', adminSettingsRouter);
+  app.get('/settings', (req, res) => res.redirect('/portal/settings'));
+  console.log('Pharmacy AI admin settings mounted at /admin/settings and /portal/settings and /portal/settings');
 } catch (err) {
   console.error('Failed to mount Pharmacy AI admin settings:', err.message);
 }
