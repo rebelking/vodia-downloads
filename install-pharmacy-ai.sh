@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# Non-interactive apt/needrestart guard.
+# Prevents Ubuntu package dialogs such as "Pending kernel upgrade" from blocking installs.
+export DEBIAN_FRONTEND=noninteractive
+export NEEDRESTART_MODE=a
+export NEEDRESTART_SUSPEND=1
+export UCF_FORCE_CONFOLD=1
+
+
 REPO_URL="${REPO_URL:-https://github.com/rebelking/vodia-downloads.git}"
 BRANCH="${BRANCH:-feature/pharmacy-installer-polish}"
 WORKDIR="${WORKDIR:-$HOME/vodia-downloads}"
@@ -86,7 +94,7 @@ command -v sudo >/dev/null 2>&1 || fatal "sudo is required."
 
 echo "=== Install bootstrap packages ==="
 run sudo apt-get update -y
-run sudo apt-get install -y git curl ca-certificates dnsutils
+run sudo apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" git curl ca-certificates dnsutils
 
 echo
 echo "=== Clone or update installer repo ==="

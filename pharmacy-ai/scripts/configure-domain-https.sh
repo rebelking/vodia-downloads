@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# Non-interactive apt/needrestart guard.
+# Prevents Ubuntu package dialogs such as "Pending kernel upgrade" from blocking installs.
+export DEBIAN_FRONTEND=noninteractive
+export NEEDRESTART_MODE=a
+export NEEDRESTART_SUSPEND=1
+export UCF_FORCE_CONFOLD=1
+
+
 APP_DIR="${APP_DIR:-/opt/vodia-pharmacy-ai}"
 DOMAIN="${PHARMACY_FQDN:-${1:-}}"
 WEBROOT="${WEBROOT:-/var/www/letsencrypt}"
@@ -177,7 +185,7 @@ fi
 DOMAIN="$(echo "$DOMAIN" | tr '[:upper:]' '[:lower:]' | sed -E 's#^https?://##; s#/.*$##; s#:.*$##; s/[[:space:]]//g')"
 
 $SUDO apt-get update
-$SUDO apt-get install -y bind9-dnsutils curl ca-certificates nginx
+$SUDO apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" bind9-dnsutils curl ca-certificates nginx
 
 SERVER_IP="$(curl -fsS4 https://api.ipify.org 2>/dev/null || curl -fsS4 https://ifconfig.me 2>/dev/null || true)"
 DNS_IPS="$(dig +short "$DOMAIN" A | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' | sort -u || true)"
@@ -238,7 +246,7 @@ curl -fsS "http://$DOMAIN/.well-known/acme-challenge/ping" || {
 }
 echo
 
-$SUDO apt-get install -y certbot
+$SUDO apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" certbot
 
 if [ -z "$EMAIL" ]; then
   if [ -r /dev/tty ]; then

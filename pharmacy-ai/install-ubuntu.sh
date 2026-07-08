@@ -541,7 +541,7 @@ fi
 
 echo "[1/15] Installing system packages..."
 apt update
-DEBIAN_FRONTEND=noninteractive apt install -y \
+DEBIAN_FRONTEND=noninteractive apt install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y \
   curl git rsync build-essential nginx sqlite3 dnsutils ufw ca-certificates gnupg unzip openssl
 
 echo "DNS preflight / public hostname check..."
@@ -550,7 +550,7 @@ dns_preflight_wizard
 echo "[2/15] Installing Node.js ${NODE_MAJOR}.x if needed..."
 if ! command -v node >/dev/null 2>&1; then
   curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash -
-  DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
+  DEBIAN_FRONTEND=noninteractive apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" nodejs
 else
   echo "Node already installed: $(node -v)"
 fi
@@ -1121,7 +1121,7 @@ ufw allow 'Nginx Full' >/dev/null 2>&1 || true
 
 if [ "${ENABLE_HTTPS}" = "true" ]; then
   echo "Installing Certbot and requesting HTTPS certificate..."
-  DEBIAN_FRONTEND=noninteractive apt install -y certbot python3-certbot-nginx
+  DEBIAN_FRONTEND=noninteractive apt install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y certbot python3-certbot-nginx
 
   certbot --nginx -d "${DOMAIN}" --non-interactive --agree-tos -m "admin@${DOMAIN}" --redirect || {
     echo "WARNING: Certbot failed. HTTP install still completed."
