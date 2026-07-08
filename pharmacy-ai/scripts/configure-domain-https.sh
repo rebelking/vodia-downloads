@@ -2,16 +2,14 @@
 set -Eeuo pipefail
 
 # Non-interactive apt/needrestart guard.
-# Prevents Ubuntu package dialogs such as "Pending kernel upgrade" from blocking installs.
 export DEBIAN_FRONTEND=noninteractive
 export NEEDRESTART_MODE=a
 export NEEDRESTART_SUSPEND=1
 export UCF_FORCE_CONFOLD=1
 
-
 APP_DIR="${APP_DIR:-/opt/vodia-pharmacy-ai}"
 DOMAIN="${PHARMACY_FQDN:-${1:-}}"
-WEBROOT="${WEBROOT:-/var/www/letsencrypt}"
+WEBROOT="${WEBROOT:-/var/www/html}"
 CONF="/etc/nginx/sites-available/vodia-pharmacy-ai"
 ENABLED="/etc/nginx/sites-enabled/vodia-pharmacy-ai"
 EMAIL="${LETSENCRYPT_EMAIL:-}"
@@ -20,6 +18,36 @@ SUDO=""
 if [ "$(id -u)" -ne 0 ]; then
   SUDO="sudo"
 fi
+
+apt_install() {
+  $SUDO apt-get update
+  $SUDO apt-get install -y \
+    -o Dpkg::Options::="--force-confdef" \
+    -o Dpkg::Options::="--force-confold" \
+    "$@"
+}
+
+clean_domain() {
+  echo "$1" \
+    | tr '[:upper:]' '[:lower:]' \
+    | sed -E 's#^https?://##; s#/.*$##; s#:.*$##; s/[[:space:]]//g'
+}
+
+get_server_ip() {
+  curl -fsS4 https://api.ipify.org 2>/dev/null \
+    || curl -fsS4 https://ifconfig.me 2>/dev/null \
+    || true
+}
+
+get_dns_ips() {
+  local domain="$1"
+
+  {
+    dig +short "$domain" A 2>/dev/null || true
+    dig +short "$domain" A @1.1.1.1 2>/dev/null || true
+    dig +short "$domain" A @8.8.8.8 2>/dev/null || true
+  } | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' | sort -u || true
+}
 
 set_env_value() {
   local file="$1"
@@ -63,6 +91,7 @@ for path in files:
         continue
 
     txt = path.read_text()
+
     txt = txt.replace("http://_", base)
     txt = txt.replace("https://_", base)
 
@@ -80,12 +109,32 @@ for path in files:
 PY
 }
 
+apply_public_urls() {
+  local base_url="$1"
+  local domain="$2"
+
+  echo "$base_url" | $SUDO tee /root/vodia-pharmacy-ai-public-url.txt >/dev/null
+
+  set_env_value "$APP_DIR/.env" "PUBLIC_BASE_URL" "$base_url"
+  set_env_value "$APP_DIR/.env" "PHARMACY_DOMAIN" "$domain"
+  set_env_value "$APP_DIR/.env" "PHARMACY_PUBLIC_BASE_URL" "$base_url"
+
+  if [ -f /root/vodia-pharmacy-ai-portal-login.txt ]; then
+    $SUDO sed -i -E "s#^URL: .*#URL: $base_url/portal#" /root/vodia-pharmacy-ai-portal-login.txt
+  fi
+
+  update_voice_agent_urls "$base_url"
+
+  $SUDO -iu ubuntu pm2 restart vodia-pharmacy-ai --update-env >/dev/null 2>&1 || true
+}
+
 write_http_nginx() {
   local domain="$1"
 
   $SUDO mkdir -p "$WEBROOT/.well-known/acme-challenge"
-
   echo "acme-ok" | $SUDO tee "$WEBROOT/.well-known/acme-challenge/ping" >/dev/null
+
+  $SUDO rm -f /etc/nginx/sites-enabled/default || true
 
   if [ -f "$CONF" ]; then
     $SUDO cp -a "$CONF" "$CONF.bak.http.$(date +%Y%m%d-%H%M%S)"
@@ -94,11 +143,12 @@ write_http_nginx() {
   $SUDO tee "$CONF" >/dev/null <<EOF_CONF
 server {
     listen 80;
+    listen [::]:80;
     server_name $domain;
 
     location ^~ /.well-known/acme-challenge/ {
         root $WEBROOT;
-        default_type "text/plain";
+        default_type text/plain;
         try_files \$uri =404;
     }
 
@@ -130,11 +180,12 @@ write_https_nginx() {
   $SUDO tee "$CONF" >/dev/null <<EOF_CONF
 server {
     listen 80;
+    listen [::]:80;
     server_name $domain;
 
     location ^~ /.well-known/acme-challenge/ {
         root $WEBROOT;
-        default_type "text/plain";
+        default_type text/plain;
         try_files \$uri =404;
     }
 
@@ -144,7 +195,10 @@ server {
 }
 
 server {
-    listen 443 ssl http2;
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+
     server_name $domain;
 
     ssl_certificate /etc/letsencrypt/live/$domain/fullchain.pem;
@@ -178,80 +232,74 @@ echo " DNS / HTTPS setup"
 echo "=================================================="
 
 if [ -z "$DOMAIN" ]; then
-  echo "[domain] No PHARMACY_FQDN provided. Skipping HTTPS."
+  echo "[domain] No PHARMACY_FQDN provided. Skipping DNS/HTTPS."
   exit 0
 fi
 
-DOMAIN="$(echo "$DOMAIN" | tr '[:upper:]' '[:lower:]' | sed -E 's#^https?://##; s#/.*$##; s#:.*$##; s/[[:space:]]//g')"
+DOMAIN="$(clean_domain "$DOMAIN")"
 
-$SUDO apt-get update
-$SUDO apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" bind9-dnsutils curl ca-certificates nginx
+apt_install bind9-dnsutils curl ca-certificates nginx
 
-SERVER_IP="$(curl -fsS4 https://api.ipify.org 2>/dev/null || curl -fsS4 https://ifconfig.me 2>/dev/null || true)"
-DNS_IPS="$(dig +short "$DOMAIN" A | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' | sort -u || true)"
+SERVER_IP="$(get_server_ip)"
+DNS_IPS="$(get_dns_ips "$DOMAIN")"
+
+DNS_BAD_IPS="$(echo "$DNS_IPS" | grep -vx "$SERVER_IP" || true)"
+DNS_COUNT="$(echo "$DNS_IPS" | sed '/^$/d' | wc -l | tr -d ' ')"
 
 echo
 echo "[domain] Domain: $DOMAIN"
 echo "[domain] Server public IP: ${SERVER_IP:-unknown}"
 echo "[domain] DNS A record IP(s): ${DNS_IPS:-none}"
 
-if [ -z "$SERVER_IP" ] || ! echo "$DNS_IPS" | grep -qx "$SERVER_IP"; then
+if [ -z "$SERVER_IP" ] || [ -z "$DNS_IPS" ] || [ -n "$DNS_BAD_IPS" ] || [ "$DNS_COUNT" -ne 1 ]; then
   echo
-  echo "[domain] DNS does not point to this server yet."
-  echo "Create or update this DNS record:"
+  echo "[domain] DNS is not clean enough for HTTPS."
   echo
+  echo "Required DNS:"
   echo "  Type: A"
   echo "  Name/FQDN: $DOMAIN"
   echo "  Value: $SERVER_IP"
-  echo "  TTL: 300"
   echo
-  echo "[domain] Configuring HTTP only and skipping Certbot."
+  if [ -n "$DNS_BAD_IPS" ]; then
+    echo "Remove these old/wrong A records:"
+    echo "$DNS_BAD_IPS" | sed 's/^/  - /'
+    echo
+  fi
+  echo "[domain] Configuring HTTP only for now. HTTPS will be skipped."
 
   write_http_nginx "$DOMAIN"
-
-  BASE_URL="http://$DOMAIN"
-
-  set_env_value "$APP_DIR/.env" "PUBLIC_BASE_URL" "$BASE_URL"
-  set_env_value "$APP_DIR/.env" "PHARMACY_DOMAIN" "$DOMAIN"
-  set_env_value "$APP_DIR/.env" "PHARMACY_PUBLIC_BASE_URL" "$BASE_URL"
-
-  echo "$BASE_URL" | $SUDO tee /root/vodia-pharmacy-ai-public-url.txt >/dev/null
-
-  if [ -f /root/vodia-pharmacy-ai-portal-login.txt ]; then
-    $SUDO sed -i -E "s#^URL: .*#URL: $BASE_URL/portal#" /root/vodia-pharmacy-ai-portal-login.txt
-  fi
-
-  update_voice_agent_urls "$BASE_URL"
+  apply_public_urls "http://$DOMAIN" "$DOMAIN"
 
   echo
   echo "[domain] HTTP public URLs:"
-  echo "  $BASE_URL/portal"
-  echo "  $BASE_URL/portal/settings"
-  echo "  $BASE_URL/portal/voice-agent"
+  echo "  http://$DOMAIN/health"
+  echo "  http://$DOMAIN/portal"
+  echo "  http://$DOMAIN/portal/settings"
+  echo "  http://$DOMAIN/portal/voice-agent"
 
   exit 0
 fi
 
 echo
-echo "[domain] DNS matches this server."
+echo "[domain] DNS is clean. Exactly one A record points to this server."
 
 write_http_nginx "$DOMAIN"
+apply_public_urls "http://$DOMAIN" "$DOMAIN"
 
 echo
 echo "[domain] Public ACME challenge test:"
-curl -fsS "http://$DOMAIN/.well-known/acme-challenge/ping" || {
+if ! curl -fsS "http://$DOMAIN/.well-known/acme-challenge/ping"; then
   echo
   echo "[domain] ERROR: ACME challenge path is not publicly reachable over HTTP."
-  exit 1
-}
+  echo "[domain] Leaving app configured as HTTP instead of broken placeholder."
+  exit 0
+fi
 echo
 
-$SUDO apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" certbot
+apt_install certbot
 
-if [ -z "$EMAIL" ]; then
-  if [ -r /dev/tty ]; then
-    read -r -p "Let's Encrypt email, optional but recommended: " EMAIL </dev/tty || EMAIL=""
-  fi
+if [ -z "$EMAIL" ] && [ -r /dev/tty ]; then
+  read -r -p "Let's Encrypt email, optional but recommended: " EMAIL </dev/tty || EMAIL=""
 fi
 
 CERTBOT_ARGS=(
@@ -271,29 +319,19 @@ else
 fi
 
 echo "[domain] Requesting certificate for $DOMAIN..."
-$SUDO certbot "${CERTBOT_ARGS[@]}"
-
-write_https_nginx "$DOMAIN"
-
-BASE_URL="https://$DOMAIN"
-
-set_env_value "$APP_DIR/.env" "PUBLIC_BASE_URL" "$BASE_URL"
-set_env_value "$APP_DIR/.env" "PHARMACY_DOMAIN" "$DOMAIN"
-set_env_value "$APP_DIR/.env" "PHARMACY_PUBLIC_BASE_URL" "$BASE_URL"
-
-echo "$BASE_URL" | $SUDO tee /root/vodia-pharmacy-ai-public-url.txt >/dev/null
-
-if [ -f /root/vodia-pharmacy-ai-portal-login.txt ]; then
-  $SUDO sed -i -E "s#^URL: .*#URL: $BASE_URL/portal#" /root/vodia-pharmacy-ai-portal-login.txt
+if ! $SUDO certbot "${CERTBOT_ARGS[@]}"; then
+  echo
+  echo "[domain] ERROR: Certbot failed."
+  echo "[domain] Leaving app configured as HTTP instead of broken placeholder."
+  exit 0
 fi
 
-update_voice_agent_urls "$BASE_URL"
-
-$SUDO -iu ubuntu pm2 restart vodia-pharmacy-ai --update-env || true
+write_https_nginx "$DOMAIN"
+apply_public_urls "https://$DOMAIN" "$DOMAIN"
 
 echo
 echo "[domain] HTTPS public URLs:"
-echo "  $BASE_URL/health"
-echo "  $BASE_URL/portal"
-echo "  $BASE_URL/portal/settings"
-echo "  $BASE_URL/portal/voice-agent"
+echo "  https://$DOMAIN/health"
+echo "  https://$DOMAIN/portal"
+echo "  https://$DOMAIN/portal/settings"
+echo "  https://$DOMAIN/portal/voice-agent"
