@@ -81,6 +81,7 @@ REPO_BRANCH="${REPO_BRANCH:-$BRANCH}"
 REPO_TMP="${REPO_TMP:-/tmp/vodia-downloads-install}"
 PACKAGE_APP_SUBDIR="${PACKAGE_APP_SUBDIR:-pharmacy-ai/app}"
 PACKAGE_VOICE_SUBDIR="${PACKAGE_VOICE_SUBDIR:-pharmacy-ai/voice-agent}"
+PHARMACY_INSTALLER_SOURCE_DIR="${PHARMACY_INSTALLER_SOURCE_DIR:-${REPO_TMP}/pharmacy-ai}"
 STAFF_TRANSFER_DESTINATION="${STAFF_TRANSFER_DESTINATION:-700}"
 
 echo "=================================================="
