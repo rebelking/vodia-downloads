@@ -97,7 +97,6 @@ console.log(JSON.stringify(body))
 if (body.type == "realtime.call.incoming") {
 var callid = body.data.call_id
 
-```
 console.log("Call id:")
 console.log(callid)
 
@@ -122,7 +121,6 @@ system.http({
     connected(code, response, headers, callid)
   }
 })
-```
 
 }
 }
@@ -138,7 +136,6 @@ ws.header([
 ws.on("open", function() {
 console.log("Websocket opened")
 
-```
 var instructions =
   audioDirective +
 
@@ -449,7 +446,6 @@ ws.send(JSON.stringify({
     instructions: "Greet with: " + text("initial")
   }
 }))
-```
 
 })
 
@@ -460,7 +456,6 @@ console.log("Websocket closed")
 ws.on("message", function(message) {
 var evt
 
-```
 try {
   evt = JSON.parse(message)
 } catch (e) {
@@ -510,7 +505,6 @@ if (
     return
   }
 }
-```
 
 })
 
@@ -563,7 +557,6 @@ console.log(code)
 console.log("Customer lookup response:")
 console.log(response)
 
-```
   var output
 
   try {
@@ -618,7 +611,6 @@ console.log(response)
     }
   }))
 }
-```
 
 })
 }
@@ -783,7 +775,6 @@ console.log("Transfer started during goodbye wait. Skipping hangup.")
 return
 }
 
-```
 try {
   console.log("Closing WebSocket before hangup")
   ws.close()
@@ -792,7 +783,6 @@ try {
 }
 
 call.hangup()
-```
 
 }, 8000)
 }
@@ -883,7 +873,6 @@ callId,
 if (fulfillmentMethod === "pickup") {
 var store = resolvePickupStore(pickupStoreLocation || pickupStoreCode || pickupStoreName)
 
-```
 if (store) {
   pickupStoreCode = store.store_code
   pickupStoreName = store.store_name
@@ -899,7 +888,6 @@ if (!pickupStoreName || !pickupStoreAddress) {
     "Ask which pickup location they prefer: Lawrence, Burlington, or Methuen."
   )
 }
-```
 
 }
 
@@ -908,7 +896,6 @@ if (!deliveryAddress) {
 deliveryAddress = address
 }
 
-```
 if (!deliveryAddressConfirmed) {
   return askAgain(
     ws,
@@ -918,7 +905,6 @@ if (!deliveryAddressConfirmed) {
     "Repeat the delivery address and ask: Is this correct for delivery?"
   )
 }
-```
 
 }
 
@@ -954,7 +940,6 @@ callback: function(code, response, headers) {
 console.log("Pharmacy backend response code:")
 console.log(code)
 
-```
   console.log("Pharmacy backend response:")
   console.log(response)
 
@@ -1042,7 +1027,6 @@ console.log(code)
     }
   }))
 }
-```
 
 })
 }
