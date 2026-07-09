@@ -1,6 +1,65 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+
+# --- Vodia Pharmacy AI interactive DNS/FQDN prompt ---
+ensure_pharmacy_fqdn_interactive() {
+  if [ -n "${PHARMACY_FQDN:-}" ]; then
+    echo "[domain] PHARMACY_FQDN provided: $PHARMACY_FQDN"
+    return 0
+  fi
+
+  if [ ! -t 0 ]; then
+    echo "[domain] No PHARMACY_FQDN provided and no interactive terminal detected. Skipping DNS/HTTPS."
+    return 0
+  fi
+
+  echo
+  echo "=================================================="
+  echo " DNS / HTTPS setup"
+  echo "=================================================="
+  echo
+
+  SERVER_IP="$(curl -fsS https://checkip.amazonaws.com 2>/dev/null | tr -d '[:space:]' || true)"
+
+  echo "Detected server public IP: ${SERVER_IP:-unknown}"
+  echo
+  read -rp "Enter the public DNS/FQDN for this app, example pharmacy.customer.com: " PHARMACY_FQDN
+
+  if [ -z "${PHARMACY_FQDN:-}" ]; then
+    echo "[domain] No DNS/FQDN entered. Skipping DNS/HTTPS."
+    return 0
+  fi
+
+  echo
+  echo "Checking DNS..."
+  DNS_IP="$(dig +short A "$PHARMACY_FQDN" 2>/dev/null | tail -n1 || true)"
+
+  echo "Domain: $PHARMACY_FQDN"
+  echo "DNS IP: ${DNS_IP:-not found}"
+  echo "Server IP: ${SERVER_IP:-unknown}"
+  echo
+
+  if [ -n "$SERVER_IP" ] && [ "$DNS_IP" != "$SERVER_IP" ]; then
+    echo "DNS does not point to this server yet."
+    echo
+    echo "Create/update this DNS record:"
+    echo "Type:  A"
+    echo "Name:  $PHARMACY_FQDN"
+    echo "Value: $SERVER_IP"
+    echo
+    echo "Stopping here so HTTPS does not get built wrong."
+    echo "Fix DNS, then rerun the installer."
+    exit 1
+  fi
+
+  export PHARMACY_FQDN
+}
+
+ensure_pharmacy_fqdn_interactive
+# --- End Vodia Pharmacy AI interactive DNS/FQDN prompt ---
+
+
 # BEGIN PHARMACY_BRANCH_ALIAS_FIX
 # Accept branch from bootstrap, direct env, or old variable names.
 BRANCH="${BRANCH:-${REPO_BRANCH:-${INSTALL_BRANCH:-${PHARMACY_BRANCH:-main}}}}"
