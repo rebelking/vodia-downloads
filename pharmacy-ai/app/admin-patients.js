@@ -315,7 +315,7 @@ function pageLayout(title, body) {
     <a href="/portal/orders">Agent Orders</a><a href="/portal/chat">Chat</a>
     <a href="/admin/users">Admin Users</a>
     <a href="/admin/patients">Patients</a><a href="/admin/medications">Medications</a>
-    <a href="/admin/history">History</a><a href="/portal/logout">Logout</a>
+    <a href="/admin/history">History</a><a href="/portal/settings">Settings</a><a href="/portal/voice-agent">Voice Agent</a><a href="/portal/logout">Logout</a>
   </header>
   <main>
     ${body}

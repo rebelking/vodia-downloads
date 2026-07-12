@@ -17,6 +17,8 @@ const { installOrderEditRoutes } = require('./order-edit');
 const { auditPostMiddleware, installPortalExtraRoutes } = require('./portal-extra');
 const { installAdminMedicationRoutes } = require('./admin-medications');
 const { installAdminPatientRoutes } = require('./admin-patients');
+const { installVoiceAgentPortalRoutes } = require('./voice-agent-portal-routes');
+const adminSettingsRouter = require('./routes/adminSettings');
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
@@ -1247,6 +1249,13 @@ installOrderEditRoutes(app, openDb);
 installPortalExtraRoutes(app, openDb);
 installAdminMedicationRoutes(app, openDb);
 installAdminPatientRoutes(app, openDb);
+installVoiceAgentPortalRoutes(app);
+
+app.use('/portal/settings', adminSettingsRouter);
+app.use('/admin/settings', adminSettingsRouter);
+app.get('/settings', function (req, res) {
+  res.redirect('/portal/settings');
+});
 // PHARMACY_LOCATION_ROUTES_V1
 require('./pharmacy-location-routes')(app);
 
