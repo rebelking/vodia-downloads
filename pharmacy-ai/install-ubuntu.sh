@@ -559,10 +559,11 @@ else
       break
     done
 
-    ADMIN_NAME="${ADMIN_NAME}" \
-    ADMIN_USERNAME="${ADMIN_USERNAME}" \
-    ADMIN_PASSWORD="${ADMIN_PASSWORD}" \
-    sudo -u "${REAL_USER}" node <<'NODE'
+    sudo -u "${REAL_USER}" env \
+      ADMIN_NAME="${ADMIN_NAME}" \
+      ADMIN_USERNAME="${ADMIN_USERNAME}" \
+      ADMIN_PASSWORD="${ADMIN_PASSWORD}" \
+      node <<'NODE'
 const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcrypt');
 
