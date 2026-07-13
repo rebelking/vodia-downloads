@@ -530,12 +530,34 @@ else
   else
     prompt_required ADMIN_NAME "Admin full name: "
     prompt_required ADMIN_USERNAME "Admin username: "
-    prompt_required ADMIN_PASSWORD "Admin password: " true
 
     [[ -n "${ADMIN_NAME}" ]] || die "Admin full name cannot be empty."
     [[ -n "${ADMIN_USERNAME}" ]] || die "Admin username cannot be empty."
-    [[ "${#ADMIN_PASSWORD}" -ge 10 ]] \
-      || die "Admin password must contain at least 10 characters."
+
+    while true; do
+      ADMIN_PASSWORD=""
+      ADMIN_PASSWORD_CONFIRM=""
+
+      prompt_required ADMIN_PASSWORD "Admin password: " true
+
+      if [[ "${#ADMIN_PASSWORD}" -lt 10 ]]; then
+        echo "ERROR: Admin password must contain at least 10 characters."
+        echo "Please enter the password again."
+        echo
+        continue
+      fi
+
+      prompt_required ADMIN_PASSWORD_CONFIRM "Re-enter admin password: " true
+
+      if [[ "${ADMIN_PASSWORD}" != "${ADMIN_PASSWORD_CONFIRM}" ]]; then
+        echo "ERROR: Passwords do not match."
+        echo "Please enter both passwords again."
+        echo
+        continue
+      fi
+
+      break
+    done
 
     ADMIN_NAME="${ADMIN_NAME}" \
     ADMIN_USERNAME="${ADMIN_USERNAME}" \
