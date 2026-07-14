@@ -2,7 +2,10 @@
 
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
-const nodemailer = require('nodemailer');
+const {
+  createConfiguredMailer,
+  getPortalLoginUrl
+} = require('./lib/mailer');
 
 function escapeHtml(value) {
   return String(value || '')
@@ -86,30 +89,24 @@ function renderPhone(phone) {
   return `<a href="${escapeHtml(href)}" title="Dial ${escapeHtml(e164)}">${display}</a><br><span class="muted">${escapeHtml(e164)}</span>`;
 }
 
-function createEmailTransporter() {
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT || 587),
-    secure: String(process.env.SMTP_SECURE || 'false') === 'true',
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS
-    }
-  });
-}
-
 async function sendUserWelcomeEmail(user, temporaryPassword) {
   if (!user.email) {
-    return { sent: false, reason: 'No email address provided.' };
+    return {
+      sent: false,
+      reason: 'No email address provided.'
+    };
   }
 
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS || !process.env.EMAIL_FROM) {
-    return { sent: false, reason: 'SMTP settings missing.' };
+  const mailer = createConfiguredMailer();
+
+  if (!mailer.configured) {
+    return {
+      sent: false,
+      reason: mailer.reason || 'SMTP settings are missing.'
+    };
   }
 
-  const portalUrl = process.env.PORTAL_LOGIN_URL || 'https://pharmacy.audiomercy.com/portal/login';
-  const transporter = createEmailTransporter();
-
+  const portalUrl = getPortalLoginUrl();
   const subject = 'Your Vodia Pharmacy Portal Login';
 
   const text = `
@@ -126,29 +123,41 @@ ${user.username}
 Temporary password:
 ${temporaryPassword}
 
-Please log in and keep this information secure.
+Please log in and change your temporary password.
 `;
 
   const html = `
     <h2>Your Vodia Pharmacy Portal Login</h2>
     <p>Hello ${escapeHtml(user.name)},</p>
     <p>Your Vodia Pharmacy Portal account has been created.</p>
-    <p><strong>Portal:</strong><br><a href="${escapeHtml(portalUrl)}">${escapeHtml(portalUrl)}</a></p>
-    <p><strong>Username:</strong><br>${escapeHtml(user.username)}</p>
-    <p><strong>Temporary password:</strong><br>${escapeHtml(temporaryPassword)}</p>
-    <p>Please log in and keep this information secure.</p>
+    <p>
+      <strong>Portal:</strong><br>
+      <a href="${escapeHtml(portalUrl)}">
+        ${escapeHtml(portalUrl)}
+      </a>
+    </p>
+    <p>
+      <strong>Username:</strong><br>
+      ${escapeHtml(user.username)}
+    </p>
+    <p>
+      <strong>Temporary password:</strong><br>
+      ${escapeHtml(temporaryPassword)}
+    </p>
+    <p>Please log in and change your temporary password.</p>
   `;
 
-  const info = await transporter.sendMail({
-    from: process.env.EMAIL_FROM,
+  const info = await mailer.transporter.sendMail({
+    from: mailer.from,
     to: user.email,
-    subject: subject,
-    text: text,
-    html: html
+    subject,
+    text,
+    html
   });
 
   return {
     sent: true,
+    source: mailer.source,
     accepted: info.accepted,
     rejected: info.rejected,
     messageId: info.messageId
