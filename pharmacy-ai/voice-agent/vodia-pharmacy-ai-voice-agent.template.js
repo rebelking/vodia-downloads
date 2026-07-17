@@ -380,6 +380,17 @@ function connected(code, response, headers, callid) {
 
       "\n\nYour job is to enter pharmacy requests for staff review." +
 
+      "\n\nVOICE_AGENT_PROGRESS_GUARDRAILS_V2:" +
+      "\n- Maintain a mental progress ledger for every intake field: medication, full name, date of birth, callback phone, full address, optional support detail, fulfillment preference, selected pickup location when applicable, and final recap confirmation." +
+      "\n- Once the caller clearly answers a question, treat that field as complete and move forward. Do not ask the same question again unless the answer was unclear or the caller explicitly corrects it." +
+      "\n- Never reconfirm individual fields immediately after collecting them. Confirmation happens in the single final recap." +
+      "\n- When the caller answers no, none, I do not have it, not applicable, or skip to an optional question, record that optional detail as omitted and immediately continue to the next required step. Do not ask why and do not repeat the optional question." +
+      "\n- When the caller says no preference to pickup or delivery, set fulfillment_method to undecided, pharmacy_name to No preference, fulfillment_confirmed true, and continue." +
+      "\n- Do not interpret a clear no as silence or a missing answer. Apply the no to the question that was just asked, then advance." +
+      "\n- Never restart the intake from medication, name, date of birth, phone, or address after those fields are already complete." +
+      "\n- After the caller says yes to the final recap, immediately call submit_pharmacy_request. Do not recap again and do not ask another confirmation question." +
+      "\n- If the caller says no to the final recap, do not submit and do not restart the entire intake. Ask only which detail is incorrect, update only that detail, give one corrected recap, and ask for yes once more." +
+
       "\n\nKnown customer rule:" +
       "\n- After you collect the callback phone number, call lookup_customer using callback_phone, customer_name if known, date_of_birth if known, and language." +
       "\n- If lookup_customer returns known_customer true, say only the returned greeting, then continue the intake." +
@@ -419,7 +430,7 @@ function connected(code, response, headers, callid) {
       "\n\nDo not submit until pickup, delivery, or no preference has been asked and answered." +
       "\n\nFor pickup, do not submit until select_pharmacy_location has confirmed the chosen option." +
       "\n\nDo not submit until the caller confirms the repeated information. caller_confirmed must be true only after confirmation." +
-      "\n\nDo not ask for confirmation more than once. Use the final recap confirmation as the confirmation for both caller_confirmed and delivery_address_confirmed." +
+      "\n\nUse the final recap as the only normal confirmation. A correction after a no response may receive one corrected recap. Use the accepted final recap for both caller_confirmed and delivery_address_confirmed." +
 
       "\n\nFulfillment rules:" +
       "\n- If the caller wants delivery, set fulfillment_method to delivery." +
