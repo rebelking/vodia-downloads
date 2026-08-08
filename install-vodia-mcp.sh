@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-APP_VERSION="0.5.0"
+APP_VERSION="0.6.0"
 APP_DIR="/opt/vodia-mcp"
 ENV_FILE="/etc/vodia-mcp.env"
 SERVICE_FILE="/etc/systemd/system/vodia-mcp.service"
@@ -46,6 +46,7 @@ echo
 MCP_DOMAIN="$(prompt_required "Public MCP domain (example: mcp.tryvodia.com)")"
 VODIA_URL="$(prompt_required "Vodia PBX URL (example: https://pbx.example.com)")"
 VODIA_USER="$(prompt_required "Dedicated Vodia API username")"
+read -r -p "Allowed tenant domains, comma-separated (blank for system-wide): " VODIA_ALLOWED_DOMAINS </dev/tty
 read -r -s -p "Vodia API password: " VODIA_PASS </dev/tty
 echo
 [[ -n "$VODIA_PASS" ]] || { echo "Vodia API password cannot be empty."; exit 1; }
@@ -56,6 +57,10 @@ if [[ ! "$MCP_DOMAIN" =~ ^[A-Za-z0-9.-]+$ ]] || [[ "$MCP_DOMAIN" != *.* ]]; then
 fi
 if [[ ! "$VODIA_URL" =~ ^https:// ]]; then
   echo "Use an HTTPS Vodia PBX URL."
+  exit 1
+fi
+if [[ -n "$VODIA_ALLOWED_DOMAINS" ]] && [[ ! "$VODIA_ALLOWED_DOMAINS" =~ ^[A-Za-z0-9.-]+(,[A-Za-z0-9.-]+)*$ ]]; then
+  echo "Allowed tenant domains must be comma-separated hostnames without spaces."
   exit 1
 fi
 
@@ -111,8 +116,10 @@ cat > "$ENV_FILE" <<EOF
 VODIA_URL="$(escape_env "${VODIA_URL%/}")"
 VODIA_USER="$(escape_env "$VODIA_USER")"
 VODIA_PASS="$(escape_env "$VODIA_PASS")"
+VODIA_ALLOWED_DOMAINS="$(escape_env "$VODIA_ALLOWED_DOMAINS")"
 MCP_BEARER_TOKEN="$MCP_TOKEN"
 ADMIN_TOKEN="$ADMIN_TOKEN"
+VODIA_AUDIT_LOG="/var/log/vodia-mcp/audit.jsonl"
 HOST="127.0.0.1"
 PORT="3100"
 NODE_ENV="production"
@@ -140,6 +147,8 @@ ProtectSystem=strict
 ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectControlGroups=true
+LogsDirectory=vodia-mcp
+UMask=0077
 
 [Install]
 WantedBy=multi-user.target
