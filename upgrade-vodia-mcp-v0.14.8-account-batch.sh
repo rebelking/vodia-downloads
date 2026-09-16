@@ -153,6 +153,7 @@ block=r'''
       if (String(actor || "unknown") !== plan.actor) throw new Error("Account batch plan belongs to a different administrator identity.");
       if (String(confirmation || "") !== plan.requiredConfirmation) throw new Error("Confirmation does not exactly match requiredConfirmation.");
 
+      // Mark used before the first PBX write to prevent replay even if a later item fails.
       plan.used = true;
       const results = [];
       let succeeded = 0;
@@ -193,6 +194,7 @@ python3 - "$TMP_VERSION" <<'PY'
 from pathlib import Path
 import re, sys
 p=Path(sys.argv[1]); s=p.read_text()
+# Preserve formatting; replace only the exported connector version value.
 n=re.sub(r'(CONNECTOR_VERSION\s*=\s*["\'])[^"\']+(["\'])', r'\g<1>0.14.8\2', s, count=1)
 if n==s: raise SystemExit('PATCH ERROR: CONNECTOR_VERSION assignment not found')
 p.write_text(n)
