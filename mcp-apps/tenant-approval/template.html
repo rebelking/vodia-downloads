@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vodia Tenant Creation</title>
+<style>
+:root{color-scheme:dark;--panel:#171d24;--line:#34404d;--text:#f4f7fb;--muted:#a7b2c0;--blue:#2f81f7;--green:#37d996;--chip:#1d2936;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}*{box-sizing:border-box}body{margin:0;background:transparent;color:var(--text);padding:14px}.shell{max-width:1120px;margin:auto;background:linear-gradient(180deg,#10161d,#0c1117);border:1px solid #27313c;border-radius:18px;padding:22px;box-shadow:0 18px 50px rgba(0,0,0,.25)}.top{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:18px}.brand{display:flex;gap:14px}.logo{width:52px;height:52px;border-radius:13px;background:#202b38;display:grid;place-items:center;font-size:27px;border:1px solid #334154}.title{font-size:26px;font-weight:760}.sub{margin-top:7px;color:var(--muted);font-size:15px}.status{white-space:nowrap;border:1px solid #246fd0;background:#12355f;color:#7bb7ff;padding:10px 16px;border-radius:999px;font-weight:700}.card{border:1px solid var(--line);border-radius:14px;background:var(--panel);overflow:hidden}.card-title{padding:14px 16px;font-size:18px;font-weight:750;border-bottom:1px solid var(--line)}table{width:100%;border-collapse:collapse}th,td{padding:12px 16px;text-align:left;border-bottom:1px solid #2b3540;vertical-align:top}th{background:#202833;color:#cbd4df}td:first-child{width:185px}tr:last-child td{border-bottom:0}.mono,code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.chip{display:inline-block;background:var(--chip);border:1px solid #39495b;border-radius:7px;padding:2px 6px;color:#73b7ff}.muted{color:var(--muted)}.approval{margin-top:16px;border:1px solid #23835f;border-radius:14px;background:linear-gradient(180deg,#13342a,#102820);padding:16px}.approval-head{display:flex;justify-content:space-between;gap:16px;align-items:center}.approval-title{font-size:18px;font-weight:800;color:#61e3ad}.approval-note{color:#b8c6c0;margin-top:5px}.copy{background:linear-gradient(180deg,#347fff,#1969e8);border:0;color:white;border-radius:11px;padding:11px 16px;font-weight:800;cursor:pointer}.copy:disabled{opacity:.45;cursor:not-allowed}.command{margin-top:13px;background:#0c1219;border:1px solid #445468;border-radius:11px;padding:14px 15px;display:flex;gap:10px;align-items:center}.command code{flex:1;overflow-wrap:anywhere}.icon-btn{border:0;background:transparent;color:#b9c6d6;font-size:21px;cursor:pointer}.next{margin-top:16px;border:1px solid #2d3946;background:#121820;border-radius:14px;padding:16px}.next h3{margin:0 0 10px;color:#67adff}.next ol{margin:0;padding-left:22px;color:#c6cfda;line-height:1.65}.safe{margin-top:11px;color:var(--muted);font-size:13px}@media(max-width:700px){body{padding:8px}.shell{padding:14px}.top,.approval-head{flex-direction:column}.status{align-self:flex-start}.copy{width:100%}td:first-child{width:125px}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="top">
+    <div class="brand"><div class="logo">⚙</div><div><div class="title">Vodia Tenant Creation</div><div class="sub">Plan is ready — nothing has been changed on the PBX yet.</div></div></div>
+    <div class="status">ⓘ &nbsp; Awaiting your approval</div>
+  </div>
+  <section class="card">
+    <div class="card-title">▣ &nbsp; Plan Summary</div>
+    <table>
+      <thead><tr><th>Field</th><th>Value</th></tr></thead>
+      <tbody>
+        <tr><td>Action</td><td id="action">Loading…</td></tr>
+        <tr><td>Tenant FQDN</td><td><span class="chip mono" id="tenant">Loading…</span></td></tr>
+        <tr><td>DNS provider</td><td id="provider">Loading…</td></tr>
+        <tr><td>Country code</td><td id="country">Loading…</td></tr>
+        <tr><td>Display name</td><td id="display">Loading…</td></tr>
+        <tr><td>Current state</td><td id="state">Waiting for tool result…</td></tr>
+        <tr><td>Effect</td><td>Adds a new empty tenant domain; no existing tenant, trunk, or extension is touched.</td></tr>
+        <tr><td>Risk</td><td>Low — no service interruption expected from the plan itself.</td></tr>
+        <tr><td>Plan ID</td><td><span class="chip mono" id="plan-id">—</span> <span class="muted" id="expires"></span></td></tr>
+      </tbody>
+    </table>
+  </section>
+  <section class="approval">
+    <div class="approval-head">
+      <div><div class="approval-title">✓ &nbsp; Copy this command to approve</div><div class="approval-note">Copy the exact command below and paste it into the chat to proceed.</div></div>
+      <button class="copy" id="copy-btn" disabled>▣ &nbsp; Copy to clipboard</button>
+    </div>
+    <div class="command"><code id="confirmation">Waiting for approval command…</code><button class="icon-btn" id="copy-icon" title="Copy approval command" disabled>▣</button></div>
+  </section>
+  <section class="next">
+    <h3>ⓘ &nbsp; What happens next?</h3>
+    <ol><li>Click <strong>Copy to clipboard</strong>.</li><li>Paste the approval command into the chat and send it.</li><li>The existing guarded apply tool performs and verifies the change.</li></ol>
+    <div class="safe"><strong>No PBX change is made by this card.</strong> It only renders the plan and copies its exact confirmation phrase.</div>
+  </section>
+</div>
+<script>__VODIA_APP_BUNDLE__</script>
+</body>
+</html>
