@@ -151,12 +151,12 @@ once('''        inputSchema: {
 once('async ({ tenant, ipv4, ttl, comment, reason }) => {\n        scopedAudit("plan_create_tenant_with_dns", { tenant, ipv4, ttl, reason });','async ({ tenant, country_code, ipv4, ttl, comment, reason }) => {\n        scopedAudit("plan_create_tenant_with_dns", { tenant, country_code, ipv4, ttl, reason });','combined handler')
 once('planCreateTenantWithDns({ actor, tenant, ipv4, ttl, comment, reason })','planCreateTenantWithDns({ actor, tenant, countryCode: country_code, ipv4, ttl, comment, reason })','combined call')
 once('{ operation: "PLAN_CREATE_TENANT_WITH_DNS", tenant: data.tenant },','{ operation: "PLAN_CREATE_TENANT_WITH_DNS", tenant: data.tenant, country_code: data.country_code },','combined metadata')
-once('''        inputSchema: {
-          tenant: z.string().min(3).max(253),
-          reason: z.string().max(1000).optional(),''','''        inputSchema: {
-          tenant: z.string().min(3).max(253),
-          country_code: z.string().regex(VODIA_TENANT_COUNTRY_CODE_PATTERN, 'Use digits only, without "+".'),
-          reason: z.string().max(1000).optional(),''','standalone tool schema')
+once('''      inputSchema: {
+        tenant: z.string().min(3).max(253),
+        reason: z.string().max(1000).optional(),''','''      inputSchema: {
+        tenant: z.string().min(3).max(253),
+        country_code: z.string().regex(VODIA_TENANT_COUNTRY_CODE_PATTERN, 'Use digits only, without "+".'),
+        reason: z.string().max(1000).optional(),''','standalone tool schema')
 once('async ({ tenant, reason }) => {\n      scopedAudit("plan_create_tenant", { tenant, reason });','async ({ tenant, country_code, reason }) => {\n      scopedAudit("plan_create_tenant", { tenant, country_code, reason });','standalone handler')
 once('planCreateTenant({ actor, tenant, reason })','planCreateTenant({ actor, tenant, countryCode: country_code, reason })','standalone call')
 once('{ operation: "PLAN_CREATE_TENANT", tenant: data.tenant },','{ operation: "PLAN_CREATE_TENANT", tenant: data.tenant, country_code: data.country_code },','standalone metadata')
