@@ -241,7 +241,7 @@ $("modalPrimary").addEventListener("click",async()=>{
   }
   location.href="/admin/";
 });
-document.querySelectorAll("[data-admin]").forEach(el=>el.addEventListener("click",()=>location.href="/admin/"));
+document.querySelectorAll("[data-admin]").forEach(el=>el.addEventListener("click",()=>{ location.href=el.dataset.admin==="connections"?"/admin-connections/":"/admin/"; }));
 const themeToggle=$("themeToggle");
 if(themeToggle) themeToggle.addEventListener("click",()=>applyTheme(document.documentElement.dataset.theme==="dark"?"light":"dark"));
 initTheme();
