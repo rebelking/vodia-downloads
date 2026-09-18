@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vodia MCP Control Center</title>
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<div class="app-shell">
+  <header class="topbar">
+    <div>
+      <div class="eyebrow">VODIA PBX · MCP</div>
+      <h1>Vodia MCP Control Center</h1>
+      <p>Manage connections, deployments, PBX health, capabilities, and activity from one place.</p>
+    </div>
+    <div class="top-status">
+      <span class="dot" id="mcpDot"></span>
+      <span id="mcpStatus">Checking MCP…</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="section">
+      <div class="section-head">
+        <div><div class="eyebrow">CONNECTIONS</div><h2>Connected services</h2></div>
+        <button class="ghost" id="refreshBtn">Refresh</button>
+      </div>
+      <div class="connection-grid">
+        <article class="connection-card" data-provider="pbx">
+          <div class="connection-title"><span class="provider-icon">PBX</span><div><h3>Vodia PBX</h3><p>Primary phone-system connection</p></div></div>
+          <div class="connection-meta"><span class="badge" id="pbxBadge">Checking</span><span id="pbxDetail">—</span></div>
+          <div class="card-actions"><button class="secondary" data-action="test" data-provider="pbx">Test</button><button class="primary" data-action="manage" data-provider="pbx">Manage</button></div>
+        </article>
+
+        <article class="connection-card" data-provider="aws">
+          <div class="connection-title"><span class="provider-icon">AWS</span><div><h3>Amazon Web Services</h3><p>Marketplace and EC2 deployment</p></div></div>
+          <div class="connection-meta"><span class="badge neutral" id="awsBadge">Not checked</span><span id="awsDetail">Use guided setup</span></div>
+          <div class="card-actions"><button class="secondary" data-action="test" data-provider="aws">Test</button><button class="primary" data-action="connect" data-provider="aws">Connect / Manage</button></div>
+        </article>
+
+        <article class="connection-card" data-provider="microsoft">
+          <div class="connection-title"><span class="provider-icon">M365</span><div><h3>Microsoft 365</h3><p>Tenant and Teams integration</p></div></div>
+          <div class="connection-meta"><span class="badge neutral" id="microsoftBadge">Not checked</span><span id="microsoftDetail">Guided connection</span></div>
+          <div class="card-actions"><button class="secondary" data-action="test" data-provider="microsoft">Test</button><button class="primary" data-action="connect" data-provider="microsoft">Connect / Manage</button></div>
+        </article>
+
+        <article class="connection-card" data-provider="cloudflare">
+          <div class="connection-title"><span class="provider-icon">CF</span><div><h3>Cloudflare DNS</h3><p>Customer-owned DNS automation</p></div></div>
+          <div class="connection-meta"><span class="badge neutral" id="cloudflareBadge">Not checked</span><span id="cloudflareDetail">Guided connection</span></div>
+          <div class="card-actions"><button class="secondary" data-action="test" data-provider="cloudflare">Test</button><button class="primary" data-action="connect" data-provider="cloudflare">Connect / Manage</button></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head"><div><div class="eyebrow">SYSTEM</div><h2>Service overview</h2></div></div>
+      <div class="metric-grid">
+        <article class="metric"><span>Service</span><strong id="serviceState">Checking…</strong><small id="serviceName">Vodia MCP</small></article>
+        <article class="metric"><span>Connector</span><strong id="versionValue">—</strong><small>Current running version</small></article>
+        <article class="metric"><span>OAuth</span><strong id="oauthValue">—</strong><small>Authentication status</small></article>
+        <article class="metric"><span>Mode</span><strong id="modeValue">—</strong><small>Safety policy</small></article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head"><div><div class="eyebrow">WORKFLOWS</div><h2>What do you want to do?</h2></div></div>
+      <div class="workflow-grid">
+        <button class="workflow" data-workflow="deploy-aws"><span class="workflow-kicker">AWS</span><strong>Deploy a Vodia PBX</strong><small>Marketplace check → region → network → DryRun → approval</small></button>
+        <button class="workflow" data-workflow="create-tenant"><span class="workflow-kicker">PBX</span><strong>Create a tenant</strong><small>Plan and verify tenant + DNS before applying</small></button>
+        <button class="workflow" data-workflow="teams"><span class="workflow-kicker">M365</span><strong>Configure Teams</strong><small>Readiness, domains, users, and Direct Routing workflow</small></button>
+        <button class="workflow" data-workflow="health"><span class="workflow-kicker">HEALTH</span><strong>Check PBX health</strong><small>Review service health and operational issues</small></button>
+      </div>
+    </section>
+
+    <section class="section split">
+      <div class="panel">
+        <div class="section-head compact"><div><div class="eyebrow">PBX</div><h2>PBX health</h2></div><button class="ghost" data-action="manage" data-provider="pbx">Open</button></div>
+        <div class="empty-state" id="pbxPanel"><strong>Ready for live PBX data</strong><span>This panel will use the existing MCP/PBX read tools. No credentials are entered here.</span></div>
+      </div>
+      <div class="panel">
+        <div class="section-head compact"><div><div class="eyebrow">ACTIVITY</div><h2>Recent MCP activity</h2></div><button class="ghost" id="activityBtn">View all</button></div>
+        <div class="activity-list" id="activityList">
+          <div class="activity-row"><span class="activity-dot"></span><div><strong>Control Center loaded</strong><small>Waiting for live activity feed</small></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section advanced">
+      <div>
+        <div class="eyebrow">ADMINISTRATION</div>
+        <h2>Advanced administration</h2>
+        <p>Raw tokens, URLs, provider secrets, and diagnostic controls stay out of the customer dashboard.</p>
+      </div>
+      <button class="secondary" id="advancedBtn">Open advanced admin</button>
+    </section>
+  </main>
+</div>
+
+<div class="modal-backdrop" id="modalBackdrop" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <button class="modal-close" id="modalClose" aria-label="Close">×</button>
+    <div class="eyebrow" id="modalEyebrow">GUIDED SETUP</div>
+    <h2 id="modalTitle">Connect service</h2>
+    <p id="modalText"></p>
+    <div class="step-list" id="modalSteps"></div>
+    <div class="modal-actions">
+      <button class="secondary" id="modalCancel">Close</button>
+      <button class="primary" id="modalPrimary">Continue</button>
+    </div>
+  </div>
+</div>
+
+<script src="./app.js"></script>
+</body>
+</html>
