@@ -8,22 +8,29 @@ VERSION="$APP/version.js"
 SERVICE="${VODIA_MCP_SERVICE:-vodia-mcp}"
 CONTROL_SERVICE="${VODIA_CONTROL_SERVICE:-vodia-control-api}"
 
+AWS_URL='https://upload.wikimedia.org/wikipedia/commons/9/93/Amazon_Web_Services_Logo.svg'
+MS_URL='https://learn.microsoft.com/en-us/entra/identity-platform/media/howto-add-branding-in-apps/ms-symbollockup_mssymbol_19.svg'
+CF_URL='https://cdn.jsdelivr.net/npm/simple-icons@16.31.0/icons/cloudflare.svg'
+
 STAMP="$(date -u +%Y%m%d-%H%M%S)"
-BACKUP_DIR="${VODIA_MCP_BACKUP_ROOT:-/var/backups}/vodia-mcp-v0.14.9.23.1-vendor-icons-fix-$STAMP"
+BACKUP_DIR="${VODIA_MCP_BACKUP_ROOT:-/var/backups}/vodia-mcp-v0.14.9.23.2-vendor-icons-verified-$STAMP"
 
 TMP_INDEX="$(mktemp --suffix=.html)"
 TMP_CSS="$(mktemp --suffix=.css)"
 TMP_VERSION="$(mktemp --suffix=.js)"
+TMP_AWS="$(mktemp --suffix=.svg)"
+TMP_MS="$(mktemp --suffix=.svg)"
+TMP_CF="$(mktemp --suffix=.svg)"
 HEALTH="$(mktemp)"
 
-trap 'rm -f "$TMP_INDEX" "$TMP_CSS" "$TMP_VERSION" "$HEALTH"' EXIT
+trap 'rm -f "$TMP_INDEX" "$TMP_CSS" "$TMP_VERSION" "$TMP_AWS" "$TMP_MS" "$TMP_CF" "$HEALTH"' EXIT
 
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
 rollback() {
   local rc=$?
   trap - ERR
-  echo "Activation failed; restoring pre-v0.14.9.23.1 files..."
+  echo "Activation failed; restoring pre-v0.14.9.23.2 files..."
   [[ -f "$BACKUP_DIR/index.html" ]] && cp -a "$BACKUP_DIR/index.html" "$WEB_DIR/index.html" || true
   [[ -f "$BACKUP_DIR/styles.css" ]] && cp -a "$BACKUP_DIR/styles.css" "$WEB_DIR/styles.css" || true
   [[ -f "$BACKUP_DIR/version.js" ]] && cp -a "$BACKUP_DIR/version.js" "$VERSION" || true
@@ -50,12 +57,22 @@ download_svg() {
 [[ ${EUID} -eq 0 ]] || fail "run as root"
 for c in curl python3 node systemctl; do command -v "$c" >/dev/null 2>&1 || fail "$c is required"; done
 for f in "$WEB_DIR/index.html" "$WEB_DIR/styles.css" "$VERSION"; do [[ -f "$f" ]] || fail "missing $f"; done
-if ! grep -Eq '0\.14\.9\.(22|23|23\.1)' "$VERSION"; then fail "expected installed base v0.14.9.22/v0.14.9.23"; fi
+if ! grep -Eq '0\.14\.9\.(22|23|23\.1|23\.2)' "$VERSION"; then fail "expected installed base v0.14.9.22/v0.14.9.23.x"; fi
 
-echo "=== Vodia MCP v0.14.9.23.1 — Vendor Icons URL Fix ==="
-echo "Uses stable jsDelivr Simple Icons assets and a local Vodia SVG fallback."
+echo "=== Vodia MCP v0.14.9.23.2 — Verified Vendor Icons ==="
+echo "All remote logo URLs are tested before any application file is modified."
 
-echo "[1/8] Backup"
+echo "[1/9] Remote asset sanity test — NO APP CHANGES YET"
+download_svg "$AWS_URL" "$TMP_AWS" || fail "AWS SVG sanity test failed"
+download_svg "$MS_URL" "$TMP_MS" || fail "Microsoft SVG sanity test failed"
+download_svg "$CF_URL" "$TMP_CF" || fail "Cloudflare SVG sanity test failed"
+for f in "$TMP_AWS" "$TMP_MS" "$TMP_CF"; do
+  bytes="$(wc -c < "$f")"
+  [[ "$bytes" -ge 100 ]] || fail "downloaded SVG is unexpectedly small: $f ($bytes bytes)"
+done
+echo "PASS: AWS, Microsoft, and Cloudflare URLs all returned valid SVG before backup/patching"
+
+echo "[2/9] Backup"
 mkdir -p "$BACKUP_DIR"
 cp -a "$WEB_DIR/index.html" "$BACKUP_DIR/index.html"
 cp -a "$WEB_DIR/styles.css" "$BACKUP_DIR/styles.css"
@@ -63,11 +80,11 @@ cp -a "$VERSION" "$BACKUP_DIR/version.js"
 [[ -d "$ICON_DIR" ]] && cp -a "$ICON_DIR" "$BACKUP_DIR/icons" || true
 echo "PASS: $BACKUP_DIR"
 
-echo "[2/8] Install vendor SVG assets"
+echo "[3/9] Install vendor SVG assets"
 mkdir -p "$ICON_DIR"
-download_svg 'https://cdn.jsdelivr.net/npm/simple-icons@v16/icons/amazonwebservices.svg' "$ICON_DIR/aws.svg" || fail "AWS SVG download failed"
-download_svg 'https://cdn.jsdelivr.net/npm/simple-icons@v16/icons/microsoft365.svg' "$ICON_DIR/microsoft365.svg" || fail "Microsoft 365 SVG download failed"
-download_svg 'https://cdn.jsdelivr.net/npm/simple-icons@v16/icons/cloudflare.svg' "$ICON_DIR/cloudflare.svg" || fail "Cloudflare SVG download failed"
+install -o root -g root -m 0644 "$TMP_AWS" "$ICON_DIR/aws.svg"
+install -o root -g root -m 0644 "$TMP_MS" "$ICON_DIR/microsoft.svg"
+install -o root -g root -m 0644 "$TMP_CF" "$ICON_DIR/cloudflare.svg"
 
 cat > "$ICON_DIR/vodia.svg" <<'SVG'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 72" role="img" aria-labelledby="title">
@@ -83,13 +100,13 @@ cat > "$ICON_DIR/vodia.svg" <<'SVG'
 SVG
 
 chmod 0644 "$ICON_DIR"/*.svg
-for f in "$ICON_DIR/vodia.svg" "$ICON_DIR/aws.svg" "$ICON_DIR/microsoft365.svg" "$ICON_DIR/cloudflare.svg"; do
+for f in "$ICON_DIR/vodia.svg" "$ICON_DIR/aws.svg" "$ICON_DIR/microsoft.svg" "$ICON_DIR/cloudflare.svg"; do
   [[ -s "$f" ]] || fail "empty SVG: $f"
   grep -qi '<svg' "$f" || fail "invalid SVG: $f"
 done
 echo "PASS: Vodia, AWS, Microsoft 365, Cloudflare SVG assets ready"
 
-echo "[3/8] Patch Control Center HTML"
+echo "[4/9] Patch Control Center HTML"
 cp -a "$WEB_DIR/index.html" "$TMP_INDEX"
 python3 - "$TMP_INDEX" <<'PY'
 from pathlib import Path
@@ -99,7 +116,7 @@ pairs=[
 ([r'<div class="brand-mark">V</div>',r'<div class="brand-mark brand-logo"><img[^>]+></div>'],'<div class="brand-mark brand-logo"><img src="./assets/icons/vodia.svg" alt="Vodia" class="header-vendor-logo"></div>'),
 ([r'<span class="provider-icon provider-pbx">☎</span>',r'<span class="provider-icon provider-pbx"><img[^>]+></span>'],'<span class="provider-icon provider-pbx"><img src="./assets/icons/vodia.svg" alt="Vodia" class="vendor-logo"></span>'),
 ([r'<span class="provider-icon provider-aws">aws</span>',r'<span class="provider-icon provider-aws"><img[^>]+></span>'],'<span class="provider-icon provider-aws"><img src="./assets/icons/aws.svg" alt="Amazon Web Services" class="vendor-logo"></span>'),
-([r'<span class="provider-icon provider-m365">M365</span>',r'<span class="provider-icon provider-m365"><img[^>]+></span>'],'<span class="provider-icon provider-m365"><img src="./assets/icons/microsoft365.svg" alt="Microsoft 365" class="vendor-logo"></span>'),
+([r'<span class="provider-icon provider-m365">M365</span>',r'<span class="provider-icon provider-m365"><img[^>]+></span>'],'<span class="provider-icon provider-m365"><img src="./assets/icons/microsoft.svg" alt="Microsoft" class="vendor-logo"></span>'),
 ([r'<span class="provider-icon provider-cf">CF</span>',r'<span class="provider-icon provider-cf"><img[^>]+></span>'],'<span class="provider-icon provider-cf"><img src="./assets/icons/cloudflare.svg" alt="Cloudflare" class="vendor-logo"></span>')
 ]
 for patterns,repl in pairs:
@@ -112,17 +129,17 @@ p.write_text(s)
 PY
 echo PASS
 
-echo "[4/8] Patch icon CSS"
+echo "[5/9] Patch icon CSS"
 cp -a "$WEB_DIR/styles.css" "$TMP_CSS"
 python3 - "$TMP_CSS" <<'PY'
 from pathlib import Path
 import sys
 p=Path(sys.argv[1]); s=p.read_text()
-marker="/* v0.14.9.23.1 vendor icon fix */"
+marker="/* v0.14.9.23.2 verified vendor icons */"
 if marker not in s:
     s += r'''
 
-/* v0.14.9.23.1 vendor icon fix */
+/* v0.14.9.23.2 verified vendor icons */
 .brand-logo{padding:5px;overflow:hidden;background:#fff;border:1px solid var(--line)}
 .header-vendor-logo{width:100%;height:100%;object-fit:contain;display:block}
 .provider-icon{overflow:hidden;padding:6px;background:#fff;border:1px solid var(--line)}
@@ -134,20 +151,20 @@ p.write_text(s)
 PY
 echo PASS
 
-echo "[5/8] Patch connector version"
+echo "[6/9] Patch connector version"
 cp -a "$VERSION" "$TMP_VERSION"
 python3 - "$TMP_VERSION" <<'PY'
 from pathlib import Path
 import re,sys
 p=Path(sys.argv[1]); s=p.read_text()
-n=re.sub(r'(CONNECTOR_VERSION\s*=\s*["\'])[^"\']+(["\'])',r'\g<1>0.14.9.23.1\2',s,count=1)
+n=re.sub(r'(CONNECTOR_VERSION\s*=\s*["\'])[^"\']+(["\'])',r'\g<1>0.14.9.23.2\2',s,count=1)
 if n==s: raise SystemExit("PATCH ERROR: CONNECTOR_VERSION assignment not found")
 p.write_text(n)
 PY
 node --check "$TMP_VERSION" >/dev/null || fail "patched version.js syntax invalid"
 echo PASS
 
-echo "[6/8] Static validation"
+echo "[7/9] Static validation"
 python3 - "$TMP_INDEX" "$ICON_DIR" <<'PY'
 from pathlib import Path
 import sys
@@ -161,7 +178,7 @@ print("PASS: all four vendor assets valid")
 print("PASS: all four cards reference local SVG files")
 PY
 
-echo "[7/8] Install + restart"
+echo "[8/9] Install + restart"
 trap rollback ERR
 install -o root -g root -m 0644 "$TMP_INDEX" "$WEB_DIR/index.html"
 install -o root -g root -m 0644 "$TMP_CSS" "$WEB_DIR/styles.css"
@@ -173,15 +190,15 @@ for _ in {1..30}; do
   sleep 1
 done
 [[ -s "$HEALTH" ]] || fail "MCP health check failed"
-grep -q '0.14.9.23.1' "$HEALTH" || fail "health did not report v0.14.9.23.1"
+grep -q '0.14.9.23.2' "$HEALTH" || fail "health did not report v0.14.9.23.2"
 echo PASS
 
-echo "[8/8] Complete"
+echo "[9/9] Complete"
 cat "$HEALTH"; echo
-echo "PASS: v0.14.9.23.1 vendor icon fix installed"
-echo "PASS: AWS SVG installed from stable jsDelivr source"
-echo "PASS: Microsoft 365 SVG installed from stable jsDelivr source"
-echo "PASS: Cloudflare SVG installed from stable jsDelivr source"
+echo "PASS: v0.14.9.23.2 verified vendor icons installed"
+echo "PASS: AWS logo installed from verified Wikimedia source"
+echo "PASS: official Microsoft vendor logo installed"
+echo "PASS: Cloudflare logo installed from verified pinned jsDelivr source"
 echo "PASS: Vodia local vector brand tile installed"
 echo "PASS: Light/Dark mode preserved"
 echo "Open: https://mcp-test.tryvodia.com/control/"
