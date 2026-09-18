@@ -20,6 +20,22 @@
       "Resource": "*"
     },
     {
+      "Sid": "MarketplacePurchaseVodiaOnly",
+      "Effect": "Allow",
+      "Action": [
+        "aws-marketplace:CreateAgreementRequest",
+        "aws-marketplace:AcceptAgreementRequest"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "ForAnyValue:StringEquals": {
+          "aws-marketplace:ProductId": [
+            "prod-v5qnz6xf6wu5u"
+          ]
+        }
+      }
+    },
+    {
       "Sid": "EC2ReadAndLaunch",
       "Effect": "Allow",
       "Action": [
