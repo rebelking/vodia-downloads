@@ -79,9 +79,16 @@ echo PASS
 echo "[4/9] Download deployment module"
 curl -fsSL "$SOURCE_BASE/aws-marketplace-ec2-deploy-v1.js" -o "$TMP_MODULE"
 grep -q 'registerAwsMarketplaceDeployTools' "$TMP_MODULE" || fail "downloaded module missing expected export"
-cp -a "$TMP_MODULE" "$MODULE"
+install -o root -g root -m 0644 "$TMP_MODULE" "$MODULE"
+SERVICE_USER="$(systemctl show -p User --value "$SERVICE" 2>/dev/null || true)"
+[[ -n "$SERVICE_USER" ]] || SERVICE_USER="root"
+[[ -r "$MODULE" ]] || fail "deployment module is not readable"
+if [[ "$SERVICE_USER" != "root" ]]; then
+  runuser -u "$SERVICE_USER" -- test -r "$MODULE" || fail "deployment module is not readable by service user $SERVICE_USER"
+fi
 node --check "$MODULE" >/dev/null || fail "deployment module syntax invalid"
 node -e 'import("./aws-marketplace-ec2-deploy-v1.js").then(()=>process.exit(0)).catch(e=>{console.error(e);process.exit(1)})' || fail "deployment module dependency load failed"
+echo "PASS: module mode $(stat -c '%a %U:%G' "$MODULE"), service user $SERVICE_USER"
 echo PASS
 
 echo "[5/9] Patch index.js registration"
@@ -178,6 +185,7 @@ print('PASS: deployment planning verifies active agreement and EC2 DryRun')
 print('PASS: deployment apply requires exact short-lived plan confirmation')
 print('PASS: v1 contains no Marketplace subscription/term-acceptance write')
 PY
+[[ "$(stat -c '%a' "$MODULE")" == "644" ]] || fail "deployment module mode must be 644"
 echo PASS
 
 echo "[8/9] Activate + restart"
@@ -199,6 +207,7 @@ echo PASS
 
 echo "[9/9] Complete"
 echo "PASS: v0.14.9.17 AWS Marketplace + EC2 deployment v1 installed"
+echo "PASS: deployment module installed root:root 0644 and readable by the systemd service user"
 echo "PASS: STS cross-account customer-role check"
 echo "PASS: Marketplace Vodia search, offer discovery, and active-agreement verification"
 echo "PASS: region/VPC/subnet/security-group/key-pair discovery"
