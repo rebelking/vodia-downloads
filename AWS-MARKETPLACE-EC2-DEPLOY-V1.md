@@ -4,7 +4,7 @@
 
 This phase lets the Vodia MCP connect to a customer's AWS account with STS, verify that the customer has an active AWS Marketplace agreement for the Vodia product, validate an EC2 launch, and deploy the subscribed Vodia Marketplace AMI only after explicit approval.
 
-This phase intentionally **does not accept Marketplace commercial terms automatically**. The customer subscribes/accepts the offer in AWS Marketplace first. A later phase can add a separately approval-gated Agreement API purchase workflow.
+As of **v0.14.9.27**, Marketplace commercial acceptance can stay inside the MCP/chat flow. The MCP presents the live Vodia offer, creates an AWS-calculated quote, requires explicit customer approval, accepts that specific agreement request, verifies the resulting subscription, and only then hands off to the separate EC2 deployment approval.
 
 ## Current Vodia Marketplace product
 
@@ -67,10 +67,29 @@ No customer access key or secret key is stored by this phase.
 - `aws_check_customer_connection`
 - `aws_marketplace_search_vodia`
 - `aws_marketplace_get_offer`
+- `aws_marketplace_present_vodia_offer`
 - `aws_marketplace_check_subscription`
 - `aws_list_deployment_regions`
 - `aws_discover_deployment_network`
 - `aws_get_vodia_pbx_deployment_status`
+
+### Guarded Marketplace purchase
+
+- `aws_marketplace_prepare_vodia_purchase`
+  - validates the selected live Marketplace dimension/plan
+  - creates an AWS Agreement API quote with `CreateAgreementRequest`
+  - requests AWS tax estimation
+  - returns the AWS-calculated charge summary
+  - returns a short-lived exact confirmation string
+  - does **not** accept the agreement
+
+- `aws_marketplace_accept_vodia_purchase`
+  - requires the exact confirmation string from the prepared quote
+  - accepts only that short-lived agreement request
+  - can create a billable AWS Marketplace agreement
+  - returns the resulting agreement ID and subscription propagation status
+
+Marketplace purchase approval and EC2 deployment approval are deliberately separate.
 
 ### Guarded deployment
 
@@ -139,7 +158,7 @@ Attach AWS managed policy:
 arn:aws:iam::aws:policy/AWSMarketplaceGetEntitlements
 ```
 
-Create an EC2 instance profile for this role. The MCP deployment plan requires the **instance profile name**, not just the role name.
+Create an EC2 instance profile for this role. The PBX should use this entitlement role/profile when Marketplace entitlement checks are required. The deployment planner now accepts the instance profile name as optional at schema level so discovery/validation is not blocked by IAM listing permissions; production Vodia Marketplace deployments should still attach the entitlement profile when the AMI/license flow requires it.
 
 The customer deployment role is permitted to `iam:PassRole` only for this Vodia PBX entitlement role.
 
@@ -217,7 +236,7 @@ The planner validates that a supplied AMI has a Marketplace product code.
 
 ## Not included in v1
 
-- automatic acceptance of Marketplace terms;
+- unattended or silent acceptance of Marketplace terms;
 - automatic creation of customer IAM roles;
 - automatic creation of the PBX entitlement role/profile;
 - automatic security-group creation;
@@ -226,18 +245,19 @@ The planner validates that a supplied AMI has a Marketplace product code.
 
 Those should remain separate guarded phases.
 
-## Next phase
-
-Add a dedicated Marketplace commercial workflow using the AWS Marketplace Discovery and Agreement APIs:
+## Current purchase flow
 
 ```text
 discover offer
-  -> display pricing/EULA/terms
-  -> create quote/agreement request
+  -> display live pricing/EULA/terms in chat
+  -> customer selects Vodia plan
+  -> create AWS quote/agreement request
+  -> display AWS-calculated charges
   -> explicit commercial approval
   -> accept agreement request
   -> verify ACTIVE agreement
-  -> hand off to the deployment planner
+  -> hand off to deployment planner
+  -> separate EC2 deployment approval
 ```
 
-Subscription acceptance and EC2 deployment must remain two separate approvals.
+Subscription acceptance and EC2 deployment remain two separate approvals.
