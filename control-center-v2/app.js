@@ -72,14 +72,16 @@ function renderPbx(result){
   if(!box)return;
   if(!result?.ok){box.innerHTML="<strong>PBX status unavailable</strong><span>Use Test to retry the live MCP status read.</span>";return}
   const d=result.data||{};
-  const rows=[];
   const candidates=[
-    ["Version",d.version||d.pbxVersion||d.system?.version],
-    ["Platform",d.platform||d.os||d.system?.platform],
-    ["Status",d.status||d.state||"Online"]
-  ].filter(x=>x[1]);
+    ["Version",d.version],
+    ["Build",d.buildDate],
+    ["Status",d.status||"online"],
+    ["Total calls",d.totalCalls],
+    ["Extension CDRs",d.extensionCdrs],
+    ["Trunk CDRs",d.trunkCdrs]
+  ].filter(([,v])=>v!==null&&v!==undefined&&v!=="");
   if(!candidates.length){box.innerHTML="<strong>PBX connected</strong><span>Live get_system_status completed successfully.</span>";return}
-  box.innerHTML=candidates.map(([k,v])=>`<div class="pbx-row"><span>${k}</span><strong>${String(v)}</strong></div>`).join("");
+  box.innerHTML=candidates.map(([k,v])=>`<div class="pbx-row"><span>${escapeHtml(k)}</span><strong>${escapeHtml(v)}</strong></div>`).join("");
 }
 async function testProvider(provider,button){
   const old=button.textContent; button.disabled=true; button.textContent="Testing…";
@@ -107,10 +109,62 @@ const flows={
  microsoft:{eyebrow:"MICROSOFT CONNECTION",title:"Microsoft 365",text:"Microsoft readiness is checked through microsoft_check_graph_readiness using the configured Entra integration.",steps:[["OAuth","Uses the server-side Entra application configuration."],["Readiness","Checks organization, domains, users, and license reads."],["Teams","Direct Routing workflows remain separately controlled."]],primary:"Test Microsoft now"},
  pbx:{eyebrow:"PBX CONNECTION",title:"Vodia PBX",text:"PBX status is read through the existing get_system_status MCP tool.",steps:[["Service","Verify MCP/PBX connectivity."],["Read status","Load current PBX status."],["Changes","Writes remain approval-gated."]],primary:"Test PBX now"}
 };
+async function copyText(text){
+  try{await navigator.clipboard.writeText(text);return true}catch{return false}
+}
+function renderModalSteps(steps){
+  $("modalSteps").innerHTML=steps.map((s,i)=>`<div class="step"><span class="step-num">${i+1}</span><div><strong>${escapeHtml(s[0])}</strong><small>${escapeHtml(s[1]||"")}</small></div></div>`).join("");
+}
+async function openAwsFlow(forDeployment=false){
+  $("modalEyebrow").textContent=forDeployment?"AWS DEPLOYMENT":"AWS CONNECTION";
+  $("modalTitle").textContent=forDeployment?"Deploy a Vodia PBX":"Amazon Web Services";
+  $("modalText").textContent="Checking the saved AWS connection…";
+  renderModalSteps([["Loading","Reading the saved connection, Marketplace visibility, and available regions."]]);
+  $("modalPrimary").textContent="Checking…";
+  $("modalPrimary").disabled=true;
+  $("modalPrimary").dataset.flow="aws-loading";
+  $("modalBackdrop").hidden=false;
+  try{
+    const r=await fetch("/control-api/aws/overview",{credentials:"same-origin"});
+    const p=await r.json(),a=p.aws||{};
+    if(!a.configured){
+      $("modalText").textContent="AWS is not connected yet. The customer dashboard does not ask for or display the Role ARN or External ID. Run the one-time secure AWS connection setup from an MCP client, then return here.";
+      renderModalSteps([
+        ["One-time setup","Use the Vodia AWS connection MCP App."],
+        ["Secure verification","STS AssumeRole is tested before the profile is saved."],
+        ["Return here","The dashboard will detect the saved profile automatically."]
+      ]);
+      $("modalPrimary").textContent="Copy AWS setup command";
+      $("modalPrimary").dataset.flow="aws-copy-setup";
+      return;
+    }
+    const account=a.profile?.account||a.connection?.account||"Connected account";
+    const listingCount=a.marketplace?.listingCount??0;
+    const regionCount=a.regions?.count??0;
+    $("modalText").textContent=forDeployment
+      ? `AWS account ${account} is connected. Marketplace discovery found ${listingCount} Vodia listing(s), and ${regionCount} deployment region(s) are available.`
+      : `AWS account ${account} is connected and reusable. Marketplace discovery found ${listingCount} Vodia listing(s); ${regionCount} deployment region(s) are available.`;
+    renderModalSteps([
+      ["Connection","Saved AWS profile verified through STS."],
+      ["Marketplace",`${listingCount} Vodia listing(s) visible.`],
+      ["Regions",`${regionCount} EC2 region(s) available.`]
+    ]);
+    $("modalPrimary").textContent=forDeployment?"Copy deployment command":"Test AWS now";
+    $("modalPrimary").dataset.flow=forDeployment?"aws-copy-deploy":"aws";
+  }catch(e){
+    $("modalText").textContent="AWS overview could not be loaded. Use Test to retry the live connection.";
+    renderModalSteps([["Retry","The control API could not load the AWS overview."]]);
+    $("modalPrimary").textContent="Test AWS now";
+    $("modalPrimary").dataset.flow="aws";
+  }finally{
+    $("modalPrimary").disabled=false;
+  }
+}
 function openFlow(key){
+  if(key==="aws") return openAwsFlow(false);
   const f=flows[key]; if(!f)return;
   $("modalEyebrow").textContent=f.eyebrow;$("modalTitle").textContent=f.title;$("modalText").textContent=f.text;
-  $("modalSteps").innerHTML=f.steps.map((s,i)=>`<div class="step"><span class="step-num">${i+1}</span><div><strong>${s[0]}</strong><small>${s[1]}</small></div></div>`).join("");
+  renderModalSteps(f.steps);
   $("modalPrimary").textContent=f.primary;$("modalPrimary").dataset.flow=key;$("modalBackdrop").hidden=false;
 }
 function closeModal(){$("modalBackdrop").hidden=true}
@@ -121,7 +175,7 @@ document.querySelectorAll("button[data-provider]").forEach(el=>el.addEventListen
 }));
 document.querySelectorAll("[data-workflow]").forEach(el=>el.addEventListener("click",()=>{
   const w=el.dataset.workflow;
-  if(w==="deploy-aws")return openFlow("aws");
+  if(w==="deploy-aws")return openAwsFlow(true);
   if(w==="teams")return openFlow("microsoft");
   if(w==="health")return openFlow("pbx");
   $("modalEyebrow").textContent="PBX WORKFLOW";$("modalTitle").textContent="Create a Vodia tenant";
@@ -136,15 +190,36 @@ $("advancedBtn").addEventListener("click",()=>location.href="/admin/");
 $("activityBtn").addEventListener("click",()=>location.href="/admin/");
 $("modalPrimary").addEventListener("click",async()=>{
   const flow=$("modalPrimary").dataset.flow;
+  if(flow==="aws-copy-setup"){
+    const ok=await copyText("aws_connect_customer_account");
+    $("modalPrimary").textContent=ok?"Copied ✓":"Copy failed";
+    $("modalText").textContent=ok
+      ?"Paste the copied command into your MCP client once. After the AWS profile is saved, this dashboard will detect it automatically."
+      :"Copy the MCP tool name aws_connect_customer_account and invoke it from your MCP client.";
+    return;
+  }
+  if(flow==="aws-copy-deploy"){
+    const command="Plan a Vodia PBX deployment on AWS using my saved AWS connection. First verify the Marketplace subscription and show me the deployment plan before making any changes.";
+    const ok=await copyText(command);
+    $("modalPrimary").textContent=ok?"Copied ✓":"Copy failed";
+    $("modalText").textContent=ok
+      ?"Paste the command into your MCP client. The existing DryRun and explicit approval guard remain in place."
+      :"Open your MCP client and ask it to plan a Vodia PBX deployment using the saved AWS connection.";
+    return;
+  }
   if(["aws","cloudflare","microsoft","pbx"].includes(flow)){
-    const fake={textContent:$("modalPrimary").textContent,disabled:false};
+    const old=$("modalPrimary").textContent;
     $("modalPrimary").disabled=true;$("modalPrimary").textContent="Testing…";
     try{
       const r=await fetch("/control-api/test/"+flow,{method:"POST",credentials:"same-origin"});
-      const p=await r.json(),s=connectionState(flow,p);
-      $("modalText").textContent=p.ok?`Live check passed: ${s.detail}`:`Live check failed: ${p.error||"Not configured"}`;
+      const p=await r.json(),state=connectionState(flow,p);
+      $("modalText").textContent=p.ok?`Live check passed: ${state.detail}`:`Live check failed: ${p.error||"Not configured"}`;
       await loadConnections();
-    }finally{$("modalPrimary").disabled=false;$("modalPrimary").textContent=fake.textContent}
+      if(flow==="aws"&&p.ok) await openAwsFlow(false);
+    }finally{
+      $("modalPrimary").disabled=false;
+      if(flow!=="aws")$("modalPrimary").textContent=old;
+    }
     return;
   }
   location.href="/admin/";
