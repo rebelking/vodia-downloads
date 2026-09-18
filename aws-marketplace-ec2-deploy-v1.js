@@ -23,7 +23,9 @@ import {
 } from "@aws-sdk/client-marketplace-discovery";
 import {
   MarketplaceAgreementClient,
-  SearchAgreementsCommand
+  SearchAgreementsCommand,
+  CreateAgreementRequestCommand,
+  AcceptAgreementRequestCommand
 } from "@aws-sdk/client-marketplace-agreement";
 
 const AWS_DEPLOY_PLAN_TTL_MS = Number(process.env.VODIA_MCP_AWS_DEPLOY_PLAN_TTL_MS || 15 * 60 * 1000);
@@ -31,6 +33,8 @@ const AWS_DISCOVERY_REGION = process.env.VODIA_MCP_AWS_MARKETPLACE_DISCOVERY_REG
 const AWS_CONNECT_UI_URI = "ui://vodia/aws-connect/mcp-app.html";
 const AWS_CONNECT_UI_HTML = process.env.VODIA_MCP_AWS_CONNECT_UI_HTML || "/opt/vodia-mcp/ui/aws-connect-app.html";
 const deploymentPlans = new Map();
+const marketplacePurchaseQuotes = new Map();
+const AWS_MARKETPLACE_QUOTE_TTL_MS = Number(process.env.VODIA_MCP_AWS_MARKETPLACE_QUOTE_TTL_MS || 15 * 60 * 1000);
 
 function customerCredentials(roleArn, externalId) {
   const connection = resolveAwsConnection(roleArn, externalId);
@@ -126,6 +130,206 @@ async function getMarketplaceOffer(roleArn, externalId, productId, offerId) {
     offer,
     terms: terms.offerTerms || [],
     fulfillmentOptions: fulfillment.fulfillmentOptions || []
+  };
+}
+
+
+function offerTermEntries(terms) {
+  return (terms || []).map(wrapper => {
+    const entry = Object.entries(wrapper || {})[0] || [];
+    const [kind, value] = entry;
+    return { kind, value: value || {} };
+  }).filter(x => x.kind && x.value?.id);
+}
+
+function normalizeVodiaMarketplaceOffer(result) {
+  const offer = result.offer || {};
+  const entries = offerTermEntries(result.terms);
+  const pricing = entries.find(x => x.kind === "configurableUpfrontPricingTerm")?.value || null;
+  const support = entries.find(x => x.kind === "supportTerm")?.value || null;
+  const legal = entries.find(x => x.kind === "legalTerm")?.value || null;
+  const renewal = entries.find(x => x.kind === "renewalTerm")?.value || null;
+
+  const plans = [];
+  for (const rc of pricing?.rateCards || []) {
+    for (const item of rc.rateCard || []) {
+      plans.push({
+        dimensionKey: item.dimensionKey,
+        displayName: item.displayName || item.dimensionKey,
+        description: item.description || null,
+        unit: item.unit || null,
+        price: item.price || null,
+        currencyCode: pricing.currencyCode || null,
+        selector: rc.selector || null,
+        constraints: rc.constraints || null
+      });
+    }
+  }
+
+  const fulfillment = (result.fulfillmentOptions || []).map(x => {
+    const ami = x?.amazonMachineImageFulfillmentOption;
+    if (!ami) return null;
+    return {
+      type: ami.fulfillmentOptionType || null,
+      displayName: ami.fulfillmentOptionDisplayName || ami.fulfillmentOptionName || null,
+      version: ami.fulfillmentOptionVersion || null,
+      operatingSystems: ami.operatingSystems || [],
+      recommendedInstanceType: ami.recommendation?.instanceType || null,
+      releaseNotes: ami.releaseNotes || null,
+      usageInstructions: ami.usageInstructions || null
+    };
+  }).filter(Boolean);
+
+  return {
+    productId: result.productId,
+    offerId: result.selectedOfferId || offer.offerId || null,
+    agreementProposalId: offer.agreementProposalId || null,
+    seller: offer.sellerOfRecord || null,
+    pricingModel: offer.pricingModel || null,
+    badges: offer.badges || [],
+    plans,
+    autoRenewAvailable: Boolean(renewal || (offer.badges || []).some(b => b?.badgeType === "AUTO_RENEW")),
+    refundPolicy: support?.refundPolicy || null,
+    legalDocuments: (legal?.documents || []).map(d => ({ type: d.type || null, url: d.url || null })),
+    fulfillment
+  };
+}
+
+function buildRequestedVodiaTerms(terms, { dimensionKey, quantity, selectorValue, autoRenew }) {
+  const entries = offerTermEntries(terms);
+  const pricingEntry = entries.find(x => x.kind === "configurableUpfrontPricingTerm");
+  if (!pricingEntry) throw new Error("UNSUPPORTED_OFFER: configurable upfront pricing term was not found.");
+
+  let selectedRateCard = null;
+  let selectedDimension = null;
+  for (const rc of pricingEntry.value.rateCards || []) {
+    const selector = rc?.selector?.value;
+    if (selectorValue && selector !== selectorValue) continue;
+    const match = (rc.rateCard || []).find(d => d.dimensionKey === dimensionKey);
+    if (match) {
+      selectedRateCard = rc;
+      selectedDimension = match;
+      break;
+    }
+  }
+  if (!selectedDimension || !selectedRateCard) {
+    throw new Error(\`INVALID_PLAN: dimension \${dimensionKey} is not available for selector \${selectorValue || "default"}.\`);
+  }
+
+  const requested = [];
+  for (const { kind, value } of entries) {
+    if (kind === "configurableUpfrontPricingTerm") {
+      requested.push({
+        id: value.id,
+        configuration: {
+          configurableUpfrontPricingTermConfiguration: {
+            selectorValue: selectedRateCard.selector?.value,
+            dimensions: [{ dimensionKey, dimensionValue: quantity }]
+          }
+        }
+      });
+    } else if (kind === "renewalTerm") {
+      requested.push({
+        id: value.id,
+        configuration: { renewalTermConfiguration: { enableAutoRenew: Boolean(autoRenew) } }
+      });
+    } else if (kind === "variablePaymentTerm") {
+      throw new Error("UNSUPPORTED_OFFER: variable payment terms require an explicit approval strategy.");
+    } else {
+      requested.push({ id: value.id });
+    }
+  }
+
+  return {
+    requestedTerms: requested,
+    selectedPlan: {
+      dimensionKey,
+      displayName: selectedDimension.displayName || dimensionKey,
+      description: selectedDimension.description || null,
+      unit: selectedDimension.unit || null,
+      unitPrice: selectedDimension.price || null,
+      currencyCode: pricingEntry.value.currencyCode || null,
+      quantity,
+      selectorValue: selectedRateCard.selector?.value || null,
+      autoRenew: Boolean(autoRenew)
+    }
+  };
+}
+
+function cleanExpiredMarketplaceQuotes() {
+  const now = Date.now();
+  for (const [id, quote] of marketplacePurchaseQuotes.entries()) {
+    if (quote.expiresAt <= now) marketplacePurchaseQuotes.delete(id);
+  }
+}
+
+async function prepareVodiaMarketplacePurchase(roleArn, externalId, input) {
+  const connection = resolveAwsConnection(roleArn, externalId);
+  const result = await getMarketplaceOffer(connection.roleArn, connection.externalId, input.productId, input.offerId);
+  const view = normalizeVodiaMarketplaceOffer(result);
+  if (!view.agreementProposalId) throw new Error("OFFER_PROPOSAL_ID_MISSING: Marketplace offer did not return an agreementProposalId.");
+
+  const built = buildRequestedVodiaTerms(result.terms, input);
+  const client = agreementClient(connection.roleArn, connection.externalId);
+  const quote = await client.send(new CreateAgreementRequestCommand({
+    clientToken: randomUUID(),
+    intent: "NEW",
+    agreementProposalIdentifier: view.agreementProposalId,
+    requestedTerms: built.requestedTerms,
+    taxConfiguration: { taxEstimation: "ENABLED" }
+  }));
+
+  if (!quote.agreementRequestId) throw new Error("QUOTE_UNVERIFIED: AWS returned no agreementRequestId.");
+
+  cleanExpiredMarketplaceQuotes();
+  const expiresAt = Date.now() + AWS_MARKETPLACE_QUOTE_TTL_MS;
+  const charge = quote.chargeSummary || {};
+  const amount = charge.newAgreementValueAfterTax || charge.newAgreementValue || built.selectedPlan.unitPrice || "AWS-calculated";
+  const currency = charge.currencyCode || built.selectedPlan.currencyCode || "USD";
+  const confirmation = \`ACCEPT VODIA \${built.selectedPlan.displayName} FOR \${currency} \${amount}\`;
+
+  marketplacePurchaseQuotes.set(quote.agreementRequestId, {
+    agreementRequestId: quote.agreementRequestId,
+    roleArn: connection.roleArn,
+    externalId: connection.externalId,
+    productId: input.productId,
+    offerId: view.offerId,
+    selectedPlan: built.selectedPlan,
+    confirmation,
+    createdAt: Date.now(),
+    expiresAt
+  });
+
+  return {
+    agreementRequestId: quote.agreementRequestId,
+    expiresAt: new Date(expiresAt).toISOString(),
+    confirmation,
+    product: view,
+    selectedPlan: built.selectedPlan,
+    chargeSummary: charge,
+    changesMade: false
+  };
+}
+
+async function acceptVodiaMarketplacePurchase(agreementRequestId, confirmation) {
+  cleanExpiredMarketplaceQuotes();
+  const pending = marketplacePurchaseQuotes.get(agreementRequestId);
+  if (!pending) throw new Error("QUOTE_NOT_FOUND_OR_EXPIRED: create a new Marketplace purchase quote.");
+  if (confirmation !== pending.confirmation) {
+    throw new Error(\`CONFIRMATION_MISMATCH: exact confirmation required: \${pending.confirmation}\`);
+  }
+
+  const client = agreementClient(pending.roleArn, pending.externalId);
+  const out = await client.send(new AcceptAgreementRequestCommand({ agreementRequestId }));
+  if (!out.agreementId) throw new Error("AGREEMENT_ACCEPT_UNVERIFIED: AWS returned no agreementId.");
+
+  marketplacePurchaseQuotes.delete(agreementRequestId);
+  return {
+    agreementId: out.agreementId,
+    productId: pending.productId,
+    offerId: pending.offerId,
+    selectedPlan: pending.selectedPlan,
+    changesMade: true
   };
 }
 
@@ -232,13 +436,13 @@ function buildRunInstancesParams(input, image) {
     InstanceType: input.instanceType,
     MinCount: 1,
     MaxCount: 1,
-    IamInstanceProfile: { Name: input.iamInstanceProfileName },
     TagSpecifications: [
       { ResourceType: "instance", Tags: tags },
       { ResourceType: "volume", Tags: tags }
     ]
   };
 
+  if (input.iamInstanceProfileName) params.IamInstanceProfile = { Name: input.iamInstanceProfileName };
   if (input.keyName) params.KeyName = input.keyName;
 
   const securityGroupIds = input.securityGroupIds || [];
@@ -446,6 +650,92 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
     }
   );
 
+
+  server.registerTool(
+    "aws_marketplace_present_vodia_offer",
+    {
+      title: "Present Vodia AWS Marketplace offer",
+      description: "Returns a customer-facing summary of the Vodia Marketplace offer: plans, current AWS Marketplace prices, seller, renewal availability, refund policy, legal documents, and AMI details. Read-only and suitable for showing directly in chat before purchase.",
+      inputSchema: {
+        roleArn: z.string().min(20).optional(),
+        externalId: z.string().min(8).optional(),
+        productId: z.string().min(3),
+        offerId: z.string().optional()
+      },
+      outputSchema: toolOutputSchema,
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true }
+    },
+    async ({ roleArn, externalId, productId, offerId }) => {
+      scopedAudit("aws_marketplace_present_vodia_offer", { roleArn, productId, offerId: offerId || null });
+      try {
+        const raw = await getMarketplaceOffer(roleArn, externalId, productId, offerId);
+        const offer = normalizeVodiaMarketplaceOffer(raw);
+        return scopedSuccess({ offer, changesMade: false }, { operation: "AWS_MARKETPLACE_PRESENT_VODIA_OFFER", readOnly: true }, "Vodia Marketplace plans and terms are ready to present to the customer.");
+      } catch (error) {
+        return failure(error, "AWS Marketplace Vodia offer presentation");
+      }
+    }
+  );
+
+  server.registerTool(
+    "aws_marketplace_prepare_vodia_purchase",
+    {
+      title: "Prepare Vodia Marketplace purchase",
+      description: "Creates an AWS Marketplace agreement request that acts as a quote. It validates the selected Vodia plan against the live offer, asks AWS to calculate charges and taxes, and returns the exact terms plus a confirmation string. It does not accept the agreement or create a subscription.",
+      inputSchema: {
+        roleArn: z.string().min(20).optional(),
+        externalId: z.string().min(8).optional(),
+        productId: z.string().min(3),
+        offerId: z.string().optional(),
+        dimensionKey: z.string().min(1),
+        quantity: z.number().int().min(1).default(1),
+        selectorValue: z.string().optional(),
+        autoRenew: z.boolean()
+      },
+      outputSchema: toolOutputSchema,
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true }
+    },
+    async (input) => {
+      scopedAudit("aws_marketplace_prepare_vodia_purchase", {
+        roleArn: input.roleArn,
+        productId: input.productId,
+        offerId: input.offerId || null,
+        dimensionKey: input.dimensionKey,
+        quantity: input.quantity,
+        autoRenew: input.autoRenew
+      });
+      try {
+        const result = await prepareVodiaMarketplacePurchase(input.roleArn, input.externalId, input);
+        return scopedSuccess(result, { operation: "AWS_MARKETPLACE_PREPARE_VODIA_PURCHASE", readOnly: false }, "AWS Marketplace quote created. No agreement has been accepted. Present the quote and terms to the customer and require explicit approval.");
+      } catch (error) {
+        return failure(error, "AWS Marketplace Vodia purchase preparation");
+      }
+    }
+  );
+
+  server.registerTool(
+    "aws_marketplace_accept_vodia_purchase",
+    {
+      title: "Accept Vodia Marketplace purchase",
+      description: "Financially consequential action. Accepts a previously prepared AWS Marketplace agreement request only when the exact confirmation string from the quote is supplied. This can create a billable Marketplace agreement.",
+      inputSchema: {
+        agreementRequestId: z.string().min(3),
+        confirmation: z.string().min(1)
+      },
+      outputSchema: toolOutputSchema,
+      annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: true }
+    },
+    async ({ agreementRequestId, confirmation }) => {
+      scopedAudit("aws_marketplace_accept_vodia_purchase", { agreementRequestId });
+      try {
+        const result = await acceptVodiaMarketplacePurchase(agreementRequestId, confirmation);
+        return scopedSuccess(result, { operation: "AWS_MARKETPLACE_ACCEPT_VODIA_PURCHASE", readOnly: false }, "Vodia AWS Marketplace agreement accepted. Charges may now apply according to the accepted quote.");
+      } catch (error) {
+        return failure(error, "AWS Marketplace Vodia purchase acceptance");
+      }
+    }
+  );
+
   server.registerTool(
     "aws_marketplace_check_subscription",
     {
@@ -534,7 +824,7 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
         subnetId: z.string().min(3),
         securityGroupIds: z.array(z.string()).min(1),
         instanceType: z.string().min(3),
-        iamInstanceProfileName: z.string().min(1),
+        iamInstanceProfileName: z.string().min(1).optional(),
         keyName: z.string().optional(),
         storageGiB: z.number().int().min(8).max(16384).optional(),
         associatePublicIp: z.boolean().default(true),
