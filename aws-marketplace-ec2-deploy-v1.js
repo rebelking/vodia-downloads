@@ -213,7 +213,7 @@ function buildRequestedVodiaTerms(terms, { dimensionKey, quantity, selectorValue
     }
   }
   if (!selectedDimension || !selectedRateCard) {
-    throw new Error(\`INVALID_PLAN: dimension \${dimensionKey} is not available for selector \${selectorValue || "default"}.\`);
+    throw new Error(`INVALID_PLAN: dimension ${dimensionKey} is not available for selector ${selectorValue || "default"}.`);
   }
 
   const requested = [];
@@ -286,7 +286,7 @@ async function prepareVodiaMarketplacePurchase(roleArn, externalId, input) {
   const charge = quote.chargeSummary || {};
   const amount = charge.newAgreementValueAfterTax || charge.newAgreementValue || built.selectedPlan.unitPrice || "AWS-calculated";
   const currency = charge.currencyCode || built.selectedPlan.currencyCode || "USD";
-  const confirmation = \`ACCEPT VODIA \${built.selectedPlan.displayName} FOR \${currency} \${amount}\`;
+  const confirmation = `ACCEPT VODIA ${built.selectedPlan.displayName} FOR ${currency} ${amount}`;
 
   marketplacePurchaseQuotes.set(quote.agreementRequestId, {
     agreementRequestId: quote.agreementRequestId,
@@ -316,7 +316,7 @@ async function acceptVodiaMarketplacePurchase(agreementRequestId, confirmation) 
   const pending = marketplacePurchaseQuotes.get(agreementRequestId);
   if (!pending) throw new Error("QUOTE_NOT_FOUND_OR_EXPIRED: create a new Marketplace purchase quote.");
   if (confirmation !== pending.confirmation) {
-    throw new Error(\`CONFIRMATION_MISMATCH: exact confirmation required: \${pending.confirmation}\`);
+    throw new Error(`CONFIRMATION_MISMATCH: exact confirmation required: ${pending.confirmation}`);
   }
 
   const client = agreementClient(pending.roleArn, pending.externalId);
