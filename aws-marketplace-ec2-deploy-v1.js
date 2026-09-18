@@ -428,7 +428,7 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
       description: "Reads available purchase options, offer terms, and fulfillment options for a Marketplace product. Does not subscribe or accept terms.",
       inputSchema: {
         roleArn: z.string().min(20).optional(),
-        externalId: z.string().min(8).optional().optional(),
+        externalId: z.string().min(8).optional(),
         productId: z.string().min(3),
         offerId: z.string().optional()
       },
@@ -453,7 +453,7 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
       description: "Checks for an ACTIVE PurchaseAgreement for the specified Marketplace product in the customer's account. Read-only.",
       inputSchema: {
         roleArn: z.string().min(20).optional(),
-        externalId: z.string().min(8).optional().optional(),
+        externalId: z.string().min(8).optional(),
         productId: z.string().min(3)
       },
       outputSchema: toolOutputSchema,
@@ -502,7 +502,7 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
       description: "Lists VPCs, subnets, security groups, and key pairs in a selected customer region. Read-only.",
       inputSchema: {
         roleArn: z.string().min(20).optional(),
-        externalId: z.string().min(8).optional().optional(),
+        externalId: z.string().min(8).optional(),
         region: z.string().min(3)
       },
       outputSchema: toolOutputSchema,
@@ -526,7 +526,7 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
       description: "Creates a short-lived deployment plan only after an ACTIVE AWS Marketplace agreement is verified. Performs EC2 RunInstances DryRun to validate IAM, Marketplace entitlement, AMI, network, instance profile, and launch parameters. Makes no EC2 changes.",
       inputSchema: {
         roleArn: z.string().min(20).optional(),
-        externalId: z.string().min(8).optional().optional(),
+        externalId: z.string().min(8).optional(),
         productId: z.string().min(3),
         productCode: z.string().optional(),
         amiId: z.string().optional(),
@@ -666,7 +666,7 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
       description: "Reads the EC2 state and network addresses of a deployed Vodia PBX instance.",
       inputSchema: {
         roleArn: z.string().min(20).optional(),
-        externalId: z.string().min(8).optional().optional(),
+        externalId: z.string().min(8).optional(),
         region: z.string().min(3),
         instanceId: z.string().min(3)
       },
