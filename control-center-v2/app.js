@@ -1,3 +1,20 @@
+const THEME_KEY="vodia-mcp-theme";
+function applyTheme(theme){
+  const next=theme==="light"?"light":"dark";
+  document.documentElement.dataset.theme=next;
+  const btn=document.getElementById("themeToggle");
+  if(btn) btn.dataset.mode=next;
+  try{localStorage.setItem(THEME_KEY,next)}catch{}
+}
+function initTheme(){
+  let saved=null;
+  try{saved=localStorage.getItem(THEME_KEY)}catch{}
+  if(saved!=="light"&&saved!=="dark"){
+    saved=window.matchMedia&&window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";
+  }
+  applyTheme(saved);
+}
+
 const $=(id)=>document.getElementById(id);
 
 function badge(id,text,state="neutral"){
@@ -224,4 +241,8 @@ $("modalPrimary").addEventListener("click",async()=>{
   }
   location.href="/admin/";
 });
+document.querySelectorAll("[data-admin]").forEach(el=>el.addEventListener("click",()=>location.href="/admin/"));
+const themeToggle=$("themeToggle");
+if(themeToggle) themeToggle.addEventListener("click",()=>applyTheme(document.documentElement.dataset.theme==="dark"?"light":"dark"));
+initTheme();
 Promise.all([loadHealth(),loadConnections(),loadActivity()]);
