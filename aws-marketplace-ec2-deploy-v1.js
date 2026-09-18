@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { loadAwsConnectionProfile, resolveAwsConnection, sanitizeAwsConnectionProfile, saveAwsConnectionProfile } from "./aws-connection-profile-v1.js";
 import { fromTemporaryCredentials } from "@aws-sdk/credential-providers";
 import { STSClient, GetCallerIdentityCommand } from "@aws-sdk/client-sts";
 import {
@@ -27,19 +28,19 @@ import {
 
 const AWS_DEPLOY_PLAN_TTL_MS = Number(process.env.VODIA_MCP_AWS_DEPLOY_PLAN_TTL_MS || 15 * 60 * 1000);
 const AWS_DISCOVERY_REGION = process.env.VODIA_MCP_AWS_MARKETPLACE_DISCOVERY_REGION || "us-east-1";
+const AWS_CONNECT_UI_URI = "ui://vodia/aws-connect/mcp-app.html";
+const AWS_CONNECT_UI_HTML = process.env.VODIA_MCP_AWS_CONNECT_UI_HTML || "/opt/vodia-mcp/ui/aws-connect-app.html";
 const deploymentPlans = new Map();
 
 function customerCredentials(roleArn, externalId) {
-  if (!/^arn:aws:iam::\d{12}:role\/(?:[^/]+\/)*VodiaMCPDeploymentRole$/.test(String(roleArn || ""))) {
+  const connection = resolveAwsConnection(roleArn, externalId);
+  if (!/^arn:aws:iam::\d{12}:role\/(?:[^/]+\/)*VodiaMCPDeploymentRole$/.test(connection.roleArn)) {
     throw new Error("INVALID_CUSTOMER_ROLE: roleArn must target a role named VodiaMCPDeploymentRole.");
-  }
-  if (!String(externalId || "").trim()) {
-    throw new Error("EXTERNAL_ID_REQUIRED: a customer-specific STS External ID is required.");
   }
   return fromTemporaryCredentials({
     params: {
-      RoleArn: roleArn,
-      ExternalId: String(externalId),
+      RoleArn: connection.roleArn,
+      ExternalId: connection.externalId,
       RoleSessionName: "vodia-mcp-deploy"
     }
   });
@@ -289,13 +290,98 @@ function cleanExpiredPlans() {
 export function registerAwsMarketplaceDeployTools(server, ctx) {
   const { z, toolOutputSchema, scopedAudit, scopedSuccess, failure } = ctx;
 
+  // v0.14.9.18 AWS connection onboarding MCP App.
+  server.registerResource(
+    "Vodia AWS connection",
+    AWS_CONNECT_UI_URI,
+    { mimeType: "text/html;profile=mcp-app" },
+    async () => {
+      const { readFile } = await import("node:fs/promises");
+      const html = await readFile(AWS_CONNECT_UI_HTML, "utf8");
+      return { contents: [{ uri: AWS_CONNECT_UI_URI, mimeType: "text/html;profile=mcp-app", text: html }] };
+    }
+  );
+
+  server.registerTool(
+    "aws_connect_customer_account",
+    {
+      title: "Connect AWS account",
+      description: "Opens the Vodia AWS connection UI. Customers enter the VodiaMCPDeploymentRole ARN and External ID once, test STS AssumeRole, and save the connection for future AWS deployment sessions.",
+      inputSchema: {},
+      outputSchema: toolOutputSchema,
+      _meta: { ui: { resourceUri: AWS_CONNECT_UI_URI }, "ui/resourceUri": AWS_CONNECT_UI_URI },
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false }
+    },
+    async () => {
+      try {
+        const profile = sanitizeAwsConnectionProfile(loadAwsConnectionProfile());
+        return scopedSuccess(
+          { profile, changesMade: false },
+          { operation: "AWS_CONNECTION_UI", readOnly: true },
+          profile?.configured ? "AWS connection profile loaded." : "AWS connection setup is ready."
+        );
+      } catch (error) {
+        return failure(error, "AWS connection profile load");
+      }
+    }
+  );
+
+  server.registerTool(
+    "aws_get_customer_connection_profile",
+    {
+      title: "Get saved AWS connection",
+      description: "Returns the saved AWS customer connection metadata without returning the External ID. Read-only.",
+      inputSchema: {},
+      outputSchema: toolOutputSchema,
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false }
+    },
+    async () => {
+      try {
+        const profile = sanitizeAwsConnectionProfile(loadAwsConnectionProfile());
+        return scopedSuccess({ profile, changesMade: false }, { operation: "AWS_CONNECTION_PROFILE_GET", readOnly: true }, profile?.configured ? "Saved AWS connection found." : "No saved AWS connection is configured.");
+      } catch (error) {
+        return failure(error, "AWS connection profile read");
+      }
+    }
+  );
+
+  server.registerTool(
+    "aws_save_customer_connection_profile",
+    {
+      title: "Test and save AWS connection",
+      description: "Tests STS AssumeRole with the supplied VodiaMCPDeploymentRole ARN and External ID. Only after the STS check succeeds, saves an encrypted connection profile for reuse by future AWS tools.",
+      inputSchema: {
+        roleArn: z.string().min(20),
+        externalId: z.string().min(8)
+      },
+      outputSchema: toolOutputSchema,
+      _meta: { ui: { resourceUri: AWS_CONNECT_UI_URI, visibility: ["app"] }, "ui/resourceUri": AWS_CONNECT_UI_URI },
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true }
+    },
+    async ({ roleArn, externalId }) => {
+      scopedAudit("aws_save_customer_connection_profile", { roleArn });
+      try {
+        const identity = await getCustomerIdentity(roleArn, externalId);
+        const profile = saveAwsConnectionProfile({
+          roleArn,
+          externalId,
+          account: identity.account,
+          assumedRoleArn: identity.arn
+        });
+        return scopedSuccess({ profile, identity, changesMade: true }, { operation: "AWS_CONNECTION_PROFILE_SAVE", readOnly: false }, "AWS connection tested successfully and saved.");
+      } catch (error) {
+        return failure(error, "AWS connection test/save");
+      }
+    }
+  );
+
   server.registerTool(
     "aws_check_customer_connection",
     {
       title: "Check customer AWS connection",
       description: "Assumes the customer's VodiaMCPDeploymentRole using the configured External ID and returns the temporary STS caller identity. Makes no infrastructure changes.",
       inputSchema: {
-        roleArn: z.string().min(20),
+        roleArn: z.string().min(20).optional(),
         externalId: z.string().min(8)
       },
       outputSchema: toolOutputSchema,
@@ -318,7 +404,7 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
       title: "Search Vodia in AWS Marketplace",
       description: "Searches AWS Marketplace Discovery in the customer's account for Vodia listings. Read-only.",
       inputSchema: {
-        roleArn: z.string().min(20),
+        roleArn: z.string().min(20).optional(),
         externalId: z.string().min(8)
       },
       outputSchema: toolOutputSchema,
@@ -341,8 +427,8 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
       title: "Get AWS Marketplace Vodia offer",
       description: "Reads available purchase options, offer terms, and fulfillment options for a Marketplace product. Does not subscribe or accept terms.",
       inputSchema: {
-        roleArn: z.string().min(20),
-        externalId: z.string().min(8),
+        roleArn: z.string().min(20).optional(),
+        externalId: z.string().min(8).optional(),
         productId: z.string().min(3),
         offerId: z.string().optional()
       },
@@ -366,8 +452,8 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
       title: "Check AWS Marketplace subscription",
       description: "Checks for an ACTIVE PurchaseAgreement for the specified Marketplace product in the customer's account. Read-only.",
       inputSchema: {
-        roleArn: z.string().min(20),
-        externalId: z.string().min(8),
+        roleArn: z.string().min(20).optional(),
+        externalId: z.string().min(8).optional(),
         productId: z.string().min(3)
       },
       outputSchema: toolOutputSchema,
@@ -390,7 +476,7 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
       title: "List AWS deployment regions",
       description: "Lists EC2 regions available to the customer account. Read-only.",
       inputSchema: {
-        roleArn: z.string().min(20),
+        roleArn: z.string().min(20).optional(),
         externalId: z.string().min(8)
       },
       outputSchema: toolOutputSchema,
@@ -415,8 +501,8 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
       title: "Discover AWS deployment network",
       description: "Lists VPCs, subnets, security groups, and key pairs in a selected customer region. Read-only.",
       inputSchema: {
-        roleArn: z.string().min(20),
-        externalId: z.string().min(8),
+        roleArn: z.string().min(20).optional(),
+        externalId: z.string().min(8).optional(),
         region: z.string().min(3)
       },
       outputSchema: toolOutputSchema,
@@ -439,8 +525,8 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
       title: "Plan Vodia PBX deployment on AWS",
       description: "Creates a short-lived deployment plan only after an ACTIVE AWS Marketplace agreement is verified. Performs EC2 RunInstances DryRun to validate IAM, Marketplace entitlement, AMI, network, instance profile, and launch parameters. Makes no EC2 changes.",
       inputSchema: {
-        roleArn: z.string().min(20),
-        externalId: z.string().min(8),
+        roleArn: z.string().min(20).optional(),
+        externalId: z.string().min(8).optional(),
         productId: z.string().min(3),
         productCode: z.string().optional(),
         amiId: z.string().optional(),
@@ -458,6 +544,8 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true }
     },
     async (input) => {
+      const resolvedConnection = resolveAwsConnection(input.roleArn, input.externalId);
+      input = { ...input, roleArn: resolvedConnection.roleArn, externalId: resolvedConnection.externalId };
       scopedAudit("aws_marketplace_plan_vodia_pbx_deployment", {
         roleArn: input.roleArn,
         productId: input.productId,
@@ -577,8 +665,8 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
       title: "Get Vodia PBX deployment status",
       description: "Reads the EC2 state and network addresses of a deployed Vodia PBX instance.",
       inputSchema: {
-        roleArn: z.string().min(20),
-        externalId: z.string().min(8),
+        roleArn: z.string().min(20).optional(),
+        externalId: z.string().min(8).optional(),
         region: z.string().min(3),
         instanceId: z.string().min(3)
       },
