@@ -8,7 +8,7 @@ VERSION="$APP/version.js"
 MODULE="$APP/aws-marketplace-ec2-deploy-v1.js"
 FROM_VER="0.14.9.26"
 TO_VER="0.14.9.27"
-SOURCE_COMMIT="09930c6adcfd1ab32e785ba7e85790cc4e60c53e"
+SOURCE_COMMIT="c3f1d4ac77c80e4cf6744dc3f267ae92a3a431f1"
 SOURCE_URL="https://raw.githubusercontent.com/rebelking/vodia-downloads/${SOURCE_COMMIT}/aws-marketplace-ec2-deploy-v1.js"
 STAMP="$(date -u +%Y%m%d-%H%M%S)"
 BACKUP_DIR="${VODIA_MCP_BACKUP_ROOT:-/var/backups}/vodia-mcp-v${TO_VER}-marketplace-purchase-$STAMP"
@@ -68,6 +68,9 @@ NODE
 echo "[2/7] Download staged module — NO LIVE CHANGES"
 curl -fsSL "$SOURCE_URL" -o "$TMP_MODULE"
 node --check "$TMP_MODULE" >/dev/null || fail "staged Marketplace module failed node --check"
+if grep -Fq '\\`' "$TMP_MODULE" || grep -Fq '\\${' "$TMP_MODULE"; then
+  fail "staged Marketplace module contains escaped JavaScript template literals"
+fi
 for tool in \
   aws_marketplace_present_vodia_offer \
   aws_marketplace_prepare_vodia_purchase \
