@@ -117,14 +117,130 @@ async function safeTool(name, args = {}) {
   }
 }
 
+function sanitizeProviderData(provider, data) {
+  const d = data && typeof data === "object" ? data : {};
+  if (provider === "aws") {
+    const p = d.profile || d.connectionProfile || d;
+    return {
+      configured: Boolean(p?.configured),
+      account: p?.account || null,
+      savedAt: p?.savedAt || null,
+      externalIdConfigured: Boolean(p?.externalIdConfigured)
+    };
+  }
+  if (provider === "cloudflare") {
+    return {
+      connected: Boolean(d.connected ?? d.configured),
+      configured: Boolean(d.configured ?? d.connected),
+      domain: d.domain || null,
+      zoneStatus: d.zoneStatus || null,
+      permissions: {
+        zoneRead: Boolean(d.permissions?.zoneRead),
+        dnsRead: Boolean(d.permissions?.dnsRead),
+        dnsWrite: d.permissions?.dnsWrite ?? null
+      },
+      updatedAt: d.updatedAt || null
+    };
+  }
+  if (provider === "microsoft") {
+    return {
+      ready: Boolean(d.ready),
+      configured: {
+        tenantIdConfigured: Boolean(d.configured?.tenantIdConfigured),
+        clientIdConfigured: Boolean(d.configured?.clientIdConfigured),
+        clientSecretConfigured: Boolean(d.configured?.clientSecretConfigured)
+      },
+      checks: Array.isArray(d.checks)
+        ? d.checks.map((x) => ({ check: x?.check || null, status: x?.status || null }))
+        : []
+    };
+  }
+  if (provider === "pbx") {
+    return {
+      version: d.version || null,
+      buildDate: d.build_date || d.buildDate || null,
+      status: d.status || d.state || "online",
+      totalCalls: Number.isFinite(Number(d.total_calls)) ? Number(d.total_calls) : null,
+      extensionCdrs: Number.isFinite(Number(d.ext_cdr)) ? Number(d.ext_cdr) : null,
+      trunkCdrs: Number.isFinite(Number(d.trunk_cdrs)) ? Number(d.trunk_cdrs) : null,
+      objectCdrs: Number.isFinite(Number(d.obj_cdrs)) ? Number(d.obj_cdrs) : null,
+      ivrCdrs: Number.isFinite(Number(d.ivr_cdr)) ? Number(d.ivr_cdr) : null
+    };
+  }
+  return {};
+}
+
+function sanitizeToolResult(provider, result) {
+  if (!result?.ok) return result;
+  return { ok: true, data: sanitizeProviderData(provider, result.data) };
+}
+
 async function connectionSummary() {
-  const [aws, cloudflare, microsoft, pbx] = await Promise.all([
+  const [awsRaw, cloudflareRaw, microsoftRaw, pbxRaw] = await Promise.all([
     safeTool("aws_get_customer_connection_profile"),
     safeTool("cloudflare_check_connection"),
     safeTool("microsoft_check_graph_readiness"),
     safeTool("get_system_status")
   ]);
-  return { aws, cloudflare, microsoft, pbx };
+  return {
+    aws: sanitizeToolResult("aws", awsRaw),
+    cloudflare: sanitizeToolResult("cloudflare", cloudflareRaw),
+    microsoft: sanitizeToolResult("microsoft", microsoftRaw),
+    pbx: sanitizeToolResult("pbx", pbxRaw)
+  };
+}
+
+async function awsOverview() {
+  const profileRaw = await safeTool("aws_get_customer_connection_profile");
+  const profile = sanitizeToolResult("aws", profileRaw);
+  if (!profile.ok || !profile.data?.configured) {
+    return {
+      configured: false,
+      profile: profile.ok ? profile.data : null,
+      setupTool: "aws_connect_customer_account",
+      setupInstruction: "Open the AWS connection setup from an MCP client once, then return here. The Control Center never displays the External ID or Role ARN."
+    };
+  }
+
+  const [connectionRaw, listingsRaw, regionsRaw] = await Promise.all([
+    safeTool("aws_check_customer_connection"),
+    safeTool("aws_marketplace_search_vodia"),
+    safeTool("aws_list_deployment_regions")
+  ]);
+
+  const connection = connectionRaw.ok
+    ? {
+        ok: true,
+        account: connectionRaw.data?.identity?.account || profile.data.account || null
+      }
+    : { ok: false, error: connectionRaw.error || "AWS connection check failed" };
+
+  const listings = listingsRaw.ok && Array.isArray(listingsRaw.data?.listings)
+    ? listingsRaw.data.listings.map((x) => ({
+        productId: x?.productId || x?.entityId || x?.id || null,
+        title: x?.displayName || x?.title || x?.name || "Vodia listing"
+      })).slice(0, 10)
+    : [];
+
+  const regions = regionsRaw.ok && Array.isArray(regionsRaw.data?.regions)
+    ? regionsRaw.data.regions.map((x) => x?.regionName).filter(Boolean).slice(0, 50)
+    : [];
+
+  return {
+    configured: true,
+    profile: profile.data,
+    connection,
+    marketplace: {
+      ok: listingsRaw.ok,
+      listingCount: listings.length,
+      listings
+    },
+    regions: {
+      ok: regionsRaw.ok,
+      count: regions.length,
+      values: regions
+    }
+  };
 }
 
 async function tailAudit(limit = 20) {
@@ -174,13 +290,18 @@ async function route(req, res) {
     };
     if (!map[provider]) return json(res, 404, { ok: false, error: "UNKNOWN_PROVIDER" });
     const [tool, args] = map[provider];
-    const result = await safeTool(tool, args);
+    const result = sanitizeToolResult(provider, await safeTool(tool, args));
     return json(res, result.ok ? 200 : 502, { provider, ...result });
   }
 
   if (req.method === "GET" && req.url === "/control-api/pbx") {
-    const result = await safeTool("get_system_status");
+    const result = sanitizeToolResult("pbx", await safeTool("get_system_status"));
     return json(res, result.ok ? 200 : 502, result);
+  }
+
+  if (req.method === "GET" && req.url === "/control-api/aws/overview") {
+    const overview = await awsOverview();
+    return json(res, 200, { ok: true, aws: overview });
   }
 
   return json(res, 404, { ok: false, error: "NOT_FOUND" });
