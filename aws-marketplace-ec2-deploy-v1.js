@@ -324,11 +324,19 @@ async function acceptVodiaMarketplacePurchase(agreementRequestId, confirmation) 
   if (!out.agreementId) throw new Error("AGREEMENT_ACCEPT_UNVERIFIED: AWS returned no agreementId.");
 
   marketplacePurchaseQuotes.delete(agreementRequestId);
+  let subscriptionActive = false;
+  try {
+    const subscription = await checkSubscription(pending.roleArn, pending.externalId, pending.productId);
+    subscriptionActive = Boolean(subscription.active);
+  } catch {
+    // Agreement acceptance succeeded. Subscription propagation can be checked separately.
+  }
   return {
     agreementId: out.agreementId,
     productId: pending.productId,
     offerId: pending.offerId,
     selectedPlan: pending.selectedPlan,
+    subscriptionActive,
     changesMade: true
   };
 }
@@ -848,7 +856,7 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
         cleanExpiredPlans();
         const subscription = await checkSubscription(input.roleArn, input.externalId, input.productId);
         if (!subscription.active) {
-          throw new Error("SUBSCRIPTION_REQUIRED: no ACTIVE AWS Marketplace PurchaseAgreement was found for this product. Accept the Marketplace offer first.");
+          throw new Error("SUBSCRIPTION_REQUIRED: no ACTIVE AWS Marketplace PurchaseAgreement was found. Present the live offer, prepare an AWS quote, obtain explicit customer approval, and accept the quote before planning deployment.");
         }
 
         const client = ec2Client(input.roleArn, input.externalId, input.region);
