@@ -43,8 +43,14 @@ print(m.group(1) if m else "",end="")
 PY
 )"
 echo "Current version: ${CURRENT:-unknown}"
+REPAIR29=false
 if [[ "$CURRENT" == "0.14.9.29" ]]; then
-  echo "v0.14.9.29 already installed; running verification only."
+  if ! node --check "$APP/index.js" >/dev/null 2>&1 || ! grep -q 'registerMspGuidedApp' "$APP/index.js" || [[ ! -f "$APP/msp-guided-app-v1.js" ]] || [[ ! -f "$APP/ui/msp-guided-app.html" ]]; then
+    REPAIR29=true
+    echo "v0.14.9.29 is present but incomplete/broken; repair mode enabled."
+  else
+    echo "v0.14.9.29 already installed; running verification only."
+  fi
 elif [[ "$CURRENT" != "0.14.9.28" ]]; then
   fail "expected v0.14.9.28 or v0.14.9.29; found ${CURRENT:-unknown}"
 fi
@@ -58,7 +64,7 @@ cp -a "$APP/msp-authz-v1.js" "$BACKUP/msp-authz-v1.js"
 [[ -f "$APP/ui/msp-guided-app.html" ]] && cp -a "$APP/ui/msp-guided-app.html" "$BACKUP/msp-guided-app.html" || true
 echo "PASS: $BACKUP"
 
-if [[ "$CURRENT" != "0.14.9.29" ]]; then
+if [[ "$CURRENT" != "0.14.9.29" || "$REPAIR29" == "true" ]]; then
   echo "[2/8] Download immutable guided-MSP files"
   curl -fsSL "$RAW_BASE/msp-authz-v1.js" -o "$TMP/msp-authz-v1.js"
   curl -fsSL "$RAW_BASE/msp-guided-app-v1.js" -o "$TMP/msp-guided-app-v1.js"
@@ -78,7 +84,12 @@ import re,sys
 p=Path(sys.argv[1]); s=p.read_text()
 imp='import { registerMspGuidedApp } from "./msp-guided-app-v1.js";\n'
 if imp not in s:
-    s=imp+s
+    # Keep a Unix shebang as the very first line. Node only recognizes it there.
+    if s.startswith('#!'):
+        first, sep, rest = s.partition('\n')
+        s = first + '\n' + imp + rest
+    else:
+        s = imp + s
 
 if 'registerMspGuidedApp(server, {' not in s:
     factory=s.find('export function createVodiaServer')
@@ -103,14 +114,15 @@ from pathlib import Path
 import re,sys
 p=Path(sys.argv[1]); s=p.read_text()
 s,n=re.subn(r'(CONNECTOR_VERSION\s*=\s*["\'])0\.14\.9\.28(["\'])',r'\g<1>0.14.9.29\2',s,count=1)
-if n != 1:
-    if '0.14.9.29' not in s:
-        raise SystemExit('PATCH ERROR: connector version anchor not found')
+if n != 1 and '0.14.9.29' not in s:
+    raise SystemExit('PATCH ERROR: connector version anchor not found')
 p.write_text(s)
 PY
   echo PASS
 
   echo "[4/8] Validate staged files"
+  [[ "$(head -n 1 "$TMP/index.js")" == '#!/usr/bin/env node' ]] || fail "staged index.js shebang is not first line"
+  [[ "$(grep -n '^#!' "$TMP/index.js" | wc -l)" -eq 1 ]] || fail "staged index.js has misplaced/duplicate shebang"
   node --check "$TMP/index.js"
   node --check "$TMP/msp-authz-v1.js"
   node --check "$TMP/msp-guided-app-v1.js"
