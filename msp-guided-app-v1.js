@@ -1,4 +1,4 @@
-const GUIDED_UI_URI = "ui://vodia/msp-guided/v0.14.9.37/mcp-app.html";
+const GUIDED_UI_URI = "ui://vodia/msp-guided/v0.14.9.38/mcp-app.html";
 const GUIDED_UI_HTML = process.env.VODIA_MSP_GUIDED_UI_HTML || "/opt/vodia-mcp/ui/msp-guided-app.html";
 
 function appResult() {
