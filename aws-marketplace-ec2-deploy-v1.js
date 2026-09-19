@@ -348,18 +348,24 @@ async function acceptVodiaMarketplacePurchase(agreementRequestId, confirmation, 
 
   marketplacePurchaseQuotes.delete(agreementRequestId);
   let audit = null;
+  let auditError = null;
   if (pending.customerId) {
-    audit = recordCommercialAudit(extra, {
-      customerId: pending.customerId,
-      action: "AWS_MARKETPLACE_ACCEPT_AGREEMENT",
-      resource: out.agreementId,
-      details: {
-        productId: pending.productId,
-        offerId: pending.offerId,
-        plan: pending.selectedPlan?.displayName || pending.selectedPlan?.dimensionKey || null,
-        agreementRequestId
-      }
-    });
+    try {
+      audit = recordCommercialAudit(extra, {
+        customerId: pending.customerId,
+        action: "AWS_MARKETPLACE_ACCEPT_AGREEMENT",
+        resource: out.agreementId,
+        details: {
+          productId: pending.productId,
+          offerId: pending.offerId,
+          plan: pending.selectedPlan?.displayName || pending.selectedPlan?.dimensionKey || null,
+          agreementRequestId
+        }
+      });
+    } catch (error) {
+      // Never report the AWS purchase itself as failed merely because local audit persistence failed.
+      auditError = String(error?.message || error);
+    }
   }
   let subscriptionActive = false;
   try {
@@ -377,6 +383,7 @@ async function acceptVodiaMarketplacePurchase(agreementRequestId, confirmation, 
     selectedPlan: pending.selectedPlan,
     subscriptionActive,
     audit,
+    auditError,
     changesMade: true
   };
 }
