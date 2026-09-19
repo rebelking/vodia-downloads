@@ -394,7 +394,7 @@ button:disabled{opacity:.42;cursor:not-allowed}
 
     const initResult=await request("ui/initialize",{
       protocolVersion:"2026-01-26",
-      appInfo:{name:"vodia-setup",version:"1.8.0"},
+      appInfo:{name:"vodia-setup",version:"1.8.1"},
       appCapabilities:{availableDisplayModes:["inline","fullscreen"]}
     });
     post({jsonrpc:"2.0",method:"ui/notifications/initialized",params:{}});
@@ -473,14 +473,23 @@ button:disabled{opacity:.42;cursor:not-allowed}
     document.querySelectorAll(".step").forEach((el,index)=>{
       el.classList.toggle("active",index===step-1);
     });
-    $("customerPanel").classList.toggle("hidden",step!==1);
-    $("awsSection").classList.toggle("hidden",step!==1);
-    $("awsStepPanel").classList.toggle("hidden",step!==2);
-    $("deployStepPanel").classList.toggle("hidden",step!==3);
+    const views={
+      customerPanel:step===1,
+      awsSection:step===1,
+      awsStepPanel:step===2,
+      deployStepPanel:step===3
+    };
+    Object.entries(views).forEach(([id,visible])=>{
+      const el=$(id);
+      if(!el) throw new Error("Setup view is missing: "+id);
+      el.hidden=!visible;
+      el.classList.toggle("hidden",!visible);
+      el.setAttribute("aria-hidden",visible?"false":"true");
+    });
     requestAnimationFrame(()=>{
       const target=step===1?$("customerPanel"):step===2?$("awsStepPanel"):$("deployStepPanel");
-      target?.scrollIntoView({block:"start",behavior:"smooth"});
-      $("setupScroll").scrollTop=0;
+      $("setupScroll").scrollTo({top:0,left:0,behavior:"auto"});
+      target?.scrollIntoView({block:"nearest",behavior:"auto"});
       reportSize();
     });
   }
