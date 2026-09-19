@@ -8,7 +8,7 @@ INDEX="$APP/index.js"
 SERVICE="vodia-mcp"
 STAMP="$(date -u +%Y%m%d-%H%M%S)"
 BACKUP="/var/backups/vodia-mcp-v0.14.9.28-duplicate-msp-registration-$STAMP"
-TMP="$(mktemp)"
+TMP="$(mktemp --suffix=.js)"
 HEALTH="$(mktemp)"
 trap 'rm -f "$TMP" "$HEALTH"' EXIT
 
