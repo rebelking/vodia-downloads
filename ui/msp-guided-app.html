@@ -43,6 +43,16 @@ button:disabled{opacity:.42;cursor:not-allowed}
 .msg{font-size:11px;min-height:15px;margin-top:5px;opacity:.72}
 .aws{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding:11px 12px;border-radius:11px;border:1px solid color-mix(in srgb,CanvasText 10%,transparent)}
 .aws-title{font-size:12px;font-weight:700}.aws-sub{font-size:11px;opacity:.65;margin-top:2px}
+.aws-connect-form{margin-top:8px;padding:12px;border-radius:11px;border:1px solid color-mix(in srgb,CanvasText 10%,transparent);background:color-mix(in srgb,CanvasText 4%,transparent)}
+.aws-connect-form .field{margin-bottom:10px}
+.aws-connect-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}
+.aws-connect-actions button{width:auto}
+.secret-note{font-size:10px;opacity:.62;margin-top:5px}
+.step-panel{margin-top:10px}
+.step-panel h2{font-size:14px;margin:0 0 5px}
+.step-panel p{font-size:11px;opacity:.68;margin:0 0 12px}
+.region-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end}
+.region-row button{white-space:nowrap}
 .badge{display:inline-flex;align-items:center;padding:4px 7px;border-radius:999px;font-size:10px;background:color-mix(in srgb,CanvasText 7%,transparent);white-space:nowrap}
 .actions{display:flex;justify-content:flex-end;margin-top:10px}
 .actions button{font-size:11px;padding:7px 9px}
@@ -103,15 +113,54 @@ button:disabled{opacity:.42;cursor:not-allowed}
         </div>
       </div>
 
-      <div class="aws">
-        <div>
-          <div class="aws-title">AWS connection <span class="required">*</span></div>
-          <div id="awsMsg" class="aws-sub">Select a customer to check its connection.</div>
+      <div id="awsSection">
+        <div class="aws">
+          <div>
+            <div class="aws-title">AWS connection <span class="required">*</span></div>
+            <div id="awsMsg" class="aws-sub">Select a customer to check its connection.</div>
+          </div>
+          <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
+            <span id="awsBadge" class="badge">Waiting</span>
+            <button id="connectAws" class="primary" type="button" disabled>Connect AWS</button>
+            <button id="checkAws" class="secondary" type="button" disabled>Check</button>
+          </div>
         </div>
-        <div style="display:flex;gap:7px;align-items:center">
-          <span id="awsBadge" class="badge">Waiting</span>
-          <button id="checkAws" class="secondary" type="button" disabled>Check</button>
+
+        <div id="awsConnectForm" class="aws-connect-form hidden">
+          <div class="field">
+            <label for="awsRoleArn">Vodia deployment role ARN <span class="required">*</span></label>
+            <input id="awsRoleArn" type="text" autocomplete="off" spellcheck="false"
+              placeholder="arn:aws:iam::123456789012:role/VodiaMCPDeploymentRole">
+          </div>
+          <div class="field">
+            <label for="awsExternalId">External ID <span class="required">*</span></label>
+            <input id="awsExternalId" type="password" autocomplete="new-password" spellcheck="false"
+              placeholder="External ID">
+            <div class="secret-note">Used only to test and save this customer's AWS connection. It is not displayed again after saving.</div>
+          </div>
+          <div id="awsConnectMsg" class="msg"></div>
+          <div class="aws-connect-actions">
+            <button id="cancelAws" class="secondary" type="button">Cancel</button>
+            <button id="saveAws" class="primary" type="button">Test &amp; Connect</button>
+          </div>
         </div>
+
+        <div id="awsContinueRow" class="actions hidden">
+          <button id="continueAws" class="primary" type="button">Continue to AWS</button>
+        </div>
+      </div>
+
+      <div id="awsStepPanel" class="panel step-panel hidden">
+        <h2>2 · AWS</h2>
+        <p id="awsStepSummary">AWS connection verified. Choose the deployment region.</p>
+        <div class="region-row">
+          <div>
+            <label for="regionSelect">Deployment region <span class="required">*</span></label>
+            <select id="regionSelect" disabled><option value="">Load regions first</option></select>
+          </div>
+          <button id="loadRegions" class="secondary" type="button">Load regions</button>
+        </div>
+        <div id="regionMsg" class="msg"></div>
       </div>
 
       <div class="actions">
@@ -132,6 +181,8 @@ button:disabled{opacity:.42;cursor:not-allowed}
     theme: null
   };
   let allCustomers = [];
+  let currentAwsConnection = null;
+  let currentStep = 1;
   let inlineScrollTop = 0;
   let fullscreenScrollTop = 0;
 
@@ -250,7 +301,7 @@ button:disabled{opacity:.42;cursor:not-allowed}
 
     const initResult=await request("ui/initialize",{
       protocolVersion:"2026-01-26",
-      appInfo:{name:"vodia-setup",version:"1.4.0"},
+      appInfo:{name:"vodia-setup",version:"1.5.0"},
       appCapabilities:{availableDisplayModes:["inline","fullscreen"]}
     });
     post({jsonrpc:"2.0",method:"ui/notifications/initialized",params:{}});
@@ -324,10 +375,47 @@ button:disabled{opacity:.42;cursor:not-allowed}
     renderCustomers(preselect);
   }
 
+  function setStep(step){
+    currentStep=step;
+    document.querySelectorAll(".step").forEach((el,index)=>{
+      el.classList.toggle("active",index===step-1);
+    });
+    $("awsStepPanel").classList.toggle("hidden",step!==2);
+    reportSize();
+  }
+
+  function renderAwsConnection(connection){
+    currentAwsConnection=connection||null;
+    const selected=Boolean(customerId());
+    const connected=Boolean(connection?.configured);
+
+    $("checkAws").disabled=!selected;
+    $("connectAws").disabled=!selected;
+    $("awsConnectForm").classList.add("hidden");
+
+    if(connected){
+      $("awsBadge").textContent="Connected";
+      setMsg("awsMsg","AWS account "+(connection.account||"")+" is connected.");
+      $("connectAws").textContent="Reconnect";
+      $("awsContinueRow").classList.remove("hidden");
+    }else{
+      $("awsBadge").textContent=selected?"Required":"Waiting";
+      setMsg("awsMsg",selected?"No AWS connection is configured for this customer.":"Select a customer to check its connection.");
+      $("connectAws").textContent="Connect AWS";
+      $("awsContinueRow").classList.add("hidden");
+      if(currentStep>1) setStep(1);
+    }
+  }
+
   function resetAws(){
-    $("awsBadge").textContent=customerId()?"Not checked":"Waiting";
-    setMsg("awsMsg",customerId()?"AWS is required before deployment.":"Select a customer to check its connection.");
-    $("checkAws").disabled=!customerId();
+    currentAwsConnection=null;
+    $("awsRoleArn").value="";
+    $("awsExternalId").value="";
+    setMsg("awsConnectMsg","");
+    $("regionSelect").innerHTML='<option value="">Load regions first</option>';
+    $("regionSelect").disabled=true;
+    setMsg("regionMsg","");
+    renderAwsConnection(null);
   }
 
   function onCustomerChanged(){ resetAws(); }
@@ -337,6 +425,16 @@ button:disabled{opacity:.42;cursor:not-allowed}
     await refreshIdentity();
     await refreshOrganizations();
     await refreshCustomers();
+    const id=customerId();
+    if(id){
+      try{
+        const r=dataFrom(await callTool("msp_get_customer_aws_connection",{customerId:id}));
+        renderAwsConnection(r.connection||null);
+      }catch(e){
+        $("awsBadge").textContent="Error";
+        setMsg("awsMsg",e.message);
+      }
+    }
   }
 
   $("toggleOrg").addEventListener("click",()=>{
@@ -358,8 +456,19 @@ button:disabled{opacity:.42;cursor:not-allowed}
     reportSize();
   });
 
-  $("customerSelect").addEventListener("change",()=>{
+  $("customerSelect").addEventListener("change",async()=>{
     onCustomerChanged();
+    const id=customerId();
+    if(id){
+      try{
+        $("awsBadge").textContent="Checking…";
+        const r=dataFrom(await callTool("msp_get_customer_aws_connection",{customerId:id}));
+        renderAwsConnection(r.connection||null);
+      }catch(e){
+        $("awsBadge").textContent="Error";
+        setMsg("awsMsg",e.message);
+      }
+    }
     reportSize();
   });
 
@@ -402,19 +511,109 @@ button:disabled{opacity:.42;cursor:not-allowed}
       $("awsBadge").textContent="Checking…";
       setMsg("awsMsg","Checking saved AWS connection…");
       const r=dataFrom(await callTool("msp_get_customer_aws_connection",{customerId:id}));
-      const c=r.connection;
-      if(c?.configured){
-        $("awsBadge").textContent="Connected";
-        setMsg("awsMsg","AWS account "+(c.account||"")+" is ready.");
-      }else{
-        $("awsBadge").textContent="Required";
-        setMsg("awsMsg","No AWS connection is configured for this customer.");
-      }
+      renderAwsConnection(r.connection||null);
     }catch(e){
       $("awsBadge").textContent="Error";
       setMsg("awsMsg",e.message);
     }
     reportSize();
+  });
+
+  $("connectAws").addEventListener("click",()=>{
+    if(!customerId()) return;
+    setMsg("awsConnectMsg","");
+    if(currentAwsConnection?.roleArn && !$("awsRoleArn").value){
+      $("awsRoleArn").value=currentAwsConnection.roleArn;
+    }
+    $("awsExternalId").value="";
+    $("awsConnectForm").classList.remove("hidden");
+    $("awsRoleArn").focus();
+    reportSize();
+  });
+
+  $("cancelAws").addEventListener("click",()=>{
+    $("awsExternalId").value="";
+    setMsg("awsConnectMsg","");
+    $("awsConnectForm").classList.add("hidden");
+    reportSize();
+  });
+
+  $("saveAws").addEventListener("click",async()=>{
+    const id=customerId();
+    const roleArn=$("awsRoleArn").value.trim();
+    const externalId=$("awsExternalId").value.trim();
+
+    if(!id){setMsg("awsConnectMsg","Select a customer first.");return}
+    if(!/^arn:aws:iam::\d{12}:role\/(?:[^/]+\/)*VodiaMCPDeploymentRole$/.test(roleArn)){
+      setMsg("awsConnectMsg","Enter the VodiaMCPDeploymentRole ARN.");
+      return;
+    }
+    if(externalId.length<8){
+      setMsg("awsConnectMsg","Enter the External ID.");
+      return;
+    }
+
+    try{
+      $("saveAws").disabled=true;
+      $("saveAws").textContent="Testing…";
+      setMsg("awsConnectMsg","Testing STS AssumeRole…");
+      const r=dataFrom(await callTool("msp_save_customer_aws_connection",{
+        customerId:id,
+        roleArn,
+        externalId
+      }));
+      $("awsExternalId").value="";
+      $("awsConnectForm").classList.add("hidden");
+      renderAwsConnection(r.connection||null);
+      setMsg("awsMsg","AWS connection verified and saved securely.");
+    }catch(e){
+      $("awsExternalId").value="";
+      setMsg("awsConnectMsg",e.message);
+    }finally{
+      $("saveAws").disabled=false;
+      $("saveAws").textContent="Test & Connect";
+      reportSize();
+    }
+  });
+
+  $("continueAws").addEventListener("click",async()=>{
+    if(!currentAwsConnection?.configured) return;
+    setStep(2);
+    $("awsStepSummary").textContent="AWS account "+(currentAwsConnection.account||"")+" is connected. Choose the deployment region.";
+    try{
+      $("loadRegions").click();
+    }catch{}
+  });
+
+  $("loadRegions").addEventListener("click",async()=>{
+    const id=customerId();
+    if(!id || !currentAwsConnection?.configured) return;
+    try{
+      $("loadRegions").disabled=true;
+      $("loadRegions").textContent="Loading…";
+      setMsg("regionMsg","Loading available EC2 regions…");
+      const r=dataFrom(await callTool("aws_list_deployment_regions",{customerId:id}));
+      const regions=Array.isArray(r.regions)?r.regions:[];
+      const sel=$("regionSelect");
+      sel.innerHTML='<option value="">Select region…</option>';
+      regions
+        .filter(x=>x?.regionName)
+        .sort((a,b)=>String(a.regionName).localeCompare(String(b.regionName)))
+        .forEach(x=>{
+          const op=document.createElement("option");
+          op.value=x.regionName;
+          op.textContent=x.regionName;
+          sel.appendChild(op);
+        });
+      sel.disabled=regions.length===0;
+      setMsg("regionMsg",regions.length?("Found "+regions.length+" available region(s)."):"No deployment regions were returned.");
+    }catch(e){
+      setMsg("regionMsg",e.message);
+    }finally{
+      $("loadRegions").disabled=false;
+      $("loadRegions").textContent="Load regions";
+      reportSize();
+    }
   });
 
   $("expandBtn").addEventListener("click",async()=>{
