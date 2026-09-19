@@ -3,62 +3,109 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Vodia MSP Setup</title>
+<title>Vodia Setup</title>
 <style>
 :root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color-scheme:light dark}
-*{box-sizing:border-box}body{margin:0;padding:14px;background:transparent;color:CanvasText}
-.wrap{max-width:620px;margin:auto}.card{border:1px solid color-mix(in srgb,CanvasText 14%,transparent);border-radius:16px;padding:16px;background:Canvas;box-shadow:0 4px 18px rgba(0,0,0,.06)}
-h1{font-size:20px;margin:0 0 4px}.sub{font-size:13px;opacity:.7;margin:0 0 16px}
-.status{display:flex;gap:8px;align-items:center;font-size:13px;margin:8px 0 16px}.dot{width:9px;height:9px;border-radius:50%;background:#999}.ok .dot{background:#22a06b}.bad .dot{background:#d1242f}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:520px){.grid{grid-template-columns:1fr}}
-section{border:1px solid color-mix(in srgb,CanvasText 10%,transparent);border-radius:12px;padding:13px}h2{font-size:14px;margin:0 0 10px}
-label{display:block;font-size:12px;opacity:.72;margin:8px 0 5px}input,select,button{width:100%;border-radius:10px;border:1px solid color-mix(in srgb,CanvasText 18%,transparent);font:inherit}
-input,select{padding:10px;background:Canvas;color:CanvasText}button{padding:10px 12px;margin-top:10px;background:#111;color:#fff;border-color:#111;cursor:pointer;font-weight:600}button.secondary{background:transparent;color:CanvasText}button:disabled{opacity:.45;cursor:not-allowed}
-.msg{min-height:18px;font-size:12px;margin-top:8px;opacity:.8}.row{display:flex;gap:8px}.row button{width:auto;flex:1}
-.badge{display:inline-block;padding:3px 8px;border-radius:999px;font-size:11px;background:color-mix(in srgb,CanvasText 8%,transparent);margin-left:6px}
+*{box-sizing:border-box}
+body{margin:0;padding:12px;background:transparent;color:CanvasText}
+.wrap{max-width:560px;margin:auto}
+.card{border:1px solid color-mix(in srgb,CanvasText 14%,transparent);border-radius:16px;padding:16px;background:Canvas}
+.top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+h1{font-size:19px;line-height:1.2;margin:0 0 3px}
+.sub{font-size:12px;opacity:.66;margin:0}
+.status{display:flex;align-items:center;gap:6px;font-size:11px;white-space:nowrap;padding:5px 8px;border-radius:999px;background:color-mix(in srgb,CanvasText 7%,transparent)}
+.dot{width:7px;height:7px;border-radius:50%;background:#999}
+.status.ok .dot{background:#22a06b}.status.bad .dot{background:#d1242f}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:14px 0}
+.step{font-size:11px;text-align:center;padding:7px 5px;border-radius:8px;background:color-mix(in srgb,CanvasText 6%,transparent);opacity:.58}
+.step.active{opacity:1;font-weight:700;background:color-mix(in srgb,CanvasText 11%,transparent)}
+.panel{border:1px solid color-mix(in srgb,CanvasText 10%,transparent);border-radius:12px;padding:13px}
+.field{margin-bottom:12px}.field:last-child{margin-bottom:0}
+.labelrow{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+label{font-size:12px;font-weight:650}.required{opacity:.65}
+.linkbtn{width:auto!important;border:0!important;background:transparent!important;color:CanvasText!important;padding:2px 0!important;margin:0!important;font-size:11px!important;font-weight:650!important;text-decoration:underline;text-underline-offset:2px}
+input,select,button{font:inherit;border-radius:9px}
+input,select{width:100%;padding:9px 10px;border:1px solid color-mix(in srgb,CanvasText 18%,transparent);background:Canvas;color:CanvasText}
+button{border:1px solid color-mix(in srgb,CanvasText 18%,transparent);padding:9px 11px;cursor:pointer;font-weight:650}
+button.primary{background:#111;color:#fff;border-color:#111}
+button.secondary{background:transparent;color:CanvasText}
+button:disabled{opacity:.42;cursor:not-allowed}
+.createbox{margin-top:7px;padding:9px;border-radius:9px;background:color-mix(in srgb,CanvasText 5%,transparent)}
+.createbox .row{display:grid;grid-template-columns:1fr auto;gap:7px}
+.createbox button{margin:0}
+.msg{font-size:11px;min-height:15px;margin-top:5px;opacity:.72}
+.aws{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding:11px 12px;border-radius:11px;border:1px solid color-mix(in srgb,CanvasText 10%,transparent)}
+.aws-title{font-size:12px;font-weight:700}.aws-sub{font-size:11px;opacity:.65;margin-top:2px}
+.badge{display:inline-flex;align-items:center;padding:4px 7px;border-radius:999px;font-size:10px;background:color-mix(in srgb,CanvasText 7%,transparent);white-space:nowrap}
+.actions{display:flex;justify-content:flex-end;margin-top:10px}
+.actions button{font-size:11px;padding:7px 9px}
 .hidden{display:none!important}
+@media(max-width:480px){.top{display:block}.status{display:inline-flex;margin-top:8px}.createbox .row{grid-template-columns:1fr}.aws{align-items:flex-start;flex-direction:column}.aws button{width:100%}}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="card">
-    <h1>Vodia MSP Setup</h1>
-    <p class="sub">Create and select organizations and customers without copying UUIDs.</p>
-    <div id="authStatus" class="status"><span class="dot"></span><span>Connecting…</span></div>
-
-    <div class="grid">
-      <section>
-        <h2>Organization</h2>
-        <label for="orgSelect">Select organization</label>
-        <select id="orgSelect"><option value="">Loading…</option></select>
-
-        <label for="orgName">New organization</label>
-        <input id="orgName" maxlength="160" placeholder="Example: Vodia Networks">
-        <button id="createOrg">Create organization</button>
-        <div id="orgMsg" class="msg"></div>
-      </section>
-
-      <section>
-        <h2>Customer</h2>
-        <label for="customerSelect">Select customer</label>
-        <select id="customerSelect"><option value="">Loading…</option></select>
-
-        <label for="customerName">New customer</label>
-        <input id="customerName" maxlength="160" placeholder="Example: Acme Hotel">
-        <button id="createCustomer">Create customer</button>
-        <div id="customerMsg" class="msg"></div>
-      </section>
+    <div class="top">
+      <div>
+        <h1>Vodia Setup</h1>
+        <p class="sub">Only required information is shown. IDs stay in the background.</p>
+      </div>
+      <div id="authStatus" class="status"><span class="dot"></span><span>Connecting…</span></div>
     </div>
 
-    <section style="margin-top:12px">
-      <h2>AWS connection <span id="awsBadge" class="badge">Not checked</span></h2>
-      <p class="sub" style="margin-bottom:8px">Choose a customer above, then check whether its AWS connection is configured.</p>
-      <div class="row">
-        <button id="checkAws" class="secondary">Check AWS</button>
-        <button id="refresh" class="secondary">Refresh</button>
+    <div class="steps" aria-label="Setup steps">
+      <div class="step active">1 · Customer</div>
+      <div class="step">2 · AWS</div>
+      <div class="step">3 · Deploy</div>
+    </div>
+
+    <div class="panel">
+      <div class="field">
+        <div class="labelrow">
+          <label for="orgSelect">Organization <span class="required">*</span></label>
+          <button id="toggleOrg" class="linkbtn" type="button">+ New organization</button>
+        </div>
+        <select id="orgSelect" required><option value="">Loading…</option></select>
+        <div id="newOrg" class="createbox hidden">
+          <div class="row">
+            <input id="orgName" maxlength="160" placeholder="Organization name" autocomplete="organization">
+            <button id="createOrg" class="primary" type="button">Create</button>
+          </div>
+          <div id="orgMsg" class="msg"></div>
+        </div>
       </div>
-      <div id="awsMsg" class="msg"></div>
-    </section>
+
+      <div class="field">
+        <div class="labelrow">
+          <label for="customerSelect">Customer <span class="required">*</span></label>
+          <button id="toggleCustomer" class="linkbtn" type="button">+ New customer</button>
+        </div>
+        <select id="customerSelect" required disabled><option value="">Select organization first</option></select>
+        <div id="newCustomer" class="createbox hidden">
+          <div class="row">
+            <input id="customerName" maxlength="160" placeholder="Customer name" autocomplete="organization">
+            <button id="createCustomer" class="primary" type="button">Create</button>
+          </div>
+          <div id="customerMsg" class="msg"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="aws">
+      <div>
+        <div class="aws-title">AWS connection <span class="required">*</span></div>
+        <div id="awsMsg" class="aws-sub">Select a customer to check its connection.</div>
+      </div>
+      <div style="display:flex;gap:7px;align-items:center">
+        <span id="awsBadge" class="badge">Waiting</span>
+        <button id="checkAws" class="secondary" type="button" disabled>Check</button>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="refresh" class="secondary" type="button">Refresh</button>
+    </div>
   </div>
 </div>
 
@@ -67,6 +114,12 @@ input,select{padding:10px;background:Canvas;color:CanvasText}button{padding:10px
   let rpcId = 1;
   const pending = new Map();
   let initialized = false;
+  let allCustomers = [];
+
+  const $ = (id) => document.getElementById(id);
+  const orgId = () => $("orgSelect").value;
+  const customerId = () => $("customerSelect").value;
+  const setMsg = (id,text) => { $(id).textContent=text||""; };
 
   function post(msg){ window.parent.postMessage(msg, "*"); }
 
@@ -75,7 +128,7 @@ input,select{padding:10px;background:Canvas;color:CanvasText}button{padding:10px
     const m = event.data;
     if (!m || m.jsonrpc !== "2.0") return;
     if (m.id && pending.has(m.id)) {
-      const {resolve,reject} = pending.get(m.id);
+      const {resolve,reject}=pending.get(m.id);
       pending.delete(m.id);
       if (m.error) reject(new Error(m.error.message || "Host request failed"));
       else resolve(m.result);
@@ -83,7 +136,7 @@ input,select{padding:10px;background:Canvas;color:CanvasText}button{padding:10px
   });
 
   function request(method, params={}) {
-    const id = rpcId++;
+    const id=rpcId++;
     post({jsonrpc:"2.0",id,method,params});
     return new Promise((resolve,reject)=>{
       pending.set(id,{resolve,reject});
@@ -96,22 +149,21 @@ input,select{padding:10px;background:Canvas;color:CanvasText}button{padding:10px
   async function initBridge(){
     if (window.openai?.callTool) return;
     try {
-      await request("ui/initialize", {
-        protocolVersion: "2026-01-26",
-        appInfo: {name:"vodia-msp-guided",version:"1.0.0"},
-        appCapabilities: {}
+      await request("ui/initialize",{
+        protocolVersion:"2026-01-26",
+        appInfo:{name:"vodia-guided-setup",version:"1.1.0"},
+        appCapabilities:{}
       });
       post({jsonrpc:"2.0",method:"ui/notifications/initialized",params:{}});
-      initialized = true;
-    } catch (e) {
-      // Some hosts expose the compatibility callTool surface instead of the standard bridge.
-      if (!window.openai?.callTool) throw e;
+      initialized=true;
+    } catch(e) {
+      if(!window.openai?.callTool) throw e;
     }
   }
 
   async function callTool(name,args={}){
-    if (window.openai?.callTool) return window.openai.callTool(name,args);
-    if (!initialized) await initBridge();
+    if(window.openai?.callTool) return window.openai.callTool(name,args);
+    if(!initialized) await initBridge();
     return request("tools/call",{name,arguments:args});
   }
 
@@ -126,106 +178,137 @@ input,select{padding:10px;background:Canvas;color:CanvasText}button{padding:10px
   }
 
   function setStatus(ok,text){
-    const el=document.getElementById("authStatus");
-    el.className="status "+(ok?"ok":"bad");
-    el.querySelector("span:last-child").textContent=text;
+    $("authStatus").className="status "+(ok?"ok":"bad");
+    $("authStatus").querySelector("span:last-child").textContent=text;
   }
-  function msg(id,text){document.getElementById(id).textContent=text||""}
-  function customerId(){return document.getElementById("customerSelect").value}
-  function orgId(){return document.getElementById("orgSelect").value}
+
+  function renderCustomers(preselect){
+    const sel=$("customerSelect");
+    const organizationId=orgId();
+    const rows=allCustomers.filter(c=>c.organizationId===organizationId);
+    sel.disabled=!organizationId;
+    sel.innerHTML=organizationId?'<option value="">Select customer…</option>':'<option value="">Select organization first</option>';
+    rows.forEach(c=>{
+      const op=document.createElement("option");
+      op.value=c.id;
+      op.textContent=c.name;
+      sel.appendChild(op);
+    });
+    if(preselect && rows.some(c=>c.id===preselect)) sel.value=preselect;
+    else if(rows.length===1) sel.value=rows[0].id;
+    onCustomerChanged();
+  }
 
   async function refreshIdentity(){
     const r=dataFrom(await callTool("msp_get_my_identity",{}));
     const ident=r.identity||{};
-    setStatus(Boolean(ident.authenticated), ident.authenticated ? "OAuth connected" : "OAuth required");
+    setStatus(Boolean(ident.authenticated),ident.authenticated?"OAuth connected":"OAuth required");
   }
 
   async function refreshOrganizations(preselect){
     const r=dataFrom(await callTool("msp_list_organizations",{}));
     const rows=r.organizations||[];
-    const sel=document.getElementById("orgSelect");
-    sel.innerHTML='<option value="">Select…</option>';
+    const sel=$("orgSelect");
+    const keep=preselect||sel.value;
+    sel.innerHTML='<option value="">Select organization…</option>';
     rows.forEach(o=>{
       const op=document.createElement("option");
-      op.value=o.id; op.textContent=o.name + (Number(o.customerCount) ? " ("+o.customerCount+")" : "");
+      op.value=o.id; op.textContent=o.name;
       sel.appendChild(op);
     });
-    if(preselect) sel.value=preselect;
-    if(!sel.value && rows.length===1) sel.value=rows[0].id;
-    document.getElementById("createCustomer").disabled=!sel.value;
+    if(keep && rows.some(o=>o.id===keep)) sel.value=keep;
+    else if(rows.length===1) sel.value=rows[0].id;
   }
 
   async function refreshCustomers(preselect){
     const r=dataFrom(await callTool("msp_list_customers",{}));
-    const rows=r.customers||[];
-    const sel=document.getElementById("customerSelect");
-    const keep=preselect||sel.value;
-    sel.innerHTML='<option value="">Select…</option>';
-    rows.forEach(c=>{
-      const op=document.createElement("option");
-      op.value=c.id; op.dataset.org=c.organizationId||"";
-      op.textContent=c.name+" — "+(c.organizationName||"");
-      sel.appendChild(op);
-    });
-    if(keep) sel.value=keep;
-    document.getElementById("checkAws").disabled=!sel.value;
+    allCustomers=r.customers||[];
+    renderCustomers(preselect);
   }
+
+  function resetAws(){
+    $("awsBadge").textContent=customerId()?"Not checked":"Waiting";
+    setMsg("awsMsg",customerId()?"AWS is required before deployment.":"Select a customer to check its connection.");
+    $("checkAws").disabled=!customerId();
+  }
+
+  function onCustomerChanged(){ resetAws(); }
 
   async function refreshAll(){
-    msg("orgMsg","");msg("customerMsg","");msg("awsMsg","");
+    setMsg("orgMsg",""); setMsg("customerMsg","");
     await refreshIdentity();
-    await Promise.all([refreshOrganizations(),refreshCustomers()]);
+    await refreshOrganizations();
+    await refreshCustomers();
   }
 
-  document.getElementById("orgSelect").addEventListener("change",()=>{
-    document.getElementById("createCustomer").disabled=!orgId();
+  $("toggleOrg").addEventListener("click",()=>{
+    $("newOrg").classList.toggle("hidden");
+    if(!$("newOrg").classList.contains("hidden")) $("orgName").focus();
   });
-  document.getElementById("customerSelect").addEventListener("change",()=>{
-    document.getElementById("checkAws").disabled=!customerId();
-    document.getElementById("awsBadge").textContent="Not checked";
+  $("toggleCustomer").addEventListener("click",()=>{
+    if(!orgId()){ setMsg("customerMsg","Select an organization first."); return; }
+    $("newCustomer").classList.toggle("hidden");
+    if(!$("newCustomer").classList.contains("hidden")) $("customerName").focus();
   });
 
-  document.getElementById("createOrg").addEventListener("click",async()=>{
-    const name=document.getElementById("orgName").value.trim();
-    if(name.length<2){msg("orgMsg","Enter an organization name.");return}
+  $("orgSelect").addEventListener("change",()=>{
+    renderCustomers();
+    $("newCustomer").classList.add("hidden");
+  });
+  $("customerSelect").addEventListener("change",onCustomerChanged);
+
+  $("createOrg").addEventListener("click",async()=>{
+    const name=$("orgName").value.trim();
+    if(name.length<2){setMsg("orgMsg","Enter an organization name.");return}
     try{
-      msg("orgMsg","Creating…");
+      setMsg("orgMsg","Creating…");
       const r=dataFrom(await callTool("msp_create_organization",{name}));
       const id=r.organization?.id;
-      document.getElementById("orgName").value="";
+      $("orgName").value="";
+      $("newOrg").classList.add("hidden");
       await refreshOrganizations(id);
-      msg("orgMsg","Created "+(r.organization?.name||name)+".");
-    }catch(e){msg("orgMsg",e.message)}
+      await refreshCustomers();
+    }catch(e){setMsg("orgMsg",e.message)}
   });
 
-  document.getElementById("createCustomer").addEventListener("click",async()=>{
+  $("createCustomer").addEventListener("click",async()=>{
     const organizationId=orgId();
-    const name=document.getElementById("customerName").value.trim();
-    if(!organizationId){msg("customerMsg","Select an organization.");return}
-    if(name.length<2){msg("customerMsg","Enter a customer name.");return}
+    const name=$("customerName").value.trim();
+    if(!organizationId){setMsg("customerMsg","Select an organization first.");return}
+    if(name.length<2){setMsg("customerMsg","Enter a customer name.");return}
     try{
-      msg("customerMsg","Creating…");
+      setMsg("customerMsg","Creating…");
       const r=dataFrom(await callTool("msp_create_customer",{organizationId,name}));
       const id=r.customer?.id;
-      document.getElementById("customerName").value="";
-      await Promise.all([refreshOrganizations(organizationId),refreshCustomers(id)]);
-      msg("customerMsg","Created "+(r.customer?.name||name)+".");
-    }catch(e){msg("customerMsg",e.message)}
+      $("customerName").value="";
+      $("newCustomer").classList.add("hidden");
+      await refreshOrganizations(organizationId);
+      await refreshCustomers(id);
+    }catch(e){setMsg("customerMsg",e.message)}
   });
 
-  document.getElementById("checkAws").addEventListener("click",async()=>{
-    const customerId=customerId();
-    if(!customerId){msg("awsMsg","Select a customer.");return}
+  $("checkAws").addEventListener("click",async()=>{
+    const id=customerId();
+    if(!id) return;
     try{
-      msg("awsMsg","Checking…");
-      const r=dataFrom(await callTool("msp_get_customer_aws_connection",{customerId}));
+      $("awsBadge").textContent="Checking…";
+      setMsg("awsMsg","Checking saved AWS connection…");
+      const r=dataFrom(await callTool("msp_get_customer_aws_connection",{customerId:id}));
       const c=r.connection;
-      document.getElementById("awsBadge").textContent=c?.configured?"Configured":"Not configured";
-      msg("awsMsg",c?.configured ? ("AWS account "+(c.account||"connected")+" is ready.") : "No AWS connection saved for this customer.");
-    }catch(e){msg("awsMsg",e.message)}
+      if(c?.configured){
+        $("awsBadge").textContent="Connected";
+        setMsg("awsMsg","AWS account "+(c.account||"")+" is ready.");
+      }else{
+        $("awsBadge").textContent="Required";
+        setMsg("awsMsg","No AWS connection is configured for this customer.");
+      }
+    }catch(e){
+      $("awsBadge").textContent="Error";
+      setMsg("awsMsg",e.message);
+    }
   });
 
-  document.getElementById("refresh").addEventListener("click",()=>refreshAll().catch(e=>setStatus(false,e.message)));
+  $("refresh").addEventListener("click",()=>refreshAll().catch(e=>setStatus(false,e.message)));
 
   (async()=>{
     try{await initBridge();await refreshAll()}
