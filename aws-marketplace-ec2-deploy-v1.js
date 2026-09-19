@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { loadAwsConnectionProfile, resolveAwsConnection, sanitizeAwsConnectionProfile, saveAwsConnectionProfile } from "./aws-connection-profile-v1.js";
+import { requireCustomerAccess, recordCommercialAudit } from "./msp-authz-v1.js";
+import { resolveScopedAwsConnection } from "./msp-customer-connections-v1.js";
 import { fromTemporaryCredentials } from "@aws-sdk/credential-providers";
 import { STSClient, GetCallerIdentityCommand } from "@aws-sdk/client-sts";
 import {
@@ -32,9 +34,22 @@ const AWS_DEPLOY_PLAN_TTL_MS = Number(process.env.VODIA_MCP_AWS_DEPLOY_PLAN_TTL_
 const AWS_DISCOVERY_REGION = process.env.VODIA_MCP_AWS_MARKETPLACE_DISCOVERY_REGION || "us-east-1";
 const AWS_CONNECT_UI_URI = "ui://vodia/aws-connect/mcp-app.html";
 const AWS_CONNECT_UI_HTML = process.env.VODIA_MCP_AWS_CONNECT_UI_HTML || "/opt/vodia-mcp/ui/aws-connect-app.html";
+const REQUIRE_MSP_CUSTOMER_CONTEXT = String(process.env.VODIA_MSP_REQUIRE_CUSTOMER_CONTEXT || "").toLowerCase() === "true";
 const deploymentPlans = new Map();
 const marketplacePurchaseQuotes = new Map();
 const AWS_MARKETPLACE_QUOTE_TTL_MS = Number(process.env.VODIA_MCP_AWS_MARKETPLACE_QUOTE_TTL_MS || 15 * 60 * 1000);
+
+function resolveToolConnection({ customerId, roleArn, externalId }, extra, allowedRoles = ["MSP_ADMIN","CUSTOMER_ADMIN","OPERATOR","READ_ONLY"]) {
+  if (customerId) {
+    const access = requireCustomerAccess(extra, customerId, allowedRoles);
+    const scoped = resolveScopedAwsConnection(customerId);
+    return { ...scoped, customerId, access };
+  }
+  if (REQUIRE_MSP_CUSTOMER_CONTEXT) {
+    throw new Error("CUSTOMER_CONTEXT_REQUIRED: select an MSP customer before using AWS tools.");
+  }
+  return { ...resolveAwsConnection(roleArn, externalId), customerId: null, access: null };
+}
 
 function customerCredentials(roleArn, externalId) {
   const connection = resolveAwsConnection(roleArn, externalId);
@@ -263,8 +278,8 @@ function cleanExpiredMarketplaceQuotes() {
   }
 }
 
-async function prepareVodiaMarketplacePurchase(roleArn, externalId, input) {
-  const connection = resolveAwsConnection(roleArn, externalId);
+async function prepareVodiaMarketplacePurchase(roleArn, externalId, input, customerContext = null) {
+  const connection = { roleArn, externalId };
   const result = await getMarketplaceOffer(connection.roleArn, connection.externalId, input.productId, input.offerId);
   const view = normalizeVodiaMarketplaceOffer(result);
   if (!view.agreementProposalId) throw new Error("OFFER_PROPOSAL_ID_MISSING: Marketplace offer did not return an agreementProposalId.");
@@ -294,6 +309,8 @@ async function prepareVodiaMarketplacePurchase(roleArn, externalId, input) {
     externalId: connection.externalId,
     productId: input.productId,
     offerId: view.offerId,
+    customerId: customerContext?.customerId || null,
+    preparedBy: customerContext?.subject || null,
     selectedPlan: built.selectedPlan,
     confirmation,
     createdAt: Date.now(),
@@ -311,12 +328,18 @@ async function prepareVodiaMarketplacePurchase(roleArn, externalId, input) {
   };
 }
 
-async function acceptVodiaMarketplacePurchase(agreementRequestId, confirmation) {
+async function acceptVodiaMarketplacePurchase(agreementRequestId, confirmation, extra) {
   cleanExpiredMarketplaceQuotes();
   const pending = marketplacePurchaseQuotes.get(agreementRequestId);
   if (!pending) throw new Error("QUOTE_NOT_FOUND_OR_EXPIRED: create a new Marketplace purchase quote.");
   if (confirmation !== pending.confirmation) {
     throw new Error(`CONFIRMATION_MISMATCH: exact confirmation required: ${pending.confirmation}`);
+  }
+  let commercialAccess = null;
+  if (pending.customerId) {
+    commercialAccess = requireCustomerAccess(extra, pending.customerId, ["MSP_ADMIN","CUSTOMER_ADMIN"]);
+  } else if (REQUIRE_MSP_CUSTOMER_CONTEXT) {
+    throw new Error("CUSTOMER_CONTEXT_REQUIRED: quote is not bound to an MSP customer.");
   }
 
   const client = agreementClient(pending.roleArn, pending.externalId);
@@ -324,6 +347,20 @@ async function acceptVodiaMarketplacePurchase(agreementRequestId, confirmation) 
   if (!out.agreementId) throw new Error("AGREEMENT_ACCEPT_UNVERIFIED: AWS returned no agreementId.");
 
   marketplacePurchaseQuotes.delete(agreementRequestId);
+  let audit = null;
+  if (pending.customerId) {
+    audit = recordCommercialAudit(extra, {
+      customerId: pending.customerId,
+      action: "AWS_MARKETPLACE_ACCEPT_AGREEMENT",
+      resource: out.agreementId,
+      details: {
+        productId: pending.productId,
+        offerId: pending.offerId,
+        plan: pending.selectedPlan?.displayName || pending.selectedPlan?.dimensionKey || null,
+        agreementRequestId
+      }
+    });
+  }
   let subscriptionActive = false;
   try {
     const subscription = await checkSubscription(pending.roleArn, pending.externalId, pending.productId);
@@ -335,8 +372,11 @@ async function acceptVodiaMarketplacePurchase(agreementRequestId, confirmation) 
     agreementId: out.agreementId,
     productId: pending.productId,
     offerId: pending.offerId,
+    customerId: pending.customerId || null,
+    acceptedBy: commercialAccess?.identity?.subject || null,
     selectedPlan: pending.selectedPlan,
     subscriptionActive,
+    audit,
     changesMade: true
   };
 }
@@ -593,16 +633,18 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
       title: "Check customer AWS connection",
       description: "Assumes the customer's VodiaMCPDeploymentRole and returns the temporary STS caller identity. If roleArn/externalId are omitted, uses the saved AWS connection profile. Makes no infrastructure changes.",
       inputSchema: {
+        customerId: z.string().uuid().optional(),
         roleArn: z.string().min(20).optional(),
         externalId: z.string().min(8).optional()
       },
       outputSchema: toolOutputSchema,
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true }
     },
-    async ({ roleArn, externalId }) => {
-      scopedAudit("aws_check_customer_connection", { roleArn });
+    async ({ customerId, roleArn, externalId }, extra) => {
+      scopedAudit("aws_check_customer_connection", { customerId: customerId || null, roleArn });
       try {
-        const identity = await getCustomerIdentity(roleArn, externalId);
+        const c = resolveToolConnection({ customerId, roleArn, externalId }, extra);
+        const identity = await getCustomerIdentity(c.roleArn, c.externalId);
         return scopedSuccess({ identity, changesMade: false }, { operation: "AWS_STS_CUSTOMER_CHECK", readOnly: true }, "Customer AWS role assumed successfully.");
       } catch (error) {
         return failure(error, "AWS customer connection check");
@@ -616,16 +658,18 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
       title: "Search Vodia in AWS Marketplace",
       description: "Searches AWS Marketplace Discovery in the customer's account for Vodia listings. Uses the saved AWS connection when roleArn/externalId are omitted. Read-only.",
       inputSchema: {
+        customerId: z.string().uuid().optional(),
         roleArn: z.string().min(20).optional(),
         externalId: z.string().min(8).optional()
       },
       outputSchema: toolOutputSchema,
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true }
     },
-    async ({ roleArn, externalId }) => {
-      scopedAudit("aws_marketplace_search_vodia", { roleArn });
+    async ({ customerId, roleArn, externalId }, extra) => {
+      scopedAudit("aws_marketplace_search_vodia", { customerId: customerId || null, roleArn });
       try {
-        const listings = await searchVodiaListings(roleArn, externalId);
+        const c = resolveToolConnection({ customerId, roleArn, externalId }, extra);
+        const listings = await searchVodiaListings(c.roleArn, c.externalId);
         return scopedSuccess({ listings, discoveryRegion: AWS_DISCOVERY_REGION, changesMade: false }, { operation: "AWS_MARKETPLACE_SEARCH_VODIA", readOnly: true }, `Found ${listings.length} Marketplace listing(s) matching Vodia.`);
       } catch (error) {
         return failure(error, "AWS Marketplace Vodia search");
@@ -639,6 +683,7 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
       title: "Get AWS Marketplace Vodia offer",
       description: "Reads available purchase options, offer terms, and fulfillment options for a Marketplace product. Does not subscribe or accept terms.",
       inputSchema: {
+        customerId: z.string().uuid().optional(),
         roleArn: z.string().min(20).optional(),
         externalId: z.string().min(8).optional(),
         productId: z.string().min(3),
@@ -647,10 +692,11 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
       outputSchema: toolOutputSchema,
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true }
     },
-    async ({ roleArn, externalId, productId, offerId }) => {
-      scopedAudit("aws_marketplace_get_offer", { roleArn, productId, offerId: offerId || null });
+    async ({ customerId, roleArn, externalId, productId, offerId }, extra) => {
+      scopedAudit("aws_marketplace_get_offer", { customerId: customerId || null, roleArn, productId, offerId: offerId || null });
       try {
-        const result = await getMarketplaceOffer(roleArn, externalId, productId, offerId);
+        const c = resolveToolConnection({ customerId, roleArn, externalId }, extra);
+        const result = await getMarketplaceOffer(c.roleArn, c.externalId, productId, offerId);
         return scopedSuccess({ ...result, changesMade: false }, { operation: "AWS_MARKETPLACE_GET_OFFER", readOnly: true }, "Marketplace purchase options and terms loaded; nothing was accepted.");
       } catch (error) {
         return failure(error, "AWS Marketplace offer discovery");
@@ -665,6 +711,7 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
       title: "Present Vodia AWS Marketplace offer",
       description: "Returns a customer-facing summary of the Vodia Marketplace offer: plans, current AWS Marketplace prices, seller, renewal availability, refund policy, legal documents, and AMI details. Read-only and suitable for showing directly in chat before purchase.",
       inputSchema: {
+        customerId: z.string().uuid().optional(),
         roleArn: z.string().min(20).optional(),
         externalId: z.string().min(8).optional(),
         productId: z.string().min(3),
@@ -673,10 +720,11 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
       outputSchema: toolOutputSchema,
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true }
     },
-    async ({ roleArn, externalId, productId, offerId }) => {
-      scopedAudit("aws_marketplace_present_vodia_offer", { roleArn, productId, offerId: offerId || null });
+    async ({ customerId, roleArn, externalId, productId, offerId }, extra) => {
+      scopedAudit("aws_marketplace_present_vodia_offer", { customerId: customerId || null, roleArn, productId, offerId: offerId || null });
       try {
-        const raw = await getMarketplaceOffer(roleArn, externalId, productId, offerId);
+        const c = resolveToolConnection({ customerId, roleArn, externalId }, extra);
+        const raw = await getMarketplaceOffer(c.roleArn, c.externalId, productId, offerId);
         const offer = normalizeVodiaMarketplaceOffer(raw);
         return scopedSuccess({ offer, changesMade: false }, { operation: "AWS_MARKETPLACE_PRESENT_VODIA_OFFER", readOnly: true }, "Vodia Marketplace plans and terms are ready to present to the customer.");
       } catch (error) {
@@ -691,6 +739,7 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
       title: "Prepare Vodia Marketplace purchase",
       description: "Creates an AWS Marketplace agreement request that acts as a quote. It validates the selected Vodia plan against the live offer, asks AWS to calculate charges and taxes, and returns the exact terms plus a confirmation string. It does not accept the agreement or create a subscription.",
       inputSchema: {
+        customerId: z.string().uuid().optional(),
         roleArn: z.string().min(20).optional(),
         externalId: z.string().min(8).optional(),
         productId: z.string().min(3),
@@ -703,8 +752,9 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
       outputSchema: toolOutputSchema,
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true }
     },
-    async (input) => {
+    async (input, extra) => {
       scopedAudit("aws_marketplace_prepare_vodia_purchase", {
+        customerId: input.customerId || null,
         roleArn: input.roleArn,
         productId: input.productId,
         offerId: input.offerId || null,
@@ -713,7 +763,11 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
         autoRenew: input.autoRenew
       });
       try {
-        const result = await prepareVodiaMarketplacePurchase(input.roleArn, input.externalId, input);
+        const c = resolveToolConnection(input, extra, ["MSP_ADMIN","CUSTOMER_ADMIN"]);
+        const result = await prepareVodiaMarketplacePurchase(c.roleArn, c.externalId, input, {
+          customerId: c.customerId,
+          subject: c.access?.identity?.subject || null
+        });
         return scopedSuccess(result, { operation: "AWS_MARKETPLACE_PREPARE_VODIA_PURCHASE", readOnly: false }, "AWS Marketplace quote created. No agreement has been accepted. Present the quote and terms to the customer and require explicit approval.");
       } catch (error) {
         return failure(error, "AWS Marketplace Vodia purchase preparation");
@@ -733,10 +787,10 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
       outputSchema: toolOutputSchema,
       annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: true }
     },
-    async ({ agreementRequestId, confirmation }) => {
+    async ({ agreementRequestId, confirmation }, extra) => {
       scopedAudit("aws_marketplace_accept_vodia_purchase", { agreementRequestId });
       try {
-        const result = await acceptVodiaMarketplacePurchase(agreementRequestId, confirmation);
+        const result = await acceptVodiaMarketplacePurchase(agreementRequestId, confirmation, extra);
         return scopedSuccess(result, { operation: "AWS_MARKETPLACE_ACCEPT_VODIA_PURCHASE", readOnly: false }, "Vodia AWS Marketplace agreement accepted. Charges may now apply according to the accepted quote.");
       } catch (error) {
         return failure(error, "AWS Marketplace Vodia purchase acceptance");
@@ -750,6 +804,7 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
       title: "Check AWS Marketplace subscription",
       description: "Checks for an ACTIVE PurchaseAgreement for the specified Marketplace product in the customer's account. Read-only.",
       inputSchema: {
+        customerId: z.string().uuid().optional(),
         roleArn: z.string().min(20).optional(),
         externalId: z.string().min(8).optional(),
         productId: z.string().min(3)
@@ -757,10 +812,11 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
       outputSchema: toolOutputSchema,
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true }
     },
-    async ({ roleArn, externalId, productId }) => {
-      scopedAudit("aws_marketplace_check_subscription", { roleArn, productId });
+    async ({ customerId, roleArn, externalId, productId }, extra) => {
+      scopedAudit("aws_marketplace_check_subscription", { customerId: customerId || null, roleArn, productId });
       try {
-        const result = await checkSubscription(roleArn, externalId, productId);
+        const c = resolveToolConnection({ customerId, roleArn, externalId }, extra);
+        const result = await checkSubscription(c.roleArn, c.externalId, productId);
         return scopedSuccess({ ...result, changesMade: false }, { operation: "AWS_MARKETPLACE_CHECK_SUBSCRIPTION", readOnly: true }, result.active ? "Active Marketplace agreement found." : "No active Marketplace agreement found.");
       } catch (error) {
         return failure(error, "AWS Marketplace subscription check");
@@ -774,16 +830,18 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
       title: "List AWS deployment regions",
       description: "Lists EC2 regions available to the customer account. Read-only.",
       inputSchema: {
+        customerId: z.string().uuid().optional(),
         roleArn: z.string().min(20).optional(),
         externalId: z.string().min(8).optional()
       },
       outputSchema: toolOutputSchema,
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true }
     },
-    async ({ roleArn, externalId }) => {
-      scopedAudit("aws_list_deployment_regions", { roleArn });
+    async ({ customerId, roleArn, externalId }, extra) => {
+      scopedAudit("aws_list_deployment_regions", { customerId: customerId || null, roleArn });
       try {
-        const client = ec2Client(roleArn, externalId, AWS_DISCOVERY_REGION);
+        const c = resolveToolConnection({ customerId, roleArn, externalId }, extra);
+        const client = ec2Client(c.roleArn, c.externalId, AWS_DISCOVERY_REGION);
         const out = await client.send(new DescribeRegionsCommand({ AllRegions: false }));
         const regions = (out.Regions || []).map(r => ({ regionName: r.RegionName, endpoint: r.Endpoint, optInStatus: r.OptInStatus }));
         return scopedSuccess({ regions, changesMade: false }, { operation: "AWS_EC2_LIST_REGIONS", readOnly: true }, `Found ${regions.length} available EC2 region(s).`);
@@ -799,6 +857,7 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
       title: "Discover AWS deployment network",
       description: "Lists VPCs, subnets, security groups, and key pairs in a selected customer region. Read-only.",
       inputSchema: {
+        customerId: z.string().uuid().optional(),
         roleArn: z.string().min(20).optional(),
         externalId: z.string().min(8).optional(),
         region: z.string().min(3)
@@ -806,10 +865,11 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
       outputSchema: toolOutputSchema,
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true }
     },
-    async ({ roleArn, externalId, region }) => {
-      scopedAudit("aws_discover_deployment_network", { roleArn, region });
+    async ({ customerId, roleArn, externalId, region }, extra) => {
+      scopedAudit("aws_discover_deployment_network", { customerId: customerId || null, roleArn, region });
       try {
-        const result = await describeNetwork(roleArn, externalId, region);
+        const c = resolveToolConnection({ customerId, roleArn, externalId }, extra);
+        const result = await describeNetwork(c.roleArn, c.externalId, region);
         return scopedSuccess({ ...result, changesMade: false }, { operation: "AWS_EC2_DISCOVER_NETWORK", readOnly: true }, "Customer VPC, subnet, security-group, and key-pair inventory loaded.");
       } catch (error) {
         return failure(error, "AWS deployment network discovery");
@@ -823,6 +883,7 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
       title: "Plan Vodia PBX deployment on AWS",
       description: "Creates a short-lived deployment plan only after an ACTIVE AWS Marketplace agreement is verified. Performs EC2 RunInstances DryRun to validate IAM, Marketplace entitlement, AMI, network, instance profile, and launch parameters. Makes no EC2 changes.",
       inputSchema: {
+        customerId: z.string().uuid().optional(),
         roleArn: z.string().min(20).optional(),
         externalId: z.string().min(8).optional(),
         productId: z.string().min(3),
@@ -841,9 +902,9 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
       outputSchema: toolOutputSchema,
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true }
     },
-    async (input) => {
-      const resolvedConnection = resolveAwsConnection(input.roleArn, input.externalId);
-      input = { ...input, roleArn: resolvedConnection.roleArn, externalId: resolvedConnection.externalId };
+    async (input, extra) => {
+      const resolvedConnection = resolveToolConnection(input, extra, ["MSP_ADMIN","CUSTOMER_ADMIN","OPERATOR"]);
+      input = { ...input, customerId: resolvedConnection.customerId, roleArn: resolvedConnection.roleArn, externalId: resolvedConnection.externalId };
       scopedAudit("aws_marketplace_plan_vodia_pbx_deployment", {
         roleArn: input.roleArn,
         productId: input.productId,
@@ -871,6 +932,7 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
           planId,
           roleArn: input.roleArn,
           externalId: input.externalId,
+          customerId: input.customerId || null,
           productId: input.productId,
           region: input.region,
           name: input.name,
@@ -921,13 +983,18 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
       outputSchema: toolOutputSchema,
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true }
     },
-    async ({ planId, confirmation }) => {
+    async ({ planId, confirmation }, extra) => {
       scopedAudit("aws_marketplace_apply_vodia_pbx_deployment", { planId });
       try {
         cleanExpiredPlans();
         const plan = deploymentPlans.get(planId);
         if (!plan) throw new Error("PLAN_NOT_FOUND_OR_EXPIRED: create a new deployment plan.");
         if (confirmation !== plan.confirmation) throw new Error(`CONFIRMATION_MISMATCH: exact confirmation required: ${plan.confirmation}`);
+        if (plan.customerId) {
+          requireCustomerAccess(extra, plan.customerId, ["MSP_ADMIN","CUSTOMER_ADMIN","OPERATOR"]);
+        } else if (REQUIRE_MSP_CUSTOMER_CONTEXT) {
+          throw new Error("CUSTOMER_CONTEXT_REQUIRED: deployment plan is not bound to an MSP customer.");
+        }
 
         const subscription = await checkSubscription(plan.roleArn, plan.externalId, plan.productId);
         if (!subscription.active) throw new Error("SUBSCRIPTION_NO_LONGER_ACTIVE: deployment aborted.");
@@ -963,6 +1030,7 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
       title: "Get Vodia PBX deployment status",
       description: "Reads the EC2 state and network addresses of a deployed Vodia PBX instance.",
       inputSchema: {
+        customerId: z.string().uuid().optional(),
         roleArn: z.string().min(20).optional(),
         externalId: z.string().min(8).optional(),
         region: z.string().min(3),
@@ -971,10 +1039,11 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
       outputSchema: toolOutputSchema,
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true }
     },
-    async ({ roleArn, externalId, region, instanceId }) => {
-      scopedAudit("aws_get_vodia_pbx_deployment_status", { roleArn, region, instanceId });
+    async ({ customerId, roleArn, externalId, region, instanceId }, extra) => {
+      scopedAudit("aws_get_vodia_pbx_deployment_status", { customerId: customerId || null, roleArn, region, instanceId });
       try {
-        const client = ec2Client(roleArn, externalId, region);
+        const c = resolveToolConnection({ customerId, roleArn, externalId }, extra);
+        const client = ec2Client(c.roleArn, c.externalId, region);
         const out = await client.send(new DescribeInstancesCommand({ InstanceIds: [instanceId] }));
         const instance = out.Reservations?.[0]?.Instances?.[0];
         if (!instance) throw new Error(`INSTANCE_NOT_FOUND: ${instanceId}`);
