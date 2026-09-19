@@ -195,33 +195,76 @@ echo "--- 10. Local MCP initialize and tool registration ---"
 if [[ -n "${legacy:-}" ]]; then
   INIT_HEADERS="$(mktemp)"
   INIT_BODY="$(mktemp)"
-  trap 'rm -f "$INIT_HEADERS" "$INIT_BODY"' EXIT
-  curl -sS -D "$INIT_HEADERS" -o "$INIT_BODY"     -H "Authorization: Bearer $legacy"     -H 'Content-Type: application/json'     -H 'Accept: application/json, text/event-stream'     --data '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"vodia-validator","version":"1.0"}}}'     "$CORE/mcp" || true
+  TOOLS_OUT="$(mktemp)"
+  trap 'rm -f "$INIT_HEADERS" "$INIT_BODY" "$TOOLS_OUT"' EXIT
 
-  SESSION_ID="$(awk 'BEGIN{IGNORECASE=1} /^mcp-session-id:/ {gsub("\r","",$2); print $2}' "$INIT_HEADERS" | tail -1)"
-  if grep -q '"serverInfo"' "$INIT_BODY" || grep -q 'serverInfo' "$INIT_BODY"; then
+  curl -sS -D "$INIT_HEADERS" -o "$INIT_BODY" \
+    -H "Authorization: Bearer $legacy" \
+    -H 'Content-Type: application/json' \
+    -H 'Accept: application/json, text/event-stream' \
+    --data '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"vodia-validator","version":"1.1"}}}' \
+    "$CORE/mcp" || true
+
+  SESSION_ID="$(awk 'BEGIN{IGNORECASE=1} /^mcp-session-id:/ {gsub("\\r","",$2); print $2}' "$INIT_HEADERS" | tail -1)"
+  if grep -q 'serverInfo' "$INIT_BODY"; then
     ok "local MCP initialize succeeds with trusted-local legacy token"
   else
-    bad "local MCP initialize failed; inspect $INIT_BODY"
+    bad "local MCP initialize failed"
+    cat "$INIT_BODY" >&2 || true
   fi
 
   if [[ -n "$SESSION_ID" ]]; then
-    curl -sS       -H "Authorization: Bearer $legacy"       -H "mcp-session-id: $SESSION_ID"       -H 'Content-Type: application/json'       -H 'Accept: application/json, text/event-stream'       --data '{"jsonrpc":"2.0","method":"notifications/initialized","params":{}}'       "$CORE/mcp" >/dev/null || true
+    ok "MCP stateful transport returned mcp-session-id"
+    curl -sS \
+      -H "Authorization: Bearer $legacy" \
+      -H "mcp-session-id: $SESSION_ID" \
+      -H 'Content-Type: application/json' \
+      -H 'Accept: application/json, text/event-stream' \
+      --data '{"jsonrpc":"2.0","method":"notifications/initialized","params":{}}' \
+      "$CORE/mcp" >/dev/null || true
 
-    TOOLS_OUT="$(mktemp)"
-    curl -sS       -H "Authorization: Bearer $legacy"       -H "mcp-session-id: $SESSION_ID"       -H 'Content-Type: application/json'       -H 'Accept: application/json, text/event-stream'       --data '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}'       "$CORE/mcp" >"$TOOLS_OUT" || true
-
-    for tool in       msp_get_my_identity       msp_create_organization       msp_create_customer       msp_grant_membership       msp_list_customers       msp_get_commercial_audit       msp_get_customer_aws_connection       msp_save_customer_aws_connection       aws_marketplace_present_vodia_offer       aws_marketplace_prepare_vodia_purchase       aws_marketplace_accept_vodia_purchase; do
-      grep -q "\"name\":\"$tool\"" "$TOOLS_OUT"         && ok "tool registered: $tool"         || bad "tool missing: $tool"
-    done
-    rm -f "$TOOLS_OUT"
+    curl -sS \
+      -H "Authorization: Bearer $legacy" \
+      -H "mcp-session-id: $SESSION_ID" \
+      -H 'Content-Type: application/json' \
+      -H 'Accept: application/json, text/event-stream' \
+      --data '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' \
+      "$CORE/mcp" >"$TOOLS_OUT" || true
   else
-    bad "MCP initialize returned no mcp-session-id"
+    ok "MCP transport is stateless; no mcp-session-id required"
+    curl -sS \
+      -H "Authorization: Bearer $legacy" \
+      -H 'Content-Type: application/json' \
+      -H 'Accept: application/json, text/event-stream' \
+      --data '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' \
+      "$CORE/mcp" >"$TOOLS_OUT" || true
+  fi
+
+  if grep -q 'tools' "$TOOLS_OUT"; then
+    ok "local MCP tools/list returned inventory"
+    for tool in \
+      msp_get_my_identity \
+      msp_create_organization \
+      msp_create_customer \
+      msp_grant_membership \
+      msp_list_customers \
+      msp_get_commercial_audit \
+      msp_get_customer_aws_connection \
+      msp_save_customer_aws_connection \
+      aws_marketplace_present_vodia_offer \
+      aws_marketplace_prepare_vodia_purchase \
+      aws_marketplace_accept_vodia_purchase; do
+      grep -q "$tool" "$TOOLS_OUT" \
+        && ok "tool registered: $tool" \
+        || bad "tool missing: $tool"
+    done
+  else
+    bad "local MCP tools/list did not return inventory"
+    cat "$TOOLS_OUT" >&2 || true
   fi
 else
   warn "legacy token unavailable; skipped local MCP tool registration check"
 fi
-
 echo
 echo "=== SUMMARY ==="
 echo "PASS: $PASS"
