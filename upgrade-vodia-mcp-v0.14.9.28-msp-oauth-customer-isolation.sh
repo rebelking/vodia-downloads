@@ -181,7 +181,7 @@ PY
 
 node --check "$TMP_INDEX" >/dev/null || fail "patched index syntax invalid"
 node --check "$TMP_VERSION" >/dev/null || fail "patched version syntax invalid"
-caddy validate --adapter caddyfile --config "$TMP_CADDY" >/dev/null 2>&1 || fail "staged Caddy config invalid"
+caddy validate --adapter caddyfile --config "$TMP_CADDY" || fail "staged Caddy config invalid"
 echo PASS
 
 echo "[4/10] Backup"
@@ -270,7 +270,7 @@ echo "PASS: legacy static token rejected on public-gateway path"
 
 echo "[9/10] Activate Caddy public /mcp route"
 install -o root -g root -m 0644 "$TMP_CADDY" "$CADDY_FILE"
-caddy validate --config /etc/caddy/Caddyfile >/dev/null 2>&1 || fail "live Caddy validation failed"
+caddy validate --config /etc/caddy/Caddyfile || fail "live Caddy validation failed"
 systemctl reload caddy
 echo PASS
 
