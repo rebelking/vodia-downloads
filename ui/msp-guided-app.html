@@ -127,6 +127,8 @@ button:disabled{opacity:.42;cursor:not-allowed}
         </div>
 
         <div id="awsConnectForm" class="aws-connect-form hidden">
+          <div class="aws-title" style="margin-bottom:4px">Connect customer's AWS account</div>
+          <div class="aws-sub" style="margin-bottom:10px">Enter the deployment role ARN and External ID supplied for this customer.</div>
           <div class="field">
             <label for="awsRoleArn">Vodia deployment role ARN <span class="required">*</span></label>
             <input id="awsRoleArn" type="text" autocomplete="off" spellcheck="false"
@@ -301,7 +303,7 @@ button:disabled{opacity:.42;cursor:not-allowed}
 
     const initResult=await request("ui/initialize",{
       protocolVersion:"2026-01-26",
-      appInfo:{name:"vodia-setup",version:"1.5.0"},
+      appInfo:{name:"vodia-setup",version:"1.6.0"},
       appCapabilities:{availableDisplayModes:["inline","fullscreen"]}
     });
     post({jsonrpc:"2.0",method:"ui/notifications/initialized",params:{}});
@@ -397,12 +399,25 @@ button:disabled{opacity:.42;cursor:not-allowed}
       $("awsBadge").textContent="Connected";
       setMsg("awsMsg","AWS account "+(connection.account||"")+" is connected.");
       $("connectAws").textContent="Reconnect";
+      $("connectAws").classList.remove("hidden");
+      $("checkAws").classList.remove("hidden");
+      $("awsConnectForm").classList.add("hidden");
       $("awsContinueRow").classList.remove("hidden");
     }else{
       $("awsBadge").textContent=selected?"Required":"Waiting";
-      setMsg("awsMsg",selected?"No AWS connection is configured for this customer.":"Select a customer to check its connection.");
+      setMsg("awsMsg",selected?"Enter the AWS role ARN and External ID below to connect this customer.":"Select a customer to connect AWS.");
       $("connectAws").textContent="Connect AWS";
+      $("connectAws").classList.add("hidden");
+      $("checkAws").classList.add("hidden");
       $("awsContinueRow").classList.add("hidden");
+      if(selected){
+        $("awsRoleArn").value="";
+        $("awsExternalId").value="";
+        setMsg("awsConnectMsg","");
+        $("awsConnectForm").classList.remove("hidden");
+      }else{
+        $("awsConnectForm").classList.add("hidden");
+      }
       if(currentStep>1) setStep(1);
     }
   }
@@ -522,7 +537,7 @@ button:disabled{opacity:.42;cursor:not-allowed}
   $("connectAws").addEventListener("click",()=>{
     if(!customerId()) return;
     setMsg("awsConnectMsg","");
-    if(currentAwsConnection?.roleArn && !$("awsRoleArn").value){
+    if(currentAwsConnection?.roleArn){
       $("awsRoleArn").value=currentAwsConnection.roleArn;
     }
     $("awsExternalId").value="";
@@ -534,7 +549,11 @@ button:disabled{opacity:.42;cursor:not-allowed}
   $("cancelAws").addEventListener("click",()=>{
     $("awsExternalId").value="";
     setMsg("awsConnectMsg","");
-    $("awsConnectForm").classList.add("hidden");
+    if(currentAwsConnection?.configured){
+      $("awsConnectForm").classList.add("hidden");
+    }else{
+      setMsg("awsConnectMsg","AWS connection is required to continue.");
+    }
     reportSize();
   });
 
@@ -568,6 +587,7 @@ button:disabled{opacity:.42;cursor:not-allowed}
       setMsg("awsMsg","AWS connection verified and saved securely.");
     }catch(e){
       $("awsExternalId").value="";
+      $("awsConnectForm").classList.remove("hidden");
       setMsg("awsConnectMsg",e.message);
     }finally{
       $("saveAws").disabled=false;
