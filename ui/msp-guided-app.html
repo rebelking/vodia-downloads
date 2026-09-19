@@ -53,11 +53,20 @@ button:disabled{opacity:.42;cursor:not-allowed}
 .step-panel p{font-size:11px;opacity:.68;margin:0 0 12px}
 .region-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end}
 .region-row button{white-space:nowrap}
+.guided-box{margin-top:9px;padding:12px;border-radius:11px;border:1px solid color-mix(in srgb,CanvasText 10%,transparent);background:color-mix(in srgb,CanvasText 3%,transparent)}
+.guided-title{font-size:12px;font-weight:750;margin-bottom:4px}
+.guided-copy{font-size:11px;opacity:.68;line-height:1.45;margin-bottom:10px}
+.codebox{width:100%;min-height:165px;padding:9px;border:1px solid color-mix(in srgb,CanvasText 14%,transparent);border-radius:9px;background:color-mix(in srgb,CanvasText 5%,transparent);color:CanvasText;font:11px/1.4 ui-monospace,SFMono-Regular,Consolas,monospace;resize:vertical}
+.twocol{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.threecol{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.nav-actions{display:flex;justify-content:space-between;gap:8px;margin-top:12px}
+.nav-actions button{width:auto}
+.summarybox{font-size:11px;line-height:1.5;white-space:pre-wrap;padding:10px;border-radius:9px;background:color-mix(in srgb,CanvasText 5%,transparent);margin-top:8px}
 .badge{display:inline-flex;align-items:center;padding:4px 7px;border-radius:999px;font-size:10px;background:color-mix(in srgb,CanvasText 7%,transparent);white-space:nowrap}
 .actions{display:flex;justify-content:flex-end;margin-top:10px}
 .actions button{font-size:11px;padding:7px 9px}
 .hidden{display:none!important}
-@media(max-width:480px){.top{display:block}.top-actions{margin-top:8px}.status{display:inline-flex}.createbox .row{grid-template-columns:1fr}.aws{align-items:flex-start;flex-direction:column}.aws button{width:100%}}
+@media(max-width:600px){.top{display:block}.top-actions{margin-top:8px}.status{display:inline-flex}.createbox .row,.twocol,.threecol{grid-template-columns:1fr}.aws{align-items:flex-start;flex-direction:column}.aws button{width:100%}}
 </style>
 </head>
 <body>
@@ -81,7 +90,7 @@ button:disabled{opacity:.42;cursor:not-allowed}
         <div class="step">3 · Deploy</div>
       </div>
 
-      <div class="panel">
+      <div id="customerPanel" class="panel">
         <div class="field">
           <div class="labelrow">
             <label for="orgSelect">Organization <span class="required">*</span></label>
@@ -126,6 +135,29 @@ button:disabled{opacity:.42;cursor:not-allowed}
           </div>
         </div>
 
+        <div id="awsHostedSetup" class="guided-box hidden">
+          <div class="guided-title">Connect AWS automatically <span class="badge">Recommended</span></div>
+          <div class="guided-copy">Vodia generates the customer-specific External ID and a ready-to-run AWS CloudShell setup. The customer only returns the 12-digit AWS account ID printed by the command.</div>
+          <button id="prepareHostedAws" class="primary" type="button">Generate AWS setup</button>
+          <div id="awsHostedInstructions" class="hidden" style="margin-top:10px">
+            <label for="awsCloudShellScript">AWS CloudShell command</label>
+            <textarea id="awsCloudShellScript" class="codebox" readonly spellcheck="false"></textarea>
+            <div class="aws-connect-actions">
+              <button id="copyAwsScript" class="secondary" type="button">Copy command</button>
+            </div>
+            <div class="field">
+              <label for="awsAccountId">AWS account ID after running the command <span class="required">*</span></label>
+              <input id="awsAccountId" inputmode="numeric" maxlength="12" placeholder="123456789012" autocomplete="off">
+            </div>
+            <button id="verifyHostedAws" class="primary" type="button">Verify &amp; Connect</button>
+          </div>
+          <div id="awsHostedMsg" class="msg"></div>
+        </div>
+
+        <div id="manualAwsToggleRow" class="actions hidden">
+          <button id="toggleManualAws" class="linkbtn" type="button">Advanced: enter role ARN and External ID manually</button>
+        </div>
+
         <div id="awsConnectForm" class="aws-connect-form hidden">
           <div class="aws-title" style="margin-bottom:4px">Connect customer's AWS account</div>
           <div class="aws-sub" style="margin-bottom:10px">Enter the deployment role ARN and External ID supplied for this customer.</div>
@@ -163,6 +195,62 @@ button:disabled{opacity:.42;cursor:not-allowed}
           <button id="loadRegions" class="secondary" type="button">Load regions</button>
         </div>
         <div id="regionMsg" class="msg"></div>
+        <div class="nav-actions">
+          <button id="backToCustomer" class="secondary" type="button">Back</button>
+          <button id="continueDeploy" class="primary" type="button" disabled>Continue to Deploy</button>
+        </div>
+      </div>
+
+      <div id="deployStepPanel" class="panel step-panel hidden">
+        <h2>3 · Deploy</h2>
+        <p id="deployStepSummary">Choose the PBX and AWS network settings, validate the Marketplace subscription, and create a no-change deployment plan.</p>
+        <div class="twocol">
+          <div class="field">
+            <label for="pbxName">PBX name <span class="required">*</span></label>
+            <input id="pbxName" maxlength="128" placeholder="customer-pbx" value="vodia-pbx">
+          </div>
+          <div class="field">
+            <label for="instanceType">Instance type <span class="required">*</span></label>
+            <input id="instanceType" value="t3.medium" placeholder="t3.medium">
+          </div>
+        </div>
+        <div class="threecol">
+          <div class="field">
+            <label for="vpcSelect">VPC <span class="required">*</span></label>
+            <select id="vpcSelect" disabled><option value="">Load network first</option></select>
+          </div>
+          <div class="field">
+            <label for="subnetSelect">Subnet <span class="required">*</span></label>
+            <select id="subnetSelect" disabled><option value="">Load network first</option></select>
+          </div>
+          <div class="field">
+            <label for="securityGroupSelect">Security group <span class="required">*</span></label>
+            <select id="securityGroupSelect" disabled><option value="">Load network first</option></select>
+          </div>
+        </div>
+        <div class="twocol">
+          <div class="field">
+            <label for="keyPairSelect">SSH key pair</label>
+            <select id="keyPairSelect" disabled><option value="">No key pair</option></select>
+          </div>
+          <div class="field">
+            <label for="storageGiB">Storage (GiB)</label>
+            <input id="storageGiB" type="number" min="8" max="16384" value="50">
+          </div>
+        </div>
+        <button id="loadNetwork" class="secondary" type="button">Load AWS network</button>
+        <div id="deployMsg" class="msg"></div>
+        <div id="planSummary" class="summarybox hidden"></div>
+        <div id="approvalBox" class="guided-box hidden">
+          <label for="deploymentApproval">Exact deployment approval</label>
+          <input id="deploymentApproval" autocomplete="off" spellcheck="false">
+          <div class="secret-note">Launching EC2 can create AWS charges. Paste the exact approval shown above.</div>
+          <button id="applyDeployment" class="primary" type="button" style="margin-top:9px">Deploy Vodia PBX</button>
+        </div>
+        <div class="nav-actions">
+          <button id="backToAws" class="secondary" type="button">Back</button>
+          <button id="planDeployment" class="primary" type="button">Validate &amp; Create Plan</button>
+        </div>
       </div>
 
       <div class="actions">
@@ -185,6 +273,9 @@ button:disabled{opacity:.42;cursor:not-allowed}
   let allCustomers = [];
   let currentAwsConnection = null;
   let currentStep = 1;
+  let selectedRegion = "";
+  let currentNetwork = null;
+  let currentDeploymentPlan = null;
   let inlineScrollTop = 0;
   let fullscreenScrollTop = 0;
 
@@ -303,7 +394,7 @@ button:disabled{opacity:.42;cursor:not-allowed}
 
     const initResult=await request("ui/initialize",{
       protocolVersion:"2026-01-26",
-      appInfo:{name:"vodia-setup",version:"1.7.0"},
+      appInfo:{name:"vodia-setup",version:"1.8.0"},
       appCapabilities:{availableDisplayModes:["inline","fullscreen"]}
     });
     post({jsonrpc:"2.0",method:"ui/notifications/initialized",params:{}});
@@ -382,8 +473,16 @@ button:disabled{opacity:.42;cursor:not-allowed}
     document.querySelectorAll(".step").forEach((el,index)=>{
       el.classList.toggle("active",index===step-1);
     });
+    $("customerPanel").classList.toggle("hidden",step!==1);
+    $("awsSection").classList.toggle("hidden",step!==1);
     $("awsStepPanel").classList.toggle("hidden",step!==2);
-    reportSize();
+    $("deployStepPanel").classList.toggle("hidden",step!==3);
+    requestAnimationFrame(()=>{
+      const target=step===1?$("customerPanel"):step===2?$("awsStepPanel"):$("deployStepPanel");
+      target?.scrollIntoView({block:"start",behavior:"smooth"});
+      $("setupScroll").scrollTop=0;
+      reportSize();
+    });
   }
 
   function renderAwsConnection(connection){
@@ -394,6 +493,8 @@ button:disabled{opacity:.42;cursor:not-allowed}
     $("checkAws").disabled=!selected;
     $("connectAws").disabled=!selected;
     $("awsConnectForm").classList.add("hidden");
+    $("awsHostedSetup").classList.add("hidden");
+    $("manualAwsToggleRow").classList.add("hidden");
 
     if(connected){
       $("awsBadge").textContent="Connected";
@@ -414,8 +515,11 @@ button:disabled{opacity:.42;cursor:not-allowed}
         $("awsRoleArn").value="";
         $("awsExternalId").value="";
         setMsg("awsConnectMsg","");
-        $("awsConnectForm").classList.remove("hidden");
+        $("awsHostedSetup").classList.remove("hidden");
+        $("manualAwsToggleRow").classList.remove("hidden");
       }else{
+        $("awsHostedSetup").classList.add("hidden");
+        $("manualAwsToggleRow").classList.add("hidden");
         $("awsConnectForm").classList.add("hidden");
       }
       if(currentStep>1) setStep(1);
@@ -429,6 +533,17 @@ button:disabled{opacity:.42;cursor:not-allowed}
     setMsg("awsConnectMsg","");
     $("regionSelect").innerHTML='<option value="">Load regions first</option>';
     $("regionSelect").disabled=true;
+    $("continueDeploy").disabled=true;
+    selectedRegion="";
+    currentNetwork=null;
+    currentDeploymentPlan=null;
+    $("awsHostedInstructions").classList.add("hidden");
+    $("awsCloudShellScript").value="";
+    $("awsAccountId").value="";
+    setMsg("awsHostedMsg","");
+    $("planSummary").classList.add("hidden");
+    $("approvalBox").classList.add("hidden");
+    setMsg("deployMsg","");
     setMsg("regionMsg","");
     renderAwsConnection(null);
   }
@@ -546,6 +661,77 @@ button:disabled{opacity:.42;cursor:not-allowed}
     reportSize();
   });
 
+  $("toggleManualAws").addEventListener("click",()=>{
+    const opening=$("awsConnectForm").classList.contains("hidden");
+    $("awsConnectForm").classList.toggle("hidden",!opening);
+    $("toggleManualAws").textContent=opening
+      ?"Hide manual AWS connection"
+      :"Advanced: enter role ARN and External ID manually";
+    if(opening) $("awsRoleArn").focus();
+    reportSize();
+  });
+
+  $("prepareHostedAws").addEventListener("click",async()=>{
+    const id=customerId();
+    if(!id) return;
+    try{
+      $("prepareHostedAws").disabled=true;
+      $("prepareHostedAws").textContent="Generating…";
+      setMsg("awsHostedMsg","Generating a customer-specific AWS setup…");
+      const r=dataFrom(await callTool("msp_prepare_customer_aws_onboarding",{customerId:id}));
+      const onboarding=r.onboarding||{};
+      if(!onboarding.cloudShellScript) throw new Error("AWS setup command was not returned.");
+      $("awsCloudShellScript").value=onboarding.cloudShellScript;
+      $("awsHostedInstructions").classList.remove("hidden");
+      setMsg("awsHostedMsg","Open AWS CloudShell as an administrator, run the command, then enter the printed 12-digit AWS account ID.");
+    }catch(e){
+      setMsg("awsHostedMsg",e.message);
+    }finally{
+      $("prepareHostedAws").disabled=false;
+      $("prepareHostedAws").textContent="Generate AWS setup";
+      reportSize();
+    }
+  });
+
+  $("copyAwsScript").addEventListener("click",async()=>{
+    const text=$("awsCloudShellScript").value;
+    if(!text) return;
+    try{
+      await navigator.clipboard.writeText(text);
+      setMsg("awsHostedMsg","AWS CloudShell command copied.");
+    }catch(_e){
+      $("awsCloudShellScript").focus();
+      $("awsCloudShellScript").select();
+      setMsg("awsHostedMsg","Command selected. Copy it with Ctrl+C or Command+C.");
+    }
+  });
+
+  $("verifyHostedAws").addEventListener("click",async()=>{
+    const id=customerId();
+    const accountId=$("awsAccountId").value.trim();
+    if(!id) return;
+    if(!/^\d{12}$/.test(accountId)){
+      setMsg("awsHostedMsg","Enter the 12-digit AWS account ID printed by CloudShell.");
+      return;
+    }
+    try{
+      $("verifyHostedAws").disabled=true;
+      $("verifyHostedAws").textContent="Verifying…";
+      setMsg("awsHostedMsg","Testing the generated Vodia deployment role…");
+      await callTool("msp_complete_customer_aws_onboarding",{customerId:id,accountId});
+      const verified=dataFrom(await callTool("msp_get_customer_aws_connection",{customerId:id}));
+      if(!verified.connection?.configured) throw new Error("AWS connection did not verify after setup.");
+      renderAwsConnection(verified.connection);
+      setMsg("awsMsg","AWS connection verified and saved securely.");
+    }catch(e){
+      setMsg("awsHostedMsg",e.message);
+    }finally{
+      $("verifyHostedAws").disabled=false;
+      $("verifyHostedAws").textContent="Verify & Connect";
+      reportSize();
+    }
+  });
+
   $("cancelAws").addEventListener("click",()=>{
     $("awsExternalId").value="";
     setMsg("awsConnectMsg","");
@@ -614,9 +800,7 @@ button:disabled{opacity:.42;cursor:not-allowed}
     if(!currentAwsConnection?.configured) return;
     setStep(2);
     $("awsStepSummary").textContent="AWS account "+(currentAwsConnection.account||"")+" is connected. Choose the deployment region.";
-    try{
-      $("loadRegions").click();
-    }catch{}
+    $("loadRegions").click();
   });
 
   $("loadRegions").addEventListener("click",async()=>{
@@ -640,12 +824,190 @@ button:disabled{opacity:.42;cursor:not-allowed}
           sel.appendChild(op);
         });
       sel.disabled=regions.length===0;
+      if(regions.length===1){
+        sel.value=regions[0].regionName;
+        selectedRegion=regions[0].regionName;
+        $("continueDeploy").disabled=false;
+      }
       setMsg("regionMsg",regions.length?("Found "+regions.length+" available region(s)."):"No deployment regions were returned.");
     }catch(e){
       setMsg("regionMsg",e.message);
     }finally{
       $("loadRegions").disabled=false;
       $("loadRegions").textContent="Load regions";
+      reportSize();
+    }
+  });
+
+  $("regionSelect").addEventListener("change",()=>{
+    selectedRegion=$("regionSelect").value;
+    $("continueDeploy").disabled=!selectedRegion;
+    currentNetwork=null;
+    currentDeploymentPlan=null;
+    reportSize();
+  });
+
+  $("backToCustomer").addEventListener("click",()=>setStep(1));
+
+  $("continueDeploy").addEventListener("click",()=>{
+    selectedRegion=$("regionSelect").value;
+    if(!selectedRegion) return;
+    $("deployStepSummary").textContent="AWS account "+(currentAwsConnection?.account||"")+" · "+selectedRegion+". Load the network, review the settings, then create a no-change deployment plan.";
+    setStep(3);
+    $("loadNetwork").click();
+  });
+
+  $("backToAws").addEventListener("click",()=>setStep(2));
+
+  function fillSelect(id,rows,valueKey,labelFn,emptyLabel){
+    const sel=$(id);
+    sel.innerHTML='<option value="">'+emptyLabel+'</option>';
+    rows.forEach(row=>{
+      const op=document.createElement("option");
+      op.value=row[valueKey]||"";
+      op.textContent=labelFn(row);
+      sel.appendChild(op);
+    });
+    sel.disabled=rows.length===0;
+  }
+
+  function filterNetworkForVpc(){
+    if(!currentNetwork) return;
+    const vpcId=$("vpcSelect").value;
+    const subnets=(currentNetwork.subnets||[]).filter(x=>!vpcId||x.vpcId===vpcId);
+    const groups=(currentNetwork.securityGroups||[]).filter(x=>!vpcId||x.vpcId===vpcId);
+    fillSelect("subnetSelect",subnets,"subnetId",x=>x.subnetId+" · "+(x.availabilityZone||"")+" · "+(x.cidrBlock||""),"Select subnet…");
+    fillSelect("securityGroupSelect",groups,"groupId",x=>x.groupName+" · "+x.groupId,"Select security group…");
+    const publicSubnet=subnets.find(x=>x.mapPublicIpOnLaunch) || subnets[0];
+    if(publicSubnet) $("subnetSelect").value=publicSubnet.subnetId;
+    const defaultGroup=groups.find(x=>x.groupName==="default") || groups[0];
+    if(defaultGroup) $("securityGroupSelect").value=defaultGroup.groupId;
+  }
+
+  $("vpcSelect").addEventListener("change",filterNetworkForVpc);
+
+  $("loadNetwork").addEventListener("click",async()=>{
+    const id=customerId();
+    if(!id || !selectedRegion) return;
+    try{
+      $("loadNetwork").disabled=true;
+      $("loadNetwork").textContent="Loading…";
+      setMsg("deployMsg","Loading VPCs, subnets, security groups, and key pairs…");
+      const r=dataFrom(await callTool("aws_discover_deployment_network",{customerId:id,region:selectedRegion}));
+      currentNetwork=r;
+      const vpcs=Array.isArray(r.vpcs)?r.vpcs:[];
+      fillSelect("vpcSelect",vpcs,"vpcId",x=>x.vpcId+" · "+(x.cidrBlock||"")+(x.isDefault?" · default":""),"Select VPC…");
+      const preferred=vpcs.find(x=>x.isDefault)||vpcs[0];
+      if(preferred) $("vpcSelect").value=preferred.vpcId;
+      filterNetworkForVpc();
+      const keys=Array.isArray(r.keyPairs)?r.keyPairs:[];
+      fillSelect("keyPairSelect",keys,"keyName",x=>x.keyName,"No key pair");
+      $("keyPairSelect").disabled=false;
+      setMsg("deployMsg","AWS network loaded. Review the selections before creating the deployment plan.");
+    }catch(e){
+      setMsg("deployMsg",e.message);
+    }finally{
+      $("loadNetwork").disabled=false;
+      $("loadNetwork").textContent="Load AWS network";
+      reportSize();
+    }
+  });
+
+  $("planDeployment").addEventListener("click",async()=>{
+    const id=customerId();
+    const name=$("pbxName").value.trim();
+    const instanceType=$("instanceType").value.trim();
+    const subnetId=$("subnetSelect").value;
+    const securityGroupId=$("securityGroupSelect").value;
+    const keyName=$("keyPairSelect").value;
+    const storageGiB=Number($("storageGiB").value||50);
+    if(!id||!selectedRegion||!name||!instanceType||!subnetId||!securityGroupId){
+      setMsg("deployMsg","Complete the PBX, region, subnet, and security-group fields.");
+      return;
+    }
+    try{
+      $("planDeployment").disabled=true;
+      $("planDeployment").textContent="Validating…";
+      setMsg("deployMsg","Checking Vodia Marketplace subscription and running an EC2 DryRun…");
+      const subscription=dataFrom(await callTool("aws_marketplace_check_subscription",{
+        customerId:id,
+        productId:"prod-v5qnz6xf6wu5u"
+      }));
+      if(!subscription.active) throw new Error("An active Vodia AWS Marketplace subscription is required before deployment.");
+      const plan=dataFrom(await callTool("aws_marketplace_plan_vodia_pbx_deployment",{
+        customerId:id,
+        productId:"prod-v5qnz6xf6wu5u",
+        region:selectedRegion,
+        subnetId,
+        securityGroupIds:[securityGroupId],
+        instanceType,
+        iamInstanceProfileName:"VodiaPBXMarketplaceEntitlementRole",
+        keyName:keyName||undefined,
+        storageGiB,
+        associatePublicIp:true,
+        name
+      }));
+      if(!plan.planId||!plan.confirmation) throw new Error("The deployment planner did not return an approval.");
+      currentDeploymentPlan=plan;
+      $("planSummary").textContent=[
+        "Plan validated — no instance launched",
+        "PBX: "+name,
+        "Region: "+selectedRegion,
+        "Instance: "+instanceType,
+        "Subnet: "+subnetId,
+        "Security group: "+securityGroupId,
+        "Storage: "+storageGiB+" GiB",
+        "",
+        "Required approval: "+plan.confirmation
+      ].join("\n");
+      $("planSummary").classList.remove("hidden");
+      $("approvalBox").classList.remove("hidden");
+      $("deploymentApproval").value="";
+      $("deploymentApproval").placeholder=plan.confirmation;
+      setMsg("deployMsg","DryRun passed. Review the plan and enter the exact approval to launch EC2.");
+    }catch(e){
+      currentDeploymentPlan=null;
+      $("planSummary").classList.add("hidden");
+      $("approvalBox").classList.add("hidden");
+      setMsg("deployMsg",e.message);
+    }finally{
+      $("planDeployment").disabled=false;
+      $("planDeployment").textContent="Validate & Create Plan";
+      reportSize();
+    }
+  });
+
+  $("applyDeployment").addEventListener("click",async()=>{
+    if(!currentDeploymentPlan?.planId) return;
+    const confirmation=$("deploymentApproval").value.trim();
+    if(confirmation!==currentDeploymentPlan.confirmation){
+      setMsg("deployMsg","Enter the exact approval shown in the validated plan.");
+      return;
+    }
+    try{
+      $("applyDeployment").disabled=true;
+      $("applyDeployment").textContent="Deploying…";
+      setMsg("deployMsg","Launching the approved Vodia PBX EC2 instance…");
+      const result=dataFrom(await callTool("aws_marketplace_apply_vodia_pbx_deployment",{
+        planId:currentDeploymentPlan.planId,
+        confirmation
+      }));
+      $("planSummary").textContent=[
+        "Deployment started",
+        "Instance ID: "+(result.instanceId||"pending"),
+        "State: "+(result.state||"pending"),
+        "Region: "+(result.region||selectedRegion),
+        "Public IP: "+(result.publicIpAddress||"pending"),
+        "Public DNS: "+(result.publicDnsName||"pending")
+      ].join("\n");
+      $("approvalBox").classList.add("hidden");
+      setMsg("deployMsg","Vodia PBX deployment started successfully.");
+      currentDeploymentPlan=null;
+    }catch(e){
+      setMsg("deployMsg",e.message);
+    }finally{
+      $("applyDeployment").disabled=false;
+      $("applyDeployment").textContent="Deploy Vodia PBX";
       reportSize();
     }
   });
