@@ -303,7 +303,7 @@ button:disabled{opacity:.42;cursor:not-allowed}
 
     const initResult=await request("ui/initialize",{
       protocolVersion:"2026-01-26",
-      appInfo:{name:"vodia-setup",version:"1.6.0"},
+      appInfo:{name:"vodia-setup",version:"1.7.0"},
       appCapabilities:{availableDisplayModes:["inline","fullscreen"]}
     });
     post({jsonrpc:"2.0",method:"ui/notifications/initialized",params:{}});
@@ -576,18 +576,32 @@ button:disabled{opacity:.42;cursor:not-allowed}
       $("saveAws").disabled=true;
       $("saveAws").textContent="Testing…";
       setMsg("awsConnectMsg","Testing STS AssumeRole…");
-      const r=dataFrom(await callTool("msp_save_customer_aws_connection",{
+      await callTool("msp_save_customer_aws_connection",{
         customerId:id,
         roleArn,
         externalId
-      }));
+      });
+
+      // Do not trust the write response shape for UI state. Re-read the
+      // canonical customer-scoped connection after the save completes.
       $("awsExternalId").value="";
+      setMsg("awsConnectMsg","Verifying saved AWS connection…");
+      const verified=dataFrom(await callTool("msp_get_customer_aws_connection",{customerId:id}));
+      const connection=verified.connection||null;
+
+      if(!connection?.configured){
+        renderAwsConnection(null);
+        throw new Error("AWS connection did not verify after save. Check the role trust policy and External ID, then try again.");
+      }
+
+      renderAwsConnection(connection);
       $("awsConnectForm").classList.add("hidden");
-      renderAwsConnection(r.connection||null);
       setMsg("awsMsg","AWS connection verified and saved securely.");
+      setMsg("awsConnectMsg","");
     }catch(e){
       $("awsExternalId").value="";
       $("awsConnectForm").classList.remove("hidden");
+      $("awsBadge").textContent=currentAwsConnection?.configured?"Connected":"Required";
       setMsg("awsConnectMsg",e.message);
     }finally{
       $("saveAws").disabled=false;
