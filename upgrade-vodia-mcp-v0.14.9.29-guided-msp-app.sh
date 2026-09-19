@@ -83,13 +83,15 @@ from pathlib import Path
 import re,sys
 p=Path(sys.argv[1]); s=p.read_text()
 imp='import { registerMspGuidedApp } from "./msp-guided-app-v1.js";\n'
-if imp not in s:
-    # Keep a Unix shebang as the very first line. Node only recognizes it there.
-    if s.startswith('#!'):
-        first, sep, rest = s.partition('\n')
-        s = first + '\n' + imp + rest
-    else:
-        s = imp + s
+
+# Normalize the guided import so a Unix shebang always remains byte 0 / line 1.
+# This also repairs the earlier v0.14.9.29 installer which put the import above #!.
+s = s.replace(imp, '')
+if s.startswith('#!'):
+    first, sep, rest = s.partition('\n')
+    s = first + '\n' + imp + rest
+else:
+    s = imp + s
 
 if 'registerMspGuidedApp(server, {' not in s:
     factory=s.find('export function createVodiaServer')
