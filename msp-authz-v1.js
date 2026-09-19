@@ -105,6 +105,8 @@ function isBootstrap(subject) {
 
 export function requireMspAdmin(extra) {
   const identity = requireOAuthSubject(extra);
+  const organizationCount = Number(db.prepare("SELECT COUNT(*) AS n FROM organizations").get()?.n || 0);
+  if (organizationCount === 0) return { identity, bootstrap: true, firstOrganizationClaim: true };
   if (isBootstrap(identity.subject)) return { identity, bootstrap: true };
   const row = db.prepare("SELECT 1 FROM memberships WHERE subject=? AND role='MSP_ADMIN' LIMIT 1").get(identity.subject);
   if (!row) throw new Error("MSP_ADMIN_REQUIRED: this OAuth identity is not an MSP administrator.");
