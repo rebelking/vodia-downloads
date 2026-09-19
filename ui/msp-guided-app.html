@@ -15,6 +15,8 @@ body{padding:10px}
 h1{font-size:19px;line-height:1.2;margin:0 0 3px}
 .sub{font-size:12px;opacity:.66;margin:0}
 .status{display:flex;align-items:center;gap:6px;font-size:11px;white-space:nowrap;padding:5px 8px;border-radius:999px;background:color-mix(in srgb,CanvasText 7%,transparent)}
+.top-actions{display:flex;align-items:center;gap:7px}
+.expandbtn{width:auto;border:1px solid color-mix(in srgb,CanvasText 18%,transparent);background:transparent;color:CanvasText;padding:5px 8px;border-radius:8px;font-size:11px;font-weight:650;cursor:pointer}
 .dot{width:7px;height:7px;border-radius:50%;background:#999}
 .status.ok .dot{background:#22a06b}.status.bad .dot{background:#d1242f}
 .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:14px 0}
@@ -41,7 +43,8 @@ button:disabled{opacity:.42;cursor:not-allowed}
 .actions{display:flex;justify-content:flex-end;margin-top:10px}
 .actions button{font-size:11px;padding:7px 9px}
 .hidden{display:none!important}
-@media(max-width:480px){.top{display:block}.status{display:inline-flex;margin-top:8px}.createbox .row{grid-template-columns:1fr}.aws{align-items:flex-start;flex-direction:column}.aws button{width:100%}}
+html[data-display-mode="fullscreen"] .wrap{max-width:860px}
+@media(max-width:480px){.top{display:block}.top-actions{margin-top:8px}.status{display:inline-flex}.createbox .row{grid-template-columns:1fr}.aws{align-items:flex-start;flex-direction:column}.aws button{width:100%}}
 </style>
 </head>
 <body>
@@ -52,7 +55,10 @@ button:disabled{opacity:.42;cursor:not-allowed}
         <h1>Vodia Setup</h1>
         <p class="sub">Only required information is shown. IDs stay in the background.</p>
       </div>
-      <div id="authStatus" class="status"><span class="dot"></span><span>Connecting…</span></div>
+      <div class="top-actions">
+        <button id="expandView" class="expandbtn" type="button">Expand</button>
+        <div id="authStatus" class="status"><span class="dot"></span><span>Connecting…</span></div>
+      </div>
     </div>
 
     <div class="steps" aria-label="Setup steps">
@@ -115,6 +121,7 @@ button:disabled{opacity:.42;cursor:not-allowed}
   let rpcId = 1;
   const pending = new Map();
   let initialized = false;
+  let currentDisplayMode = "inline";
   let allCustomers = [];
 
   const $ = (id) => document.getElementById(id);
@@ -165,17 +172,44 @@ button:disabled{opacity:.42;cursor:not-allowed}
     });
   }
 
+  async function requestDisplayMode(mode){
+    try{
+      let result;
+      if(window.openai?.requestDisplayMode){
+        result=await window.openai.requestDisplayMode({mode});
+      }else{
+        result=await request("ui/request-display-mode",{mode});
+      }
+      currentDisplayMode=result?.mode||mode;
+      document.documentElement.dataset.displayMode=currentDisplayMode;
+      $("expandView").textContent=currentDisplayMode==="fullscreen"?"Inline":"Expand";
+      return currentDisplayMode;
+    }catch(_e){
+      $("expandView").textContent="Expand";
+      return currentDisplayMode;
+    }
+  }
+
   async function initBridge(){
-    if (window.openai?.callTool) return;
+    if (window.openai?.callTool) {
+      currentDisplayMode=window.openai.displayMode||"inline";
+      setTimeout(()=>requestDisplayMode("fullscreen"),120);
+      return;
+    }
     try {
-      await request("ui/initialize",{
+      const initResult=await request("ui/initialize",{
         protocolVersion:"2026-01-26",
-        appInfo:{name:"vodia-guided-setup",version:"1.2.0"},
+        appInfo:{name:"vodia-guided-setup",version:"1.3.0"},
         appCapabilities:{}
       });
       post({jsonrpc:"2.0",method:"ui/notifications/initialized",params:{}});
       initialized=true;
+      const hostMode=initResult?.hostContext?.displayMode||initResult?.displayMode;
+      if(hostMode) currentDisplayMode=hostMode;
       reportSize();
+      // Claude currently caps inline MCP Apps to a short viewport. Prefer
+      // fullscreen for setup so the form is a normal tall rectangle.
+      setTimeout(()=>requestDisplayMode("fullscreen"),120);
     } catch(e) {
       if(!window.openai?.callTool) throw e;
     }
@@ -331,6 +365,12 @@ button:disabled{opacity:.42;cursor:not-allowed}
       $("awsBadge").textContent="Error";
       setMsg("awsMsg",e.message);
     }
+    reportSize();
+  });
+
+  $("expandView").addEventListener("click",async()=>{
+    const next=currentDisplayMode==="fullscreen"?"inline":"fullscreen";
+    await requestDisplayMode(next);
     reportSize();
   });
 
