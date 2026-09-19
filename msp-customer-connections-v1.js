@@ -12,6 +12,51 @@ import { requireCustomerAccess } from "./msp-authz-v1.js";
 const STORE_PATH = process.env.VODIA_MSP_CUSTOMER_CONNECTION_STORE || "/var/lib/vodia-mcp/msp-customer-connections.enc";
 const KEY_PATH = process.env.VODIA_MSP_CUSTOMER_CONNECTION_KEY_FILE || "/var/lib/vodia-mcp/msp-customer-connections.key";
 const REGION = process.env.VODIA_MCP_AWS_MARKETPLACE_DISCOVERY_REGION || "us-east-1";
+const PROVIDER_ROLE_ARN = process.env.VODIA_MCP_AWS_PROVIDER_ROLE_ARN || "arn:aws:iam::963966408518:role/VodiaMCPChimeRole";
+const DEPLOYMENT_ROLE_NAME = "VodiaMCPDeploymentRole";
+
+const DEPLOYMENT_POLICY = {
+  Version: "2012-10-17",
+  Statement: [
+    {
+      Sid: "MarketplaceRead",
+      Effect: "Allow",
+      Action: [
+        "aws-marketplace:SearchListings", "aws-marketplace:GetProduct",
+        "aws-marketplace:ListFulfillmentOptions", "aws-marketplace:ListPurchaseOptions",
+        "aws-marketplace:GetOffer", "aws-marketplace:GetOfferTerms",
+        "aws-marketplace:SearchAgreements", "aws-marketplace:DescribeAgreement",
+        "aws-marketplace:GetAgreementTerms", "aws-marketplace:GetAgreementEntitlements",
+        "aws-marketplace:ViewSubscriptions"
+      ],
+      Resource: "*"
+    },
+    {
+      Sid: "MarketplacePurchaseVodiaOnly",
+      Effect: "Allow",
+      Action: ["aws-marketplace:CreateAgreementRequest", "aws-marketplace:AcceptAgreementRequest"],
+      Resource: "*",
+      Condition: { "ForAnyValue:StringEquals": { "aws-marketplace:ProductId": ["prod-v5qnz6xf6wu5u"] } }
+    },
+    {
+      Sid: "EC2ReadAndLaunch",
+      Effect: "Allow",
+      Action: [
+        "ec2:DescribeRegions", "ec2:DescribeAvailabilityZones", "ec2:DescribeVpcs",
+        "ec2:DescribeSubnets", "ec2:DescribeSecurityGroups", "ec2:DescribeKeyPairs",
+        "ec2:DescribeImages", "ec2:DescribeInstances", "ec2:DescribeInstanceStatus",
+        "ec2:DescribeInstanceTypes", "ec2:RunInstances", "ec2:CreateTags"
+      ],
+      Resource: "*"
+    },
+    {
+      Sid: "PassVodiaEntitlementRoleOnly",
+      Effect: "Allow",
+      Action: "iam:PassRole",
+      Resource: "arn:aws:iam::*:role/VodiaPBXMarketplaceEntitlementRole"
+    }
+  ]
+};
 
 function ensureParent(path) { mkdirSync(dirname(path), { recursive: true, mode: 0o700 }); }
 
@@ -45,6 +90,58 @@ function writeAll(data) {
     v: 1, iv: iv.toString("base64"), tag: cipher.getAuthTag().toString("base64"), data: ciphertext.toString("base64")
   }), { mode: 0o600 });
   chmodSync(STORE_PATH, 0o600);
+}
+
+function customerRecord(data, customerId) {
+  data.customers[customerId] ||= {};
+  return data.customers[customerId];
+}
+
+function buildCustomerCloudShellScript(externalId) {
+  const trust = {
+    Version: "2012-10-17",
+    Statement: [{
+      Sid: "TrustVodiaMCP",
+      Effect: "Allow",
+      Principal: { AWS: PROVIDER_ROLE_ARN },
+      Action: "sts:AssumeRole",
+      Condition: { StringEquals: { "sts:ExternalId": externalId } }
+    }]
+  };
+  const entitlementTrust = {
+    Version: "2012-10-17",
+    Statement: [{ Effect: "Allow", Principal: { Service: "ec2.amazonaws.com" }, Action: "sts:AssumeRole" }]
+  };
+  const q = (value) => `'${JSON.stringify(value).replaceAll("'", "'\\''")}'`;
+
+  return `set -euo pipefail
+ROLE_NAME="${DEPLOYMENT_ROLE_NAME}"
+ENTITLEMENT_ROLE="VodiaPBXMarketplaceEntitlementRole"
+TRUST_FILE="$(mktemp)"
+POLICY_FILE="$(mktemp)"
+ENTITLEMENT_TRUST_FILE="$(mktemp)"
+trap 'rm -f "$TRUST_FILE" "$POLICY_FILE" "$ENTITLEMENT_TRUST_FILE"' EXIT
+printf '%s' ${q(trust)} > "$TRUST_FILE"
+printf '%s' ${q(DEPLOYMENT_POLICY)} > "$POLICY_FILE"
+printf '%s' ${q(entitlementTrust)} > "$ENTITLEMENT_TRUST_FILE"
+if aws iam get-role --role-name "$ROLE_NAME" >/dev/null 2>&1; then
+  aws iam update-assume-role-policy --role-name "$ROLE_NAME" --policy-document "file://$TRUST_FILE"
+else
+  aws iam create-role --role-name "$ROLE_NAME" --assume-role-policy-document "file://$TRUST_FILE" >/dev/null
+fi
+aws iam put-role-policy --role-name "$ROLE_NAME" --policy-name VodiaMCPDeploymentRolePolicy --policy-document "file://$POLICY_FILE"
+if aws iam get-role --role-name "$ENTITLEMENT_ROLE" >/dev/null 2>&1; then
+  aws iam update-assume-role-policy --role-name "$ENTITLEMENT_ROLE" --policy-document "file://$ENTITLEMENT_TRUST_FILE"
+else
+  aws iam create-role --role-name "$ENTITLEMENT_ROLE" --assume-role-policy-document "file://$ENTITLEMENT_TRUST_FILE" >/dev/null
+fi
+aws iam attach-role-policy --role-name "$ENTITLEMENT_ROLE" --policy-arn arn:aws:iam::aws:policy/AWSMarketplaceGetEntitlements
+aws iam get-instance-profile --instance-profile-name "$ENTITLEMENT_ROLE" >/dev/null 2>&1 || aws iam create-instance-profile --instance-profile-name "$ENTITLEMENT_ROLE" >/dev/null
+aws iam add-role-to-instance-profile --instance-profile-name "$ENTITLEMENT_ROLE" --role-name "$ENTITLEMENT_ROLE" 2>/dev/null || true
+ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
+echo "Vodia AWS setup complete"
+echo "AWS Account ID: $ACCOUNT_ID"
+echo "Role ARN: arn:aws:iam::$ACCOUNT_ID:role/$ROLE_NAME"`;
 }
 
 function validateAws(roleArn, externalId) {
@@ -91,15 +188,45 @@ export async function saveScopedAwsConnection(customerId, roleArn, externalId) {
   const clean = validateAws(roleArn, externalId);
   const identity = await testAws(clean.roleArn, clean.externalId);
   const data = readAll();
-  data.customers[customerId] ||= {};
-  data.customers[customerId].aws = {
+  const customer = customerRecord(data, customerId);
+  customer.aws = {
     ...clean,
     account: identity.account,
     assumedRoleArn: identity.arn,
     savedAt: new Date().toISOString()
   };
+  delete customer.awsOnboarding;
   writeAll(data);
-  return { connection: sanitizeScopedAwsConnection(data.customers[customerId].aws), identity };
+  return { connection: sanitizeScopedAwsConnection(customer.aws), identity };
+}
+
+export function prepareScopedAwsOnboarding(customerId) {
+  const externalId = `vodia-${randomBytes(16).toString("hex")}`;
+  const data = readAll();
+  const customer = customerRecord(data, customerId);
+  customer.awsOnboarding = {
+    externalId,
+    providerRoleArn: PROVIDER_ROLE_ARN,
+    generatedAt: new Date().toISOString()
+  };
+  writeAll(data);
+  return {
+    providerRoleArn: PROVIDER_ROLE_ARN,
+    roleName: DEPLOYMENT_ROLE_NAME,
+    externalId,
+    generatedAt: customer.awsOnboarding.generatedAt,
+    cloudShellScript: buildCustomerCloudShellScript(externalId)
+  };
+}
+
+export async function completeScopedAwsOnboarding(customerId, accountId) {
+  const account = String(accountId || "").trim();
+  if (!/^\d{12}$/.test(account)) throw new Error("INVALID_AWS_ACCOUNT_ID: enter the 12-digit AWS account ID printed by CloudShell.");
+  const data = readAll();
+  const pending = data.customers?.[customerId]?.awsOnboarding;
+  if (!pending?.externalId) throw new Error("AWS_ONBOARDING_NOT_PREPARED: generate the hosted AWS setup first.");
+  const roleArn = `arn:aws:iam::${account}:role/${DEPLOYMENT_ROLE_NAME}`;
+  return saveScopedAwsConnection(customerId, roleArn, pending.externalId);
 }
 
 export function registerMspCustomerConnectionTools(server, ctx) {
@@ -139,5 +266,39 @@ export function registerMspCustomerConnectionTools(server, ctx) {
         { operation: "MSP_CUSTOMER_AWS_CONNECTION_SAVE", readOnly: false },
         "Customer AWS connection tested and saved.");
     } catch (error) { return failure(error, "MSP customer AWS connection save"); }
+  });
+
+  server.registerTool("msp_prepare_customer_aws_onboarding", {
+    title: "Prepare customer AWS setup",
+    description: "Generates a customer-specific External ID and a one-command AWS CloudShell setup script. The generated values are scoped to exactly one customer.",
+    inputSchema: { customerId: z.string().uuid() },
+    outputSchema: toolOutputSchema,
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false }
+  }, async ({ customerId }, extra) => {
+    try {
+      const access = requireCustomerAccess(extra, customerId, ["MSP_ADMIN","CUSTOMER_ADMIN"]);
+      const onboarding = prepareScopedAwsOnboarding(customerId);
+      scopedAudit("msp_prepare_customer_aws_onboarding", { customerId, subject: access.identity.subject });
+      return scopedSuccess({ customerId, onboarding, changesMade: true },
+        { operation: "MSP_CUSTOMER_AWS_ONBOARDING_PREPARE", readOnly: false },
+        "Customer AWS onboarding package generated.");
+    } catch (error) { return failure(error, "MSP customer AWS onboarding preparation"); }
+  });
+
+  server.registerTool("msp_complete_customer_aws_onboarding", {
+    title: "Verify customer AWS setup",
+    description: "Derives the fixed Vodia deployment role ARN from the customer's AWS account ID, tests STS with the stored customer-specific External ID, and saves the verified connection.",
+    inputSchema: { customerId: z.string().uuid(), accountId: z.string().regex(/^\d{12}$/) },
+    outputSchema: toolOutputSchema,
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true }
+  }, async ({ customerId, accountId }, extra) => {
+    try {
+      const access = requireCustomerAccess(extra, customerId, ["MSP_ADMIN","CUSTOMER_ADMIN"]);
+      const result = await completeScopedAwsOnboarding(customerId, accountId);
+      scopedAudit("msp_complete_customer_aws_onboarding", { customerId, subject: access.identity.subject, account: result.identity.account });
+      return scopedSuccess({ customerId, connection: result.connection, identity: result.identity, changesMade: true },
+        { operation: "MSP_CUSTOMER_AWS_ONBOARDING_COMPLETE", readOnly: false },
+        "Customer AWS account verified and connected.");
+    } catch (error) { return failure(error, "MSP customer AWS onboarding completion"); }
   });
 }
