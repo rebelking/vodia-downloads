@@ -181,7 +181,7 @@ PY
 
 node --check "$TMP_INDEX" >/dev/null || fail "patched index syntax invalid"
 node --check "$TMP_VERSION" >/dev/null || fail "patched version syntax invalid"
-caddy validate --config "$TMP_CADDY" >/dev/null 2>&1 || fail "staged Caddy config invalid"
+caddy validate --adapter caddyfile --config "$TMP_CADDY" >/dev/null 2>&1 || fail "staged Caddy config invalid"
 echo PASS
 
 echo "[4/10] Backup"
