@@ -106,7 +106,10 @@ function isBootstrap(subject) {
 export function requireMspAdmin(extra) {
   const identity = requireOAuthSubject(extra);
   const organizationCount = Number(db.prepare("SELECT COUNT(*) AS n FROM organizations").get()?.n || 0);
-  if (organizationCount === 0) return { identity, bootstrap: true, firstOrganizationClaim: true };
+  if (organizationCount === 0) {
+    if (isBootstrap(identity.subject)) return { identity, bootstrap: true, firstOrganizationClaim: true };
+    throw new Error("MSP_BOOTSTRAP_REQUIRED: first organization creation requires an explicitly configured bootstrap OAuth subject.");
+  }
   if (isBootstrap(identity.subject)) return { identity, bootstrap: true };
   const row = db.prepare("SELECT 1 FROM memberships WHERE subject=? AND role='MSP_ADMIN' LIMIT 1").get(identity.subject);
   if (!row) throw new Error("MSP_ADMIN_REQUIRED: this OAuth identity is not an MSP administrator.");
@@ -243,6 +246,40 @@ export function registerMspAuthzTools(server, ctx) {
       scopedAudit("msp_grant_membership", { organizationId, customerId: customerId || null, role, by: admin.identity.subject });
       return scopedSuccess({ subject: subject.trim(), organizationId, customerId: customerId || null, role, changesMade: true }, { operation: "MSP_MEMBERSHIP_GRANT", readOnly: false }, "MSP/customer access granted.");
     } catch (error) { return failure(error, "MSP membership grant"); }
+  });
+
+  server.registerTool("msp_list_organizations", {
+    title: "List my MSP organizations",
+    description: "Lists organizations the authenticated OAuth identity may administer. Read-only and suitable for guided UI dropdowns.",
+    inputSchema: {},
+    outputSchema: toolOutputSchema,
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false }
+  }, async (_input, extra) => {
+    try {
+      const identity = requireOAuthSubject(extra);
+      let organizations;
+      if (isBootstrap(identity.subject)) {
+        organizations = db.prepare(`
+          SELECT o.id,o.name,o.created_at AS createdAt,
+                 (SELECT COUNT(*) FROM customers c WHERE c.organization_id=o.id) AS customerCount
+          FROM organizations o ORDER BY o.name
+        `).all();
+      } else {
+        organizations = db.prepare(`
+          SELECT DISTINCT o.id,o.name,o.created_at AS createdAt,
+                 (SELECT COUNT(*) FROM customers c WHERE c.organization_id=o.id) AS customerCount
+          FROM organizations o
+          JOIN memberships m ON m.organization_id=o.id
+          WHERE m.subject=? AND m.role='MSP_ADMIN'
+          ORDER BY o.name
+        `).all(identity.subject);
+      }
+      return scopedSuccess(
+        { organizations, changesMade: false },
+        { operation: "MSP_ORGANIZATIONS_LIST", readOnly: true },
+        `Found ${organizations.length} accessible organization(s).`
+      );
+    } catch (error) { return failure(error, "MSP organization list"); }
   });
 
   server.registerTool("msp_list_customers", {
