@@ -211,7 +211,8 @@ button:disabled{opacity:.42;cursor:not-allowed}
           </div>
           <div class="field">
             <label for="instanceType">Instance type <span class="required">*</span></label>
-            <input id="instanceType" value="t3.medium" placeholder="t3.medium">
+            <select id="instanceType" disabled><option value="">Load AWS network first</option></select>
+            <div class="secret-note">Free-plan labels indicate AWS eligibility, not guaranteed zero cost. Micro sizes are best for trials; t3.medium is recommended for production.</div>
           </div>
         </div>
         <div class="threecol">
@@ -394,7 +395,7 @@ button:disabled{opacity:.42;cursor:not-allowed}
 
     const initResult=await request("ui/initialize",{
       protocolVersion:"2026-01-26",
-      appInfo:{name:"vodia-setup",version:"1.8.3"},
+      appInfo:{name:"vodia-setup",version:"1.8.4"},
       appCapabilities:{availableDisplayModes:["inline","fullscreen"]}
     });
     post({jsonrpc:"2.0",method:"ui/notifications/initialized",params:{}});
@@ -939,7 +940,27 @@ button:disabled{opacity:.42;cursor:not-allowed}
       const keys=Array.isArray(r.keyPairs)?r.keyPairs:[];
       fillSelect("keyPairSelect",keys,"keyName",x=>x.keyName,"No key pair");
       $("keyPairSelect").disabled=false;
-      setMsg("deployMsg","AWS network loaded. Review the selections before creating the deployment plan.");
+      let types=Array.isArray(r.instanceTypes)?r.instanceTypes:[];
+      if(!types.length){
+        types=[
+          {instanceType:"t3.micro",vcpus:2,memoryMiB:1024,freePlanEligible:true},
+          {instanceType:"t3.small",vcpus:2,memoryMiB:2048,freePlanEligible:true},
+          {instanceType:"t3.medium",vcpus:2,memoryMiB:4096,recommended:true},
+          {instanceType:"t3.large",vcpus:2,memoryMiB:8192}
+        ];
+      }
+      fillSelect("instanceType",types,"instanceType",x=>{
+        const flags=[];
+        if(x.freePlanEligible) flags.push("Free-plan eligible");
+        if(x.recommended) flags.push("Recommended");
+        const memory=x.memoryMiB?((x.memoryMiB/1024).toLocaleString()+" GiB RAM"):"";
+        const specs=[x.vcpus?(x.vcpus+" vCPU"):"",memory].filter(Boolean).join(" · ");
+        return x.instanceType+(flags.length?(" — "+flags.join(" · ")):"")+(specs?(" — "+specs):"");
+      },"Select instance type…");
+      const defaultType=types.find(x=>x.recommended)||types.find(x=>x.instanceType==="t3.medium")||types[0];
+      if(defaultType) $("instanceType").value=defaultType.instanceType;
+      const warning=r.instanceTypesWarning?" Instance types could not be verified for this region; the deployment DryRun will validate your choice.":"";
+      setMsg("deployMsg","AWS network and instance types loaded. Review the selections before creating the deployment plan."+warning);
     }catch(e){
       setMsg("deployMsg",e.message);
     }finally{

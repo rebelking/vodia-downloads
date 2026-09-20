@@ -11,6 +11,7 @@ import {
   DescribeSubnetsCommand,
   DescribeSecurityGroupsCommand,
   DescribeKeyPairsCommand,
+  DescribeInstanceTypesCommand,
   DescribeImagesCommand,
   DescribeInstancesCommand,
   RunInstancesCommand
@@ -416,8 +417,40 @@ async function describeNetwork(roleArn, externalId, region) {
     client.send(new DescribeSecurityGroupsCommand({})),
     client.send(new DescribeKeyPairsCommand({}))
   ]);
+  const preferredInstanceTypes = [
+    "t3.micro",
+    "t3.small",
+    "t3.medium",
+    "t3.large",
+    "c7i-flex.large",
+    "m7i-flex.large"
+  ];
+  const freePlanEligible = new Set(["t3.micro", "t3.small", "c7i-flex.large", "m7i-flex.large"]);
+  let instanceTypes = [];
+  let instanceTypesWarning = null;
+  try {
+    const types = await client.send(new DescribeInstanceTypesCommand({
+      Filters: [{ Name: "instance-type", Values: preferredInstanceTypes }]
+    }));
+    const order = new Map(preferredInstanceTypes.map((name, index) => [name, index]));
+    instanceTypes = (types.InstanceTypes || [])
+      .filter(t => (t.ProcessorInfo?.SupportedArchitectures || []).includes("x86_64"))
+      .map(t => ({
+        instanceType: t.InstanceType,
+        vcpus: t.VCpuInfo?.DefaultVCpus || null,
+        memoryMiB: t.MemoryInfo?.SizeInMiB || null,
+        currentGeneration: Boolean(t.CurrentGeneration),
+        freePlanEligible: freePlanEligible.has(t.InstanceType),
+        recommended: t.InstanceType === "t3.medium"
+      }))
+      .sort((a, b) => (order.get(a.instanceType) ?? 999) - (order.get(b.instanceType) ?? 999));
+  } catch (error) {
+    instanceTypesWarning = `Instance-type discovery failed: ${error?.message || String(error)}`;
+  }
   return {
     region,
+    instanceTypes,
+    instanceTypesWarning,
     vpcs: (vpcs.Vpcs || []).map(v => ({
       vpcId: v.VpcId,
       cidrBlock: v.CidrBlock,
