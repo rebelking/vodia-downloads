@@ -394,7 +394,7 @@ button:disabled{opacity:.42;cursor:not-allowed}
 
     const initResult=await request("ui/initialize",{
       protocolVersion:"2026-01-26",
-      appInfo:{name:"vodia-setup",version:"1.8.1"},
+      appInfo:{name:"vodia-setup",version:"1.8.2"},
       appCapabilities:{availableDisplayModes:["inline","fullscreen"]}
     });
     post({jsonrpc:"2.0",method:"ui/notifications/initialized",params:{}});
@@ -703,14 +703,31 @@ button:disabled{opacity:.42;cursor:not-allowed}
   });
 
   $("copyAwsScript").addEventListener("click",async()=>{
-    const text=$("awsCloudShellScript").value;
+    const field=$("awsCloudShellScript");
+    const text=field.value;
     if(!text) return;
+
+    // Clipboard API access is commonly denied inside an embedded MCP frame.
+    // execCommand runs synchronously inside the user's click and is therefore
+    // the most reliable path here despite being the older browser API.
+    field.focus({preventScroll:true});
+    field.select();
+    field.setSelectionRange(0,text.length);
+    let copied=false;
+    try{ copied=document.execCommand("copy"); }catch(_e){}
+    if(copied){
+      setMsg("awsHostedMsg","AWS CloudShell command copied.");
+      return;
+    }
+
     try{
+      if(!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
       await navigator.clipboard.writeText(text);
       setMsg("awsHostedMsg","AWS CloudShell command copied.");
     }catch(_e){
-      $("awsCloudShellScript").focus();
-      $("awsCloudShellScript").select();
+      field.focus({preventScroll:true});
+      field.select();
+      field.setSelectionRange(0,text.length);
       setMsg("awsHostedMsg","Command selected. Copy it with Ctrl+C or Command+C.");
     }
   });
