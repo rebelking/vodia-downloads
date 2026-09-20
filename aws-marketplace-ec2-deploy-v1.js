@@ -196,6 +196,26 @@ function normalizeVodiaMarketplaceOffer(result) {
     };
   }).filter(Boolean);
 
+  const availableOffers = [];
+  const seenOffers = new Set();
+  for (const option of result.purchaseOptions || []) {
+    for (const entity of option.associatedEntities || []) {
+      const candidate = entity?.offer;
+      if (!candidate?.offerId || seenOffers.has(candidate.offerId)) continue;
+      seenOffers.add(candidate.offerId);
+      availableOffers.push({
+        offerId: candidate.offerId,
+        offerName: candidate.offerName || option.purchaseOptionName || candidate.offerId,
+        purchaseOptionName: option.purchaseOptionName || null,
+        purchaseOptionType: option.purchaseOptionType || null,
+        seller: candidate.sellerOfRecord || option.sellerOfRecord || null,
+        badges: option.badges || [],
+        availableFromTime: option.availableFromTime || null,
+        expirationTime: option.expirationTime || null
+      });
+    }
+  }
+
   return {
     productId: result.productId,
     offerId: result.selectedOfferId || offer.offerId || null,
@@ -203,6 +223,7 @@ function normalizeVodiaMarketplaceOffer(result) {
     seller: offer.sellerOfRecord || null,
     pricingModel: offer.pricingModel || null,
     badges: offer.badges || [],
+    availableOffers,
     plans,
     autoRenewAvailable: Boolean(renewal || (offer.badges || []).some(b => b?.badgeType === "AUTO_RENEW")),
     refundPolicy: support?.refundPolicy || null,

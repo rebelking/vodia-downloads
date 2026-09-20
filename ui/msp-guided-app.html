@@ -62,6 +62,12 @@ button:disabled{opacity:.42;cursor:not-allowed}
 .nav-actions{display:flex;justify-content:space-between;gap:8px;margin-top:12px}
 .nav-actions button{width:auto}
 .summarybox{font-size:11px;line-height:1.5;white-space:pre-wrap;padding:10px;border-radius:9px;background:color-mix(in srgb,CanvasText 5%,transparent);margin-top:8px}
+.marketplace-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}
+.marketplace-actions button{width:auto}
+.checkrow{display:flex;align-items:flex-start;gap:7px;font-size:11px;line-height:1.4;margin-top:8px}
+.checkrow input{width:auto;margin:2px 0 0;flex:0 0 auto}
+.legal-links{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;margin-top:7px}
+.legal-links a{color:CanvasText;text-underline-offset:2px}
 .badge{display:inline-flex;align-items:center;padding:4px 7px;border-radius:999px;font-size:10px;background:color-mix(in srgb,CanvasText 7%,transparent);white-space:nowrap}
 .actions{display:flex;justify-content:flex-end;margin-top:10px}
 .actions button{font-size:11px;padding:7px 9px}
@@ -236,10 +242,54 @@ button:disabled{opacity:.42;cursor:not-allowed}
           </div>
           <div class="field">
             <label for="storageGiB">Storage (GiB)</label>
-            <input id="storageGiB" type="number" min="8" max="16384" value="50">
+            <input id="storageGiB" type="number" min="8" max="16384" value="20">
+            <div class="secret-note">20 GiB is the testing default. Increase it for production, recordings, or longer retention.</div>
           </div>
         </div>
         <button id="loadNetwork" class="secondary" type="button">Load AWS network</button>
+        <div id="marketplaceBox" class="guided-box">
+          <div class="guided-title">Vodia AWS Marketplace <span id="marketplaceBadge" class="badge">Checking…</span></div>
+          <div id="marketplaceMsg" class="guided-copy">Checking this AWS account for an active Vodia subscription…</div>
+          <div class="marketplace-actions">
+            <button id="checkMarketplace" class="secondary" type="button">Check subscription</button>
+            <button id="viewMarketplaceOffer" class="primary hidden" type="button">View plans &amp; subscribe</button>
+          </div>
+          <div id="marketplaceOfferBox" class="hidden" style="margin-top:12px">
+            <div id="marketplaceOfferSummary" class="summarybox"></div>
+            <div id="marketplaceOfferField" class="field hidden" style="margin-top:10px">
+              <label for="marketplaceOfferSelect">AWS Marketplace offer</label>
+              <select id="marketplaceOfferSelect"></select>
+            </div>
+            <div class="twocol" style="margin-top:10px">
+              <div class="field">
+                <label for="marketplacePlanSelect">Vodia plan <span class="required">*</span></label>
+                <select id="marketplacePlanSelect"></select>
+              </div>
+              <div class="field">
+                <label for="marketplaceQuantity">Quantity</label>
+                <input id="marketplaceQuantity" type="number" min="1" step="1" value="1">
+              </div>
+            </div>
+            <div id="marketplacePlanDetails" class="summarybox"></div>
+            <label class="checkrow" for="marketplaceAutoRenew">
+              <input id="marketplaceAutoRenew" type="checkbox">
+              <span>Enable automatic renewal when the selected AWS offer supports it.</span>
+            </label>
+            <div id="marketplaceLegal" class="legal-links"></div>
+            <div class="marketplace-actions">
+              <button id="prepareMarketplaceQuote" class="primary" type="button">Prepare AWS quote</button>
+            </div>
+          </div>
+          <div id="marketplaceQuoteBox" class="hidden" style="margin-top:12px">
+            <div id="marketplaceQuoteSummary" class="summarybox"></div>
+            <div class="field" style="margin-top:10px">
+              <label for="marketplaceApproval">Exact subscription approval <span class="required">*</span></label>
+              <input id="marketplaceApproval" autocomplete="off" spellcheck="false">
+              <div class="secret-note">Accepting the quote can create AWS Marketplace charges. Enter the exact approval shown above.</div>
+            </div>
+            <button id="acceptMarketplaceQuote" class="primary" type="button" disabled>Accept subscription</button>
+          </div>
+        </div>
         <div id="deployMsg" class="msg"></div>
         <div id="planSummary" class="summarybox hidden"></div>
         <div id="approvalBox" class="guided-box hidden">
@@ -250,7 +300,7 @@ button:disabled{opacity:.42;cursor:not-allowed}
         </div>
         <div class="nav-actions">
           <button id="backToAws" class="secondary" type="button">Back</button>
-          <button id="planDeployment" class="primary" type="button">Validate &amp; Create Plan</button>
+          <button id="planDeployment" class="primary" type="button" disabled>Validate &amp; Create Plan</button>
         </div>
       </div>
 
@@ -263,6 +313,7 @@ button:disabled{opacity:.42;cursor:not-allowed}
 
 <script>
 (() => {
+  const VODIA_MARKETPLACE_PRODUCT_ID="prod-v5qnz6xf6wu5u";
   let rpcId = 1;
   const pending = new Map();
   let initialized = false;
@@ -277,6 +328,9 @@ button:disabled{opacity:.42;cursor:not-allowed}
   let selectedRegion = "";
   let currentNetwork = null;
   let currentDeploymentPlan = null;
+  let marketplaceSubscriptionActive = false;
+  let currentMarketplaceOffer = null;
+  let currentMarketplaceQuote = null;
   let inlineScrollTop = 0;
   let fullscreenScrollTop = 0;
 
@@ -395,7 +449,7 @@ button:disabled{opacity:.42;cursor:not-allowed}
 
     const initResult=await request("ui/initialize",{
       protocolVersion:"2026-01-26",
-      appInfo:{name:"vodia-setup",version:"1.8.4"},
+      appInfo:{name:"vodia-setup",version:"1.9.0"},
       appCapabilities:{availableDisplayModes:["inline","fullscreen"]}
     });
     post({jsonrpc:"2.0",method:"ui/notifications/initialized",params:{}});
@@ -554,14 +608,25 @@ button:disabled{opacity:.42;cursor:not-allowed}
     selectedRegion="";
     currentNetwork=null;
     currentDeploymentPlan=null;
+    marketplaceSubscriptionActive=false;
+    currentMarketplaceOffer=null;
+    currentMarketplaceQuote=null;
     $("awsHostedInstructions").classList.add("hidden");
     $("awsCloudShellScript").value="";
     $("awsAccountId").value="";
     setMsg("awsHostedMsg","");
     $("planSummary").classList.add("hidden");
     $("approvalBox").classList.add("hidden");
+    $("marketplaceBadge").textContent="Checking…";
+    $("viewMarketplaceOffer").classList.add("hidden");
+    $("marketplaceOfferBox").classList.add("hidden");
+    $("marketplaceQuoteBox").classList.add("hidden");
+    $("marketplaceApproval").value="";
+    $("acceptMarketplaceQuote").disabled=true;
+    setMsg("marketplaceMsg","Checking this AWS account for an active Vodia subscription…");
     setMsg("deployMsg","");
     setMsg("regionMsg","");
+    updatePlanButton();
     renderAwsConnection(null);
   }
 
@@ -830,6 +895,258 @@ button:disabled{opacity:.42;cursor:not-allowed}
     }
   });
 
+  function marketplaceText(value){
+    if(value===null || value===undefined || value==="") return "Not specified";
+    if(typeof value==="string" || typeof value==="number" || typeof value==="boolean") return String(value);
+    try{return JSON.stringify(value)}catch{return String(value)}
+  }
+
+  function marketplacePrice(plan){
+    if(!plan) return "Price unavailable";
+    const price=marketplaceText(plan.price);
+    const currency=plan.currencyCode||"";
+    return [currency,price].filter(Boolean).join(" ")+(plan.unit?(" / "+plan.unit):"");
+  }
+
+  function updatePlanButton(){
+    $("planDeployment").disabled=!(marketplaceSubscriptionActive && currentNetwork);
+  }
+
+  function renderMarketplaceSubscription(active,message){
+    marketplaceSubscriptionActive=Boolean(active);
+    $("marketplaceBadge").textContent=active?"Active":"Required";
+    $("viewMarketplaceOffer").classList.toggle("hidden",Boolean(active));
+    if(active){
+      $("marketplaceOfferBox").classList.add("hidden");
+      $("marketplaceQuoteBox").classList.add("hidden");
+      currentMarketplaceQuote=null;
+    }
+    setMsg("marketplaceMsg",message||(active
+      ?"Active Vodia AWS Marketplace agreement verified. Deployment planning is unlocked."
+      :"No active Vodia agreement was found. Review the live AWS offer and subscribe before deployment."));
+    updatePlanButton();
+    reportSize();
+  }
+
+  async function checkMarketplaceSubscription(){
+    const id=customerId();
+    if(!id) return false;
+    try{
+      $("checkMarketplace").disabled=true;
+      $("checkMarketplace").textContent="Checking…";
+      $("marketplaceBadge").textContent="Checking…";
+      const r=dataFrom(await callTool("aws_marketplace_check_subscription",{
+        customerId:id,
+        productId:VODIA_MARKETPLACE_PRODUCT_ID
+      }));
+      renderMarketplaceSubscription(Boolean(r.active));
+      return Boolean(r.active);
+    }catch(e){
+      marketplaceSubscriptionActive=false;
+      $("marketplaceBadge").textContent="Error";
+      $("viewMarketplaceOffer").classList.remove("hidden");
+      setMsg("marketplaceMsg",e.message);
+      updatePlanButton();
+      return false;
+    }finally{
+      $("checkMarketplace").disabled=false;
+      $("checkMarketplace").textContent="Check subscription";
+      reportSize();
+    }
+  }
+
+  function renderMarketplacePlan(){
+    const index=Number($("marketplacePlanSelect").value);
+    const plan=currentMarketplaceOffer?.plans?.[index];
+    if(!plan){ setMsg("marketplacePlanDetails","Select a plan."); return; }
+    $("marketplacePlanDetails").textContent=[
+      "Plan: "+(plan.displayName||plan.dimensionKey),
+      "Price: "+marketplacePrice(plan),
+      plan.selector?.value?("Term: "+plan.selector.value):null,
+      plan.description||null
+    ].filter(Boolean).join("\n");
+  }
+
+  function renderMarketplaceOffer(offer){
+    currentMarketplaceOffer=offer;
+    currentMarketplaceQuote=null;
+    $("marketplaceQuoteBox").classList.add("hidden");
+    const seller=offer?.seller?.displayName||offer?.seller?.sellerProfileId||marketplaceText(offer?.seller);
+    $("marketplaceOfferSummary").textContent=[
+      "Product: Vodia PBX",
+      "Seller: "+seller,
+      "Pricing model: "+marketplaceText(offer?.pricingModel),
+      "AWS Offer ID: "+(offer?.offerId||"Unavailable"),
+      offer?.refundPolicy?("Refund policy: "+marketplaceText(offer.refundPolicy)):null
+    ].filter(Boolean).join("\n");
+
+    const offers=Array.isArray(offer?.availableOffers)?offer.availableOffers:[];
+    const offerField=$("marketplaceOfferField");
+    const offerSelect=$("marketplaceOfferSelect");
+    offerSelect.innerHTML="";
+    offers.forEach(row=>{
+      const op=document.createElement("option");
+      op.value=row.offerId;
+      const badges=(row.badges||[]).map(x=>x.displayName||x.badgeType).filter(Boolean);
+      op.textContent=(row.offerName||row.purchaseOptionName||row.offerId)+(badges.length?(" — "+badges.join(" · ")):"");
+      offerSelect.appendChild(op);
+    });
+    if(offer?.offerId) offerSelect.value=offer.offerId;
+    offerField.classList.toggle("hidden",offers.length<=1);
+
+    const plans=Array.isArray(offer?.plans)?offer.plans:[];
+    const planSelect=$("marketplacePlanSelect");
+    planSelect.innerHTML="";
+    plans.forEach((plan,index)=>{
+      const op=document.createElement("option");
+      op.value=String(index);
+      op.textContent=(plan.displayName||plan.dimensionKey)+" — "+marketplacePrice(plan)+(plan.selector?.value?(" — "+plan.selector.value):"");
+      planSelect.appendChild(op);
+    });
+    planSelect.disabled=plans.length===0;
+    $("prepareMarketplaceQuote").disabled=plans.length===0;
+    $("marketplaceAutoRenew").checked=false;
+    $("marketplaceAutoRenew").disabled=!offer?.autoRenewAvailable;
+    renderMarketplacePlan();
+
+    const legal=$("marketplaceLegal");
+    legal.innerHTML="";
+    (offer?.legalDocuments||[]).forEach((doc,index)=>{
+      if(!doc?.url) return;
+      const a=document.createElement("a");
+      a.href=doc.url;
+      a.target="_blank";
+      a.rel="noopener noreferrer";
+      a.textContent=doc.type||("Legal document "+(index+1));
+      legal.appendChild(a);
+    });
+    $("marketplaceOfferBox").classList.remove("hidden");
+    setMsg("marketplaceMsg",plans.length
+      ?"Live pricing and terms loaded from AWS Marketplace. Select a plan and prepare a quote before accepting anything."
+      :"AWS returned the offer, but no purchasable Vodia plans were found for this account.");
+    reportSize();
+  }
+
+  async function loadMarketplaceOffer(offerId){
+    const id=customerId();
+    if(!id) return;
+    try{
+      $("viewMarketplaceOffer").disabled=true;
+      $("viewMarketplaceOffer").textContent="Loading offer…";
+      setMsg("marketplaceMsg","Loading buyer-specific Vodia pricing and legal terms from AWS Marketplace…");
+      const args={customerId:id,productId:VODIA_MARKETPLACE_PRODUCT_ID};
+      if(offerId) args.offerId=offerId;
+      const r=dataFrom(await callTool("aws_marketplace_present_vodia_offer",args));
+      if(!r.offer?.offerId) throw new Error("AWS Marketplace did not return an available Vodia offer for this account.");
+      renderMarketplaceOffer(r.offer);
+    }catch(e){
+      $("marketplaceOfferBox").classList.add("hidden");
+      setMsg("marketplaceMsg",e.message);
+    }finally{
+      $("viewMarketplaceOffer").disabled=false;
+      $("viewMarketplaceOffer").textContent="View plans & subscribe";
+      reportSize();
+    }
+  }
+
+  $("checkMarketplace").addEventListener("click",checkMarketplaceSubscription);
+  $("viewMarketplaceOffer").addEventListener("click",()=>loadMarketplaceOffer());
+  $("marketplaceOfferSelect").addEventListener("change",()=>loadMarketplaceOffer($("marketplaceOfferSelect").value));
+  $("marketplacePlanSelect").addEventListener("change",renderMarketplacePlan);
+
+  $("prepareMarketplaceQuote").addEventListener("click",async()=>{
+    const id=customerId();
+    const index=Number($("marketplacePlanSelect").value);
+    const plan=currentMarketplaceOffer?.plans?.[index];
+    const quantity=Number($("marketplaceQuantity").value||1);
+    if(!id||!plan){setMsg("marketplaceMsg","Select a Vodia Marketplace plan first.");return}
+    if(!Number.isInteger(quantity)||quantity<1){setMsg("marketplaceMsg","Quantity must be a whole number of at least 1.");return}
+    try{
+      $("prepareMarketplaceQuote").disabled=true;
+      $("prepareMarketplaceQuote").textContent="Preparing quote…";
+      setMsg("marketplaceMsg","Asking AWS to calculate the selected agreement charges and estimated taxes…");
+      const r=dataFrom(await callTool("aws_marketplace_prepare_vodia_purchase",{
+        customerId:id,
+        productId:VODIA_MARKETPLACE_PRODUCT_ID,
+        offerId:currentMarketplaceOffer.offerId,
+        dimensionKey:plan.dimensionKey,
+        quantity,
+        selectorValue:plan.selector?.value||undefined,
+        autoRenew:Boolean(currentMarketplaceOffer.autoRenewAvailable && $("marketplaceAutoRenew").checked)
+      }));
+      if(!r.agreementRequestId||!r.confirmation) throw new Error("AWS did not return a complete Marketplace quote.");
+      currentMarketplaceQuote=r;
+      const charge=r.chargeSummary||{};
+      const currency=charge.currencyCode||r.selectedPlan?.currencyCode||"USD";
+      const expected=(charge.expectedCharges||[]).map(x=>
+        "Expected charge ("+(x.timing||"timing unavailable")+"): "+currency+" "+(x.amount??"usage based")
+      );
+      $("marketplaceQuoteSummary").textContent=[
+        "AWS quote prepared — subscription not yet accepted",
+        "Plan: "+(r.selectedPlan?.displayName||plan.displayName||plan.dimensionKey),
+        "Quantity: "+quantity,
+        "Agreement value before tax: "+currency+" "+(charge.newAgreementValue??"usage based"),
+        charge.newAgreementValueAfterTax!==undefined?("Agreement value after tax: "+currency+" "+charge.newAgreementValueAfterTax):null,
+        charge.estimatedTaxes?.totalAmount!==undefined?("Estimated taxes: "+currency+" "+charge.estimatedTaxes.totalAmount):null,
+        ...expected,
+        "Auto-renew: "+(r.selectedPlan?.autoRenew?"Enabled":"Disabled"),
+        "Quote expires: "+r.expiresAt,
+        "",
+        "Required approval: "+r.confirmation
+      ].filter(x=>x!==null).join("\n");
+      $("marketplaceApproval").value="";
+      $("marketplaceApproval").placeholder=r.confirmation;
+      $("acceptMarketplaceQuote").disabled=true;
+      $("marketplaceQuoteBox").classList.remove("hidden");
+      setMsg("marketplaceMsg","Review the AWS-calculated quote. The subscription is created only after the exact approval is entered.");
+    }catch(e){
+      currentMarketplaceQuote=null;
+      $("marketplaceQuoteBox").classList.add("hidden");
+      setMsg("marketplaceMsg",e.message);
+    }finally{
+      $("prepareMarketplaceQuote").disabled=false;
+      $("prepareMarketplaceQuote").textContent="Prepare AWS quote";
+      reportSize();
+    }
+  });
+
+  $("marketplaceApproval").addEventListener("input",()=>{
+    $("acceptMarketplaceQuote").disabled=$("marketplaceApproval").value.trim()!==currentMarketplaceQuote?.confirmation;
+  });
+
+  $("acceptMarketplaceQuote").addEventListener("click",async()=>{
+    const confirmation=$("marketplaceApproval").value.trim();
+    if(!currentMarketplaceQuote?.agreementRequestId || confirmation!==currentMarketplaceQuote.confirmation){
+      setMsg("marketplaceMsg","Enter the exact approval shown in the AWS quote.");
+      return;
+    }
+    try{
+      $("acceptMarketplaceQuote").disabled=true;
+      $("acceptMarketplaceQuote").textContent="Accepting…";
+      setMsg("marketplaceMsg","Accepting the explicitly approved AWS Marketplace agreement…");
+      const r=dataFrom(await callTool("aws_marketplace_accept_vodia_purchase",{
+        agreementRequestId:currentMarketplaceQuote.agreementRequestId,
+        confirmation
+      }));
+      if(!r.agreementId) throw new Error("AWS did not confirm the Marketplace agreement acceptance.");
+      currentMarketplaceQuote=null;
+      $("marketplaceApproval").value="";
+      const active=r.subscriptionActive || await checkMarketplaceSubscription();
+      if(active){
+        renderMarketplaceSubscription(true,"Vodia Marketplace subscription is active. Agreement "+r.agreementId+" was verified and deployment planning is unlocked.");
+      }else{
+        $("marketplaceBadge").textContent="Activating";
+        setMsg("marketplaceMsg","AWS accepted agreement "+r.agreementId+". Activation is still propagating; press Check subscription in a moment.");
+      }
+    }catch(e){
+      setMsg("marketplaceMsg",e.message);
+    }finally{
+      $("acceptMarketplaceQuote").textContent="Accept subscription";
+      $("acceptMarketplaceQuote").disabled=true;
+      reportSize();
+    }
+  });
+
   async function advanceToAwsStep(){
     if(!currentAwsConnection?.configured) return;
     setStep(2);
@@ -892,6 +1209,7 @@ button:disabled{opacity:.42;cursor:not-allowed}
     $("deployStepSummary").textContent="AWS account "+(currentAwsConnection?.account||"")+" · "+selectedRegion+". Load the network, review the settings, then create a no-change deployment plan.";
     setStep(3);
     $("loadNetwork").click();
+    checkMarketplaceSubscription();
   });
 
   $("backToAws").addEventListener("click",()=>setStep(2));
@@ -932,6 +1250,7 @@ button:disabled{opacity:.42;cursor:not-allowed}
       setMsg("deployMsg","Loading VPCs, subnets, security groups, and key pairs…");
       const r=dataFrom(await callTool("aws_discover_deployment_network",{customerId:id,region:selectedRegion}));
       currentNetwork=r;
+      updatePlanButton();
       const vpcs=Array.isArray(r.vpcs)?r.vpcs:[];
       fillSelect("vpcSelect",vpcs,"vpcId",x=>x.vpcId+" · "+(x.cidrBlock||"")+(x.isDefault?" · default":""),"Select VPC…");
       const preferred=vpcs.find(x=>x.isDefault)||vpcs[0];
@@ -962,6 +1281,8 @@ button:disabled{opacity:.42;cursor:not-allowed}
       const warning=r.instanceTypesWarning?" Instance types could not be verified for this region; the deployment DryRun will validate your choice.":"";
       setMsg("deployMsg","AWS network and instance types loaded. Review the selections before creating the deployment plan."+warning);
     }catch(e){
+      currentNetwork=null;
+      updatePlanButton();
       setMsg("deployMsg",e.message);
     }finally{
       $("loadNetwork").disabled=false;
@@ -977,7 +1298,7 @@ button:disabled{opacity:.42;cursor:not-allowed}
     const subnetId=$("subnetSelect").value;
     const securityGroupId=$("securityGroupSelect").value;
     const keyName=$("keyPairSelect").value;
-    const storageGiB=Number($("storageGiB").value||50);
+    const storageGiB=Number($("storageGiB").value||20);
     if(!id||!selectedRegion||!name||!instanceType||!subnetId||!securityGroupId){
       setMsg("deployMsg","Complete the PBX, region, subnet, and security-group fields.");
       return;
@@ -988,12 +1309,17 @@ button:disabled{opacity:.42;cursor:not-allowed}
       setMsg("deployMsg","Checking Vodia Marketplace subscription and running an EC2 DryRun…");
       const subscription=dataFrom(await callTool("aws_marketplace_check_subscription",{
         customerId:id,
-        productId:"prod-v5qnz6xf6wu5u"
+        productId:VODIA_MARKETPLACE_PRODUCT_ID
       }));
-      if(!subscription.active) throw new Error("An active Vodia AWS Marketplace subscription is required before deployment.");
+      if(!subscription.active){
+        renderMarketplaceSubscription(false);
+        $("viewMarketplaceOffer").focus();
+        throw new Error("Choose View plans & subscribe above to activate the required Vodia AWS Marketplace agreement.");
+      }
+      renderMarketplaceSubscription(true);
       const plan=dataFrom(await callTool("aws_marketplace_plan_vodia_pbx_deployment",{
         customerId:id,
-        productId:"prod-v5qnz6xf6wu5u",
+        productId:VODIA_MARKETPLACE_PRODUCT_ID,
         region:selectedRegion,
         subnetId,
         securityGroupIds:[securityGroupId],
@@ -1028,7 +1354,7 @@ button:disabled{opacity:.42;cursor:not-allowed}
       $("approvalBox").classList.add("hidden");
       setMsg("deployMsg",e.message);
     }finally{
-      $("planDeployment").disabled=false;
+      updatePlanButton();
       $("planDeployment").textContent="Validate & Create Plan";
       reportSize();
     }
