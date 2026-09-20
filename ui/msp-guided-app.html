@@ -180,7 +180,7 @@ button:disabled{opacity:.42;cursor:not-allowed}
         </div>
 
         <div id="awsContinueRow" class="actions hidden">
-          <button id="continueAws" class="primary" type="button">Continue to AWS</button>
+          <button id="continueAws" class="primary" type="button">Next: Choose AWS Region →</button>
         </div>
       </div>
 
@@ -394,7 +394,7 @@ button:disabled{opacity:.42;cursor:not-allowed}
 
     const initResult=await request("ui/initialize",{
       protocolVersion:"2026-01-26",
-      appInfo:{name:"vodia-setup",version:"1.8.2"},
+      appInfo:{name:"vodia-setup",version:"1.8.3"},
       appCapabilities:{availableDisplayModes:["inline","fullscreen"]}
     });
     post({jsonrpc:"2.0",method:"ui/notifications/initialized",params:{}});
@@ -513,6 +513,13 @@ button:disabled{opacity:.42;cursor:not-allowed}
       $("checkAws").classList.remove("hidden");
       $("awsConnectForm").classList.add("hidden");
       $("awsContinueRow").classList.remove("hidden");
+      // A verified connection has completed Step 1. Move directly to region
+      // selection instead of leaving the customer at a dead-end screen.
+      if(currentStep===1){
+        setTimeout(()=>{
+          if(currentStep===1 && currentAwsConnection?.configured) advanceToAwsStep();
+        },0);
+      }
     }else{
       $("awsBadge").textContent=selected?"Required":"Waiting";
       setMsg("awsMsg",selected?"Enter the AWS role ARN and External ID below to connect this customer.":"Select a customer to connect AWS.");
@@ -822,14 +829,14 @@ button:disabled{opacity:.42;cursor:not-allowed}
     }
   });
 
-  $("continueAws").addEventListener("click",async()=>{
+  async function advanceToAwsStep(){
     if(!currentAwsConnection?.configured) return;
     setStep(2);
     $("awsStepSummary").textContent="AWS account "+(currentAwsConnection.account||"")+" is connected. Choose the deployment region.";
-    $("loadRegions").click();
-  });
+    await loadDeploymentRegions();
+  }
 
-  $("loadRegions").addEventListener("click",async()=>{
+  async function loadDeploymentRegions(){
     const id=customerId();
     if(!id || !currentAwsConnection?.configured) return;
     try{
@@ -863,7 +870,10 @@ button:disabled{opacity:.42;cursor:not-allowed}
       $("loadRegions").textContent="Load regions";
       reportSize();
     }
-  });
+  }
+
+  $("continueAws").addEventListener("click",advanceToAwsStep);
+  $("loadRegions").addEventListener("click",loadDeploymentRegions);
 
   $("regionSelect").addEventListener("change",()=>{
     selectedRegion=$("regionSelect").value;
