@@ -541,6 +541,9 @@ function buildRunInstancesParams(input, image) {
     { Key: "ManagedBy", Value: "VodiaMCP" },
     { Key: "VodiaMarketplaceProductId", Value: input.productId }
   ];
+  if (input.agreementId) {
+    tags.push({ Key: "VodiaMarketplaceAgreementId", Value: String(input.agreementId).slice(0, 255) });
+  }
   const params = {
     ImageId: image.ImageId,
     InstanceType: input.instanceType,
@@ -980,6 +983,7 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
         roleArn: z.string().min(20).optional(),
         externalId: z.string().min(8).optional(),
         productId: z.string().min(3),
+        agreementId: z.string().min(3).optional(),
         productCode: z.string().optional(),
         amiId: z.string().optional(),
         region: z.string().min(3),
@@ -1013,6 +1017,14 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
           throw new Error("SUBSCRIPTION_REQUIRED: no ACTIVE AWS Marketplace PurchaseAgreement was found. Present the live offer, prepare an AWS quote, obtain explicit customer approval, and accept the quote before planning deployment.");
         }
 
+        const selectedAgreement = input.agreementId
+          ? subscription.agreements.find(a => a?.agreementId === input.agreementId)
+          : subscription.agreements[0];
+        if (!selectedAgreement) {
+          throw new Error("AGREEMENT_NOT_ACTIVE: the selected AWS Marketplace agreement is no longer active. Refresh subscriptions and choose an active agreement.");
+        }
+        input = { ...input, agreementId: selectedAgreement.agreementId };
+
         const client = ec2Client(input.roleArn, input.externalId, input.region);
         const existing = await findExistingManagedInstance(client, input.name, input.productId);
         if (existing) throw duplicateDeploymentError(existing, input.region, input.name);
@@ -1030,6 +1042,8 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
           externalId: input.externalId,
           customerId: input.customerId || null,
           productId: input.productId,
+          agreementId: selectedAgreement.agreementId,
+          agreementSummary: selectedAgreement,
           region: input.region,
           name: input.name,
           imageId: image.ImageId,
@@ -1046,6 +1060,13 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
           expiresAt: new Date(expiresAt).toISOString(),
           confirmation,
           subscriptionVerified: true,
+          selectedAgreement: {
+            agreementId: selectedAgreement.agreementId || null,
+            status: selectedAgreement.status || "ACTIVE",
+            startTime: selectedAgreement.startTime || null,
+            endTime: selectedAgreement.endTime || null,
+            acceptanceTime: selectedAgreement.acceptanceTime || null
+          },
           dryRunVerified: true,
           deployment: {
             name: input.name,
@@ -1094,6 +1115,9 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
 
         const subscription = await checkSubscription(plan.roleArn, plan.externalId, plan.productId);
         if (!subscription.active) throw new Error("SUBSCRIPTION_NO_LONGER_ACTIVE: deployment aborted.");
+        if (plan.agreementId && !subscription.agreements.some(a => a?.agreementId === plan.agreementId)) {
+          throw new Error("SELECTED_AGREEMENT_NO_LONGER_ACTIVE: refresh Marketplace subscriptions and create a new deployment plan.");
+        }
 
         const client = ec2Client(plan.roleArn, plan.externalId, plan.region);
         const lockKey = deploymentLockKey(plan);
@@ -1122,6 +1146,7 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
             imageId: plan.imageId,
             region: plan.region,
             name: plan.name,
+            agreementId: plan.agreementId || null,
             marketplaceSubscriptionVerifiedBeforeLaunch: true,
             duplicateProtection: true,
             changesMade: true
