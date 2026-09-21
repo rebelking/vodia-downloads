@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import re
 import sys
 
 if len(sys.argv) != 2:
@@ -18,8 +19,9 @@ def once(old, new, label):
     s = s.replace(old, new, 1)
 
 once('<div class="card">', '<div class="card" data-marketplace-first="v0.14.9.48">', 'release marker')
-s = s.replace('appInfo:{name:"vodia-setup",version:"1.9.0"}', 'appInfo:{name:"vodia-setup",version:"1.10.0"}', 1)
-s = s.replace('appInfo:{name:"vodia-setup",version:"1.9.1"}', 'appInfo:{name:"vodia-setup",version:"1.10.0"}', 1)
+s,n = re.subn(r'appInfo:\{name:"vodia-setup",version:"[^"]+"\}', 'appInfo:{name:"vodia-setup",version:"1.12.0"}', s, count=1)
+if n != 1:
+    raise SystemExit('PATCH ERROR: UI app version anchor not found')
 once('.steps{display:grid;grid-template-columns:repeat(3,1fr);', '.steps{display:grid;grid-template-columns:repeat(5,1fr);', 'five-column steps')
 once('''      <div class="steps" aria-label="Setup steps">
         <div class="step active">1 · Customer</div>

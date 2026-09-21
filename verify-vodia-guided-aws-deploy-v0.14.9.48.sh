@@ -27,7 +27,7 @@ checks={
  "separate approvals": 'marketplaceApproval' in ui and 'deploymentApproval' in ui,
  "real planner errors": 'function toolFailureMessage' in ui and 'result?.isError===true' in ui,
  "automatic AMI discovery": 'discoverVodiaMarketplaceAmi' in deploy and 'fulfillmentOptionId' in deploy,
- "UI app version": 'appInfo:{name:"vodia-setup",version:"1.10.0"}' in ui,
+ "UI app version": 'appInfo:{name:"vodia-setup",version:"1.12.0"}' in ui,
 }
 for k,v in checks.items(): print(('PASS' if v else 'FAIL')+': '+k)
 bad=[k for k,v in checks.items() if not v]
