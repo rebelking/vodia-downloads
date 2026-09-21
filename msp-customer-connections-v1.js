@@ -206,17 +206,55 @@ export async function saveScopedAwsConnection(customerId, roleArn, externalId) {
   return { connection: sanitizeScopedAwsConnection(customer.aws), identity };
 }
 
-export function prepareScopedAwsOnboarding(customerId) {
-  const externalId = `vodia-${randomBytes(16).toString("hex")}`;
+export async function prepareScopedAwsOnboarding(customerId) {
   const data = readAll();
   const customer = customerRecord(data, customerId);
-  customer.awsOnboarding = {
-    externalId,
-    providerRoleArn: PROVIDER_ROLE_ARN,
-    generatedAt: new Date().toISOString()
-  };
-  writeAll(data);
+
+  // v0.14.9.55: never generate a replacement External ID for a customer
+  // that already has a saved AWS connection. Verify the canonical saved
+  // connection instead and discard any stale pending onboarding state.
+  if (customer.aws?.roleArn && customer.aws?.externalId) {
+    const identity = await testAws(customer.aws.roleArn, customer.aws.externalId);
+    if (customer.awsOnboarding) {
+      delete customer.awsOnboarding;
+      writeAll(data);
+    }
+    return {
+      alreadyConnected: true,
+      reusedExisting: true,
+      providerRoleArn: PROVIDER_ROLE_ARN,
+      roleName: DEPLOYMENT_ROLE_NAME,
+      connection: sanitizeScopedAwsConnection(customer.aws),
+      identity,
+      externalId: null,
+      generatedAt: null,
+      cloudShellScript: null
+    };
+  }
+
+  // Preserve one pending onboarding package across retries. A retry must not
+  // silently rotate the External ID while CloudFormation/CloudShell is using it.
+  const pending = customer.awsOnboarding;
+  const reusable = Boolean(
+    pending?.externalId &&
+    pending?.providerRoleArn === PROVIDER_ROLE_ARN
+  );
+  const externalId = reusable
+    ? pending.externalId
+    : `vodia-${randomBytes(16).toString("hex")}`;
+
+  if (!reusable) {
+    customer.awsOnboarding = {
+      externalId,
+      providerRoleArn: PROVIDER_ROLE_ARN,
+      generatedAt: new Date().toISOString()
+    };
+    writeAll(data);
+  }
+
   return {
+    alreadyConnected: false,
+    reusedExisting: false,
     providerRoleArn: PROVIDER_ROLE_ARN,
     roleName: DEPLOYMENT_ROLE_NAME,
     externalId,
@@ -229,7 +267,28 @@ export async function completeScopedAwsOnboarding(customerId, accountId) {
   const account = String(accountId || "").trim();
   if (!/^\d{12}$/.test(account)) throw new Error("INVALID_AWS_ACCOUNT_ID: enter the 12-digit AWS account ID printed by CloudShell.");
   const data = readAll();
-  const pending = data.customers?.[customerId]?.awsOnboarding;
+  const customer = customerRecord(data, customerId);
+
+  // v0.14.9.55 recovery path: if this customer is already connected to the
+  // same AWS account, verify the saved External ID and ignore stale onboarding.
+  if (customer.aws?.roleArn && customer.aws?.externalId) {
+    const savedAccount = String(customer.aws.account || customer.aws.roleArn.match(/^arn:aws:iam::(\d{12}):role\//)?.[1] || "");
+    if (savedAccount === account) {
+      const identity = await testAws(customer.aws.roleArn, customer.aws.externalId);
+      if (customer.awsOnboarding) {
+        delete customer.awsOnboarding;
+        writeAll(data);
+      }
+      return {
+        connection: sanitizeScopedAwsConnection(customer.aws),
+        identity,
+        reusedExisting: true,
+        changesMade: false
+      };
+    }
+  }
+
+  const pending = customer.awsOnboarding;
   if (!pending?.externalId) throw new Error("AWS_ONBOARDING_NOT_PREPARED: generate the hosted AWS setup first.");
   const roleArn = `arn:aws:iam::${account}:role/${DEPLOYMENT_ROLE_NAME}`;
   return saveScopedAwsConnection(customerId, roleArn, pending.externalId);
@@ -468,11 +527,21 @@ export function registerMspCustomerConnectionTools(server, ctx) {
   }, async ({ customerId }, extra) => {
     try {
       const access = requireCustomerAccess(extra, customerId, ["MSP_ADMIN","CUSTOMER_ADMIN"]);
-      const onboarding = prepareScopedAwsOnboarding(customerId);
-      scopedAudit("msp_prepare_customer_aws_onboarding", { customerId, subject: access.identity.subject });
-      return scopedSuccess({ customerId, onboarding, changesMade: true },
+      const onboarding = await prepareScopedAwsOnboarding(customerId);
+      scopedAudit("msp_prepare_customer_aws_onboarding", {
+        customerId,
+        subject: access.identity.subject,
+        alreadyConnected: Boolean(onboarding.alreadyConnected)
+      });
+      return scopedSuccess({
+        customerId,
+        onboarding,
+        changesMade: !onboarding.alreadyConnected
+      },
         { operation: "MSP_CUSTOMER_AWS_ONBOARDING_PREPARE", readOnly: false },
-        "Customer AWS onboarding package generated.");
+        onboarding.alreadyConnected
+          ? "Existing customer AWS connection verified. No new External ID or AWS setup was generated."
+          : "Customer AWS onboarding package generated.");
     } catch (error) { return failure(error, "MSP customer AWS onboarding preparation"); }
   });
 
