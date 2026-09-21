@@ -85,7 +85,7 @@ button.danger{background:#b42318;color:#fff;border-color:#b42318}
 </head>
 <body>
 <div class="wrap">
-  <div class="card">
+  <div class="card" data-existing-aws-guard="v0.14.9.55">
     <div class="top">
       <div>
         <h1>Vodia Setup</h1>
@@ -521,7 +521,7 @@ button.danger{background:#b42318;color:#fff;border-color:#b42318}
 
     const initResult=await request("ui/initialize",{
       protocolVersion:"2026-01-26",
-      appInfo:{name:"vodia-setup",version:"1.10.0"},
+      appInfo:{name:"vodia-setup",version:"1.17.0"},
       appCapabilities:{availableDisplayModes:["inline","fullscreen"]}
     });
     post({jsonrpc:"2.0",method:"ui/notifications/initialized",params:{}});
@@ -1049,6 +1049,19 @@ button.danger{background:#b42318;color:#fff;border-color:#b42318}
       setMsg("awsHostedMsg","Generating a customer-specific AWS setup…");
       const r=dataFrom(await callTool("msp_prepare_customer_aws_onboarding",{customerId:id}));
       const onboarding=r.onboarding||{};
+
+      if(onboarding.alreadyConnected){
+        const verified=dataFrom(await callTool("msp_get_customer_aws_connection",{customerId:id}));
+        if(!verified.connection?.configured) throw new Error("Existing AWS connection did not verify.");
+        $("awsHostedInstructions").classList.add("hidden");
+        $("awsCloudShellScript").value="";
+        renderAwsConnection(verified.connection);
+        setMsg("awsHostedMsg","Existing AWS connection verified. No new External ID or AWS setup is required.");
+        setMsg("awsMsg","AWS account "+(verified.connection.account||"")+" is already connected. Continuing to the Vodia Marketplace subscription.");
+        if(typeof advanceToMarketplaceStep==="function") await advanceToMarketplaceStep();
+        return;
+      }
+
       if(!onboarding.cloudShellScript) throw new Error("AWS setup command was not returned.");
       $("awsCloudShellScript").value=onboarding.cloudShellScript;
       $("awsHostedInstructions").classList.remove("hidden");
@@ -1104,11 +1117,16 @@ button.danger{background:#b42318;color:#fff;border-color:#b42318}
       $("verifyHostedAws").disabled=true;
       $("verifyHostedAws").textContent="Verifying…";
       setMsg("awsHostedMsg","Testing the generated Vodia deployment role…");
-      await callTool("msp_complete_customer_aws_onboarding",{customerId:id,accountId});
+      const completion=dataFrom(await callTool("msp_complete_customer_aws_onboarding",{customerId:id,accountId}));
       const verified=dataFrom(await callTool("msp_get_customer_aws_connection",{customerId:id}));
       if(!verified.connection?.configured) throw new Error("AWS connection did not verify after setup.");
       renderAwsConnection(verified.connection);
-      setMsg("awsMsg","AWS connection verified and saved securely.");
+      $("awsHostedInstructions").classList.add("hidden");
+      $("awsCloudShellScript").value="";
+      setMsg("awsMsg",completion.reusedExisting
+        ?"Existing AWS connection verified. No replacement External ID was used."
+        :"AWS connection verified and saved securely.");
+      if(typeof advanceToMarketplaceStep==="function") await advanceToMarketplaceStep();
     }catch(e){
       setMsg("awsHostedMsg",e.message);
     }finally{
