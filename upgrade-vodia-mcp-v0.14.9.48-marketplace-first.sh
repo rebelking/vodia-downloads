@@ -4,11 +4,11 @@ set -Eeuo pipefail
 
 APP="${VODIA_MCP_APP_DIR:-/opt/vodia-mcp}"
 SERVICE="vodia-mcp"
-SOURCE_COMMIT="fd00836dcd47d063ee984174f1bd0b1657bbd845"
+SOURCE_COMMIT="227f2ac71643be90fe68c6f7ba063e046d99c91f"
 RAW_BASE="https://raw.githubusercontent.com/rebelking/vodia-downloads/${SOURCE_COMMIT}"
 BRANCH_RAW="https://raw.githubusercontent.com/rebelking/vodia-downloads/feature/aws-marketplace-ec2-deploy-v1"
 V46_COMMIT="41597629eeea3011a97df0ecaad0044e0448f372"
-V47_COMMIT="6ce505b0dee5ea23509a651e74fc743cd95eb995"
+V47_COMMIT="227f2ac71643be90fe68c6f7ba063e046d99c91f"
 STAMP="$(date -u +%Y%m%d-%H%M%S)"
 BACKUP="/var/backups/vodia-mcp-v0.14.9.48-marketplace-first-$STAMP"
 TMP="$(mktemp -d)"
@@ -42,7 +42,7 @@ esac
 
 if [[ "$CURRENT" == "0.14.9.46" ]]; then
   echo "[prerequisite] Installing planner repair v0.14.9.47"
-  curl -fsSL "https://raw.githubusercontent.com/rebelking/vodia-downloads/${V47_COMMIT}/upgrade-vodia-mcp-v0.14.9.47-planner-repair.sh" -o "$TMP/v47.sh"
+  curl -fsSL "https://raw.githubusercontent.com/rebelking/vodia-downloads/${V47_COMMIT}/upgrade-vodia-mcp-v0.14.9.47-planner-repair-r2.sh" -o "$TMP/v47.sh"
   chmod +x "$TMP/v47.sh"
   "$TMP/v47.sh"
   CURRENT="$(version)"
