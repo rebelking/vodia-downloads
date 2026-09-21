@@ -9,8 +9,8 @@ GUIDED="$APP/msp-guided-app-v1.js"
 BACKEND="$APP/aws-marketplace-ec2-deploy-v1.js"
 VERSION="$APP/version.js"
 TO_VER="0.14.9.68"
-V67_COMMIT="d44f570ff291dc5b94655e127dfb6c413a43995c"
-V67_URL="https://raw.githubusercontent.com/rebelking/vodia-downloads/${V67_COMMIT}/upgrade-vodia-mcp-v0.14.9.67-marketplace-subscription-usage.sh"
+V67_COMMIT="234cf5462b7e0927bc653aa6d1e4155325dbbf25"
+V67_URL="https://raw.githubusercontent.com/rebelking/vodia-downloads/${V67_COMMIT}/upgrade-vodia-mcp-v0.14.9.67-marketplace-subscription-usage-r2.sh"
 STAMP="$(date -u +%Y%m%d-%H%M%S)"
 BACKUP_DIR="${VODIA_MCP_BACKUP_ROOT:-/var/backups}/vodia-mcp-v${TO_VER}-verified-ec2-result-$STAMP"
 TMP="$(mktemp -d)"
@@ -18,7 +18,7 @@ trap 'rm -rf "$TMP"' EXIT
 fail(){ echo "FAIL: $*" >&2; exit 1; }
 
 [[ ${EUID} -eq 0 ]] || fail "run as root"
-for c in python3 node grep install systemctl curl sed; do command -v "$c" >/dev/null 2>&1 || fail "$c is required"; done
+for c in python3 node grep install systemctl curl; do command -v "$c" >/dev/null 2>&1 || fail "$c is required"; done
 for f in "$UI" "$GUIDED" "$BACKEND" "$VERSION"; do [[ -f "$f" ]] || fail "missing $f"; done
 
 read_version(){
@@ -36,11 +36,6 @@ case "$CURRENT" in
   0.14.9.64|0.14.9.65|0.14.9.66)
     echo "[prerequisite] Installing cumulative Marketplace/deployment safety v0.14.9.67"
     curl -fsSL "$V67_URL" -o "$TMP/v67.sh"
-    # The immutable v0.14.9.67 artifact escaped seven top-level shell variable
-    # expansions during publication. Repair only that literal publication
-    # escape before execution; its content remains pinned by commit.
-    sed -i 's/\\${/${/g' "$TMP/v67.sh"
-    sed -i 's/The agreement used by Hamlet1 should show IN USE and instance i-05b201c2bda680fc2\./Any previously deployed agreement should show IN USE with its exact PBX name and EC2 instance ID./' "$TMP/v67.sh"
     bash -n "$TMP/v67.sh"
     chmod +x "$TMP/v67.sh"
     "$TMP/v67.sh"
