@@ -37,6 +37,7 @@ const AWS_CONNECT_UI_URI = "ui://vodia/aws-connect/mcp-app.html";
 const AWS_CONNECT_UI_HTML = process.env.VODIA_MCP_AWS_CONNECT_UI_HTML || "/opt/vodia-mcp/ui/aws-connect-app.html";
 const REQUIRE_MSP_CUSTOMER_CONTEXT = String(process.env.VODIA_MSP_REQUIRE_CUSTOMER_CONTEXT || "").toLowerCase() === "true";
 const deploymentPlans = new Map();
+const deploymentLocks = new Set();
 const marketplacePurchaseQuotes = new Map();
 const AWS_MARKETPLACE_QUOTE_TTL_MS = Number(process.env.VODIA_MCP_AWS_MARKETPLACE_QUOTE_TTL_MS || 15 * 60 * 1000);
 
@@ -600,6 +601,37 @@ function cleanExpiredPlans() {
   }
 }
 
+function deploymentLockKey(plan) {
+  return [
+    plan.customerId || plan.roleArn,
+    plan.region,
+    String(plan.name || "").trim().toLowerCase(),
+    plan.productId
+  ].join("|");
+}
+
+async function findExistingManagedInstance(client, name, productId) {
+  const out = await client.send(new DescribeInstancesCommand({
+    Filters: [
+      { Name: "tag:ManagedBy", Values: ["VodiaMCP"] },
+      { Name: "tag:Name", Values: [name] },
+      { Name: "tag:VodiaMarketplaceProductId", Values: [productId] },
+      { Name: "instance-state-name", Values: ["pending","running","stopping","stopped"] }
+    ]
+  }));
+  const instances = (out.Reservations || []).flatMap(r => r.Instances || []);
+  instances.sort((a,b) => new Date(b.LaunchTime || 0) - new Date(a.LaunchTime || 0));
+  return instances[0] || null;
+}
+
+function duplicateDeploymentError(instance, region, name) {
+  const id = instance?.InstanceId || "unknown";
+  const state = instance?.State?.Name || "unknown";
+  return new Error(
+    `DUPLICATE_DEPLOYMENT_BLOCKED: VodiaMCP already has PBX "${name}" in ${region} (${id}, state=${state}). Use the existing instance, rename the new PBX, or explicitly remove the old deployment first.`
+  );
+}
+
 export function registerAwsMarketplaceDeployTools(server, ctx) {
   const { z, toolOutputSchema, scopedAudit, scopedSuccess, failure } = ctx;
 
@@ -982,6 +1014,9 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
         }
 
         const client = ec2Client(input.roleArn, input.externalId, input.region);
+        const existing = await findExistingManagedInstance(client, input.name, input.productId);
+        if (existing) throw duplicateDeploymentError(existing, input.region, input.name);
+
         const image = await resolveMarketplaceAmi(client, input);
         const params = buildRunInstancesParams(input, image);
         await dryRunLaunch(client, params);
@@ -1061,24 +1096,39 @@ export function registerAwsMarketplaceDeployTools(server, ctx) {
         if (!subscription.active) throw new Error("SUBSCRIPTION_NO_LONGER_ACTIVE: deployment aborted.");
 
         const client = ec2Client(plan.roleArn, plan.externalId, plan.region);
-        const out = await client.send(new RunInstancesCommand(plan.params));
-        const instance = (out.Instances || [])[0];
-        if (!instance?.InstanceId) throw new Error("EC2_LAUNCH_UNVERIFIED: RunInstances returned no instance ID.");
+        const lockKey = deploymentLockKey(plan);
+        if (deploymentLocks.has(lockKey)) {
+          throw new Error("DEPLOYMENT_ALREADY_IN_PROGRESS: a launch for this PBX is already being processed.");
+        }
 
-        deploymentPlans.delete(planId);
-        return scopedSuccess({
-          instanceId: instance.InstanceId,
-          state: instance.State?.Name || "pending",
-          privateIpAddress: instance.PrivateIpAddress || null,
-          publicIpAddress: instance.PublicIpAddress || null,
-          privateDnsName: instance.PrivateDnsName || null,
-          publicDnsName: instance.PublicDnsName || null,
-          imageId: plan.imageId,
-          region: plan.region,
-          name: plan.name,
-          marketplaceSubscriptionVerifiedBeforeLaunch: true,
-          changesMade: true
-        }, { operation: "AWS_MARKETPLACE_APPLY_VODIA_PBX_DEPLOYMENT", readOnly: false }, `Vodia PBX EC2 instance ${instance.InstanceId} launched in ${plan.region}.`);
+        deploymentLocks.add(lockKey);
+        try {
+          const existing = await findExistingManagedInstance(client, plan.name, plan.productId);
+          if (existing) throw duplicateDeploymentError(existing, plan.region, plan.name);
+
+          const clientToken = "vodia-" + planId.replace(/-/g, "");
+          const out = await client.send(new RunInstancesCommand({ ...plan.params, ClientToken: clientToken }));
+          const instance = (out.Instances || [])[0];
+          if (!instance?.InstanceId) throw new Error("EC2_LAUNCH_UNVERIFIED: RunInstances returned no instance ID.");
+
+          deploymentPlans.delete(planId);
+          return scopedSuccess({
+            instanceId: instance.InstanceId,
+            state: instance.State?.Name || "pending",
+            privateIpAddress: instance.PrivateIpAddress || null,
+            publicIpAddress: instance.PublicIpAddress || null,
+            privateDnsName: instance.PrivateDnsName || null,
+            publicDnsName: instance.PublicDnsName || null,
+            imageId: plan.imageId,
+            region: plan.region,
+            name: plan.name,
+            marketplaceSubscriptionVerifiedBeforeLaunch: true,
+            duplicateProtection: true,
+            changesMade: true
+          }, { operation: "AWS_MARKETPLACE_APPLY_VODIA_PBX_DEPLOYMENT", readOnly: false }, `Vodia PBX EC2 instance ${instance.InstanceId} launched in ${plan.region}.`);
+        } finally {
+          deploymentLocks.delete(lockKey);
+        }
       } catch (error) {
         return failure(error, "AWS Marketplace Vodia PBX deployment apply");
       }
