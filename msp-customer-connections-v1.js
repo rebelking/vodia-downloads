@@ -7,7 +7,13 @@ import {
 import { dirname } from "node:path";
 import { fromTemporaryCredentials } from "@aws-sdk/credential-providers";
 import { STSClient, GetCallerIdentityCommand } from "@aws-sdk/client-sts";
-import { requireCustomerAccess } from "./msp-authz-v1.js";
+import {
+  requireCustomerAccess,
+  getCustomerDeletePreview,
+  getOrganizationDeletePreview,
+  deleteCustomerRecord,
+  deleteOrganizationRecord
+} from "./msp-authz-v1.js";
 
 const STORE_PATH = process.env.VODIA_MSP_CUSTOMER_CONNECTION_STORE || "/var/lib/vodia-mcp/msp-customer-connections.enc";
 const KEY_PATH = process.env.VODIA_MSP_CUSTOMER_CONNECTION_KEY_FILE || "/var/lib/vodia-mcp/msp-customer-connections.key";
@@ -229,8 +235,193 @@ export async function completeScopedAwsOnboarding(customerId, accountId) {
   return saveScopedAwsConnection(customerId, roleArn, pending.externalId);
 }
 
+// v0.14.9.52 guarded deletion helpers
+function removeScopedAwsConnections(customerIds) {
+  const ids = [...new Set((customerIds || []).map(String))];
+  if (!ids.length) return { removed: [], backup: {} };
+  const data = readAll();
+  const backup = {};
+  const removed = [];
+  for (const id of ids) {
+    if (data.customers?.[id]) {
+      backup[id] = data.customers[id];
+      delete data.customers[id];
+      removed.push(id);
+    }
+  }
+  if (removed.length) writeAll(data);
+  return { removed, backup };
+}
+
+function restoreScopedAwsConnections(backup) {
+  const entries = Object.entries(backup || {});
+  if (!entries.length) return;
+  const data = readAll();
+  for (const [id, value] of entries) data.customers[id] = value;
+  writeAll(data);
+}
+
+function scopedAwsDependency(customerId) {
+  return sanitizeScopedAwsConnection(loadScopedAwsConnection(customerId));
+}
+
 export function registerMspCustomerConnectionTools(server, ctx) {
   const { z, toolOutputSchema, scopedAudit, scopedSuccess, failure } = ctx;
+
+  server.registerTool("msp_plan_delete_customer", {
+    title: "Plan customer deletion",
+    description: "Previews deletion of one MSP customer. Read-only. Shows memberships, retained audit rows, saved AWS connection dependency, and the exact confirmation phrase.",
+    inputSchema: { customerId: z.string().uuid() },
+    outputSchema: toolOutputSchema,
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false }
+  }, async ({ customerId }, extra) => {
+    try {
+      const preview = getCustomerDeletePreview(extra, customerId);
+      const awsConnection = scopedAwsDependency(customerId);
+      return scopedSuccess({
+        ...preview,
+        awsConnection,
+        awsConnectionMustBeDetached: Boolean(awsConnection),
+        changesMade: false
+      }, { operation: "MSP_CUSTOMER_DELETE_PLAN", readOnly: true },
+      awsConnection
+        ? "Customer deletion planned. A saved AWS connection exists; apply requires detachAwsConnection=true."
+        : "Customer deletion planned. No saved AWS connection dependency was found.");
+    } catch (error) { return failure(error, "MSP customer deletion plan"); }
+  });
+
+  server.registerTool("msp_apply_delete_customer", {
+    title: "Delete MSP customer",
+    description: "Permanently deletes one MSP customer after exact confirmation. Requires MSP_ADMIN. If a saved AWS connection exists, detachAwsConnection=true is required. Detaching only removes Vodia's saved connection metadata; it does not delete AWS IAM roles, EC2 instances, DNS, or other cloud resources.",
+    inputSchema: {
+      customerId: z.string().uuid(),
+      confirmation: z.string().min(10),
+      detachAwsConnection: z.boolean().default(false)
+    },
+    outputSchema: toolOutputSchema,
+    annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false }
+  }, async ({ customerId, confirmation, detachAwsConnection }, extra) => {
+    let removed = { removed: [], backup: {} };
+    try {
+      const preview = getCustomerDeletePreview(extra, customerId);
+      if (confirmation !== preview.confirmation) throw new Error(`CONFIRMATION_REQUIRED: exact phrase is ${preview.confirmation}`);
+      const awsConnection = scopedAwsDependency(customerId);
+      if (awsConnection && !detachAwsConnection) {
+        throw new Error("CUSTOMER_AWS_CONNECTION_DEPENDENCY: rerun with detachAwsConnection=true after reviewing the deletion plan.");
+      }
+      if (awsConnection) removed = removeScopedAwsConnections([customerId]);
+      try { deleteCustomerRecord(extra, customerId); }
+      catch (error) { restoreScopedAwsConnections(removed.backup); throw error; }
+
+      scopedAudit("msp_apply_delete_customer", {
+        organizationId: preview.customer.organizationId,
+        customerId,
+        customerName: preview.customer.name,
+        awsConnectionDetached: Boolean(awsConnection),
+        subject: preview.requestedBy
+      });
+
+      return scopedSuccess({
+        deleted: {
+          customerId,
+          customerName: preview.customer.name,
+          organizationId: preview.customer.organizationId,
+          organizationName: preview.customer.organizationName
+        },
+        awsConnectionDetached: Boolean(awsConnection),
+        externalCloudResourcesDeleted: false,
+        retainedCommercialAuditRows: preview.commercialAuditCount,
+        changesMade: true
+      }, { operation: "MSP_CUSTOMER_DELETE_APPLY", readOnly: false },
+      "MSP customer deleted. External cloud resources were not deleted.");
+    } catch (error) { return failure(error, "MSP customer deletion apply"); }
+  });
+
+  server.registerTool("msp_plan_delete_organization", {
+    title: "Plan organization deletion",
+    description: "Previews deletion of an MSP organization and all customers/memberships that would cascade. Read-only. Shows saved AWS connection dependencies and the exact confirmation phrase.",
+    inputSchema: { organizationId: z.string().uuid() },
+    outputSchema: toolOutputSchema,
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false }
+  }, async ({ organizationId }, extra) => {
+    try {
+      const preview = getOrganizationDeletePreview(extra, organizationId);
+      const customerDependencies = preview.customers.map(c => ({
+        customerId: c.id,
+        customerName: c.name,
+        awsConnection: scopedAwsDependency(c.id)
+      }));
+      const awsConnectionCount = customerDependencies.filter(x => x.awsConnection).length;
+      return scopedSuccess({
+        ...preview,
+        customerDependencies,
+        awsConnectionCount,
+        awsConnectionsMustBeDetached: awsConnectionCount > 0,
+        lastOrganizationDeleteBlocked: preview.organizationCount <= 1,
+        changesMade: false
+      }, { operation: "MSP_ORGANIZATION_DELETE_PLAN", readOnly: true },
+      preview.organizationCount <= 1
+        ? "Organization deletion cannot be applied because this is the final MSP organization."
+        : awsConnectionCount
+          ? `Organization deletion planned. ${awsConnectionCount} saved AWS connection(s) require explicit detachment.`
+          : "Organization deletion planned. No saved AWS connection dependencies were found.");
+    } catch (error) { return failure(error, "MSP organization deletion plan"); }
+  });
+
+  server.registerTool("msp_apply_delete_organization", {
+    title: "Delete MSP organization",
+    description: "Permanently deletes an MSP organization after exact confirmation. Customers and memberships cascade. Requires MSP_ADMIN. The final remaining organization cannot be deleted. Saved AWS connections require detachAwsConnections=true. Detaching does not delete external AWS resources.",
+    inputSchema: {
+      organizationId: z.string().uuid(),
+      confirmation: z.string().min(10),
+      detachAwsConnections: z.boolean().default(false)
+    },
+    outputSchema: toolOutputSchema,
+    annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false }
+  }, async ({ organizationId, confirmation, detachAwsConnections }, extra) => {
+    let removed = { removed: [], backup: {} };
+    try {
+      const preview = getOrganizationDeletePreview(extra, organizationId);
+      if (preview.organizationCount <= 1) {
+        throw new Error("LAST_ORGANIZATION_DELETE_BLOCKED: create another organization before deleting the final MSP organization.");
+      }
+      if (confirmation !== preview.confirmation) throw new Error(`CONFIRMATION_REQUIRED: exact phrase is ${preview.confirmation}`);
+
+      const customerIds = preview.customers.map(c => c.id);
+      const awsDependencies = customerIds
+        .map(id => ({ customerId: id, connection: scopedAwsDependency(id) }))
+        .filter(x => x.connection);
+      if (awsDependencies.length && !detachAwsConnections) {
+        throw new Error(`ORGANIZATION_AWS_CONNECTION_DEPENDENCY: ${awsDependencies.length} saved AWS connection(s) exist; rerun with detachAwsConnections=true after reviewing the deletion plan.`);
+      }
+
+      if (awsDependencies.length) removed = removeScopedAwsConnections(customerIds);
+      try { deleteOrganizationRecord(extra, organizationId); }
+      catch (error) { restoreScopedAwsConnections(removed.backup); throw error; }
+
+      scopedAudit("msp_apply_delete_organization", {
+        organizationId,
+        organizationName: preview.organization.name,
+        deletedCustomerCount: preview.customerCount,
+        detachedAwsConnectionCount: awsDependencies.length,
+        subject: preview.requestedBy
+      });
+
+      return scopedSuccess({
+        deleted: {
+          organizationId,
+          organizationName: preview.organization.name,
+          customerCount: preview.customerCount,
+          customerIds
+        },
+        detachedAwsConnectionCount: awsDependencies.length,
+        externalCloudResourcesDeleted: false,
+        retainedCommercialAuditRows: preview.commercialAuditCount,
+        changesMade: true
+      }, { operation: "MSP_ORGANIZATION_DELETE_APPLY", readOnly: false },
+      "MSP organization deleted. Customers/memberships cascaded; external cloud resources were not deleted.");
+    } catch (error) { return failure(error, "MSP organization deletion apply"); }
+  });
 
   server.registerTool("msp_get_customer_aws_connection", {
     title: "Get customer AWS connection",
