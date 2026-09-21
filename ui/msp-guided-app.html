@@ -71,6 +71,14 @@ button:disabled{opacity:.42;cursor:not-allowed}
 .badge{display:inline-flex;align-items:center;padding:4px 7px;border-radius:999px;font-size:10px;background:color-mix(in srgb,CanvasText 7%,transparent);white-space:nowrap}
 .actions{display:flex;justify-content:flex-end;margin-top:10px}
 .actions button{font-size:11px;padding:7px 9px}
+.label-actions{display:flex;gap:9px;align-items:center}
+.managebox{margin-top:7px;padding:10px;border-radius:9px;border:1px solid color-mix(in srgb,CanvasText 10%,transparent);background:color-mix(in srgb,CanvasText 3%,transparent)}
+.manage-row{display:grid;grid-template-columns:1fr auto;gap:7px;align-items:end}
+.manage-actions{display:flex;gap:7px;justify-content:flex-end;flex-wrap:wrap;margin-top:8px}
+.manage-actions button{width:auto;font-size:11px;padding:7px 9px}
+button.danger{background:#b42318;color:#fff;border-color:#b42318}
+.dangerbox{margin-top:9px;padding:10px;border-radius:9px;border:1px solid color-mix(in srgb,#d1242f 38%,transparent);background:color-mix(in srgb,#d1242f 6%,Canvas)}
+.dangerbox .summarybox{margin-top:0}
 .hidden{display:none!important}
 @media(max-width:600px){.top{display:block}.top-actions{margin-top:8px}.status{display:inline-flex}.createbox .row,.twocol,.threecol{grid-template-columns:1fr}.aws{align-items:flex-start;flex-direction:column}.aws button{width:100%}}
 </style>
@@ -100,7 +108,10 @@ button:disabled{opacity:.42;cursor:not-allowed}
         <div class="field">
           <div class="labelrow">
             <label for="orgSelect">Organization <span class="required">*</span></label>
-            <button id="toggleOrg" class="linkbtn" type="button">+ New organization</button>
+            <div class="label-actions">
+              <button id="toggleOrg" class="linkbtn" type="button">+ New organization</button>
+              <button id="manageOrg" class="linkbtn" type="button" disabled>Manage</button>
+            </div>
           </div>
           <select id="orgSelect" required><option value="">Loading…</option></select>
           <div id="newOrg" class="createbox hidden">
@@ -110,12 +121,43 @@ button:disabled{opacity:.42;cursor:not-allowed}
             </div>
             <div id="orgMsg" class="msg"></div>
           </div>
+          <div id="orgManageBox" class="managebox hidden">
+            <div class="manage-row">
+              <div>
+                <label for="orgRenameName">Organization name</label>
+                <input id="orgRenameName" maxlength="160" autocomplete="organization">
+              </div>
+              <button id="renameOrg" class="secondary" type="button">Rename</button>
+            </div>
+            <div class="manage-actions">
+              <button id="deleteOrg" class="danger" type="button">Delete organization</button>
+            </div>
+            <div id="orgManageMsg" class="msg"></div>
+            <div id="orgDeleteBox" class="dangerbox hidden">
+              <div id="orgDeleteSummary" class="summarybox"></div>
+              <div class="field" style="margin-top:9px">
+                <label for="orgDeleteConfirmation">Exact deletion confirmation</label>
+                <input id="orgDeleteConfirmation" autocomplete="off" spellcheck="false">
+              </div>
+              <label id="orgDetachRow" class="checkrow hidden" for="orgDetachAws">
+                <input id="orgDetachAws" type="checkbox">
+                <span>Detach saved AWS connection metadata for customers in this organization. External AWS resources are not deleted.</span>
+              </label>
+              <div class="manage-actions">
+                <button id="cancelOrgDelete" class="secondary" type="button">Cancel</button>
+                <button id="applyOrgDelete" class="danger" type="button" disabled>Delete permanently</button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="field">
           <div class="labelrow">
             <label for="customerSelect">Customer <span class="required">*</span></label>
-            <button id="toggleCustomer" class="linkbtn" type="button">+ New customer</button>
+            <div class="label-actions">
+              <button id="toggleCustomer" class="linkbtn" type="button">+ New customer</button>
+              <button id="manageCustomer" class="linkbtn" type="button" disabled>Manage</button>
+            </div>
           </div>
           <select id="customerSelect" required disabled><option value="">Select organization first</option></select>
           <div id="newCustomer" class="createbox hidden">
@@ -124,6 +166,34 @@ button:disabled{opacity:.42;cursor:not-allowed}
               <button id="createCustomer" class="primary" type="button">Create</button>
             </div>
             <div id="customerMsg" class="msg"></div>
+          </div>
+          <div id="customerManageBox" class="managebox hidden">
+            <div class="manage-row">
+              <div>
+                <label for="customerRenameName">Customer name</label>
+                <input id="customerRenameName" maxlength="160" autocomplete="organization">
+              </div>
+              <button id="renameCustomer" class="secondary" type="button">Rename</button>
+            </div>
+            <div class="manage-actions">
+              <button id="deleteCustomer" class="danger" type="button">Delete customer</button>
+            </div>
+            <div id="customerManageMsg" class="msg"></div>
+            <div id="customerDeleteBox" class="dangerbox hidden">
+              <div id="customerDeleteSummary" class="summarybox"></div>
+              <div class="field" style="margin-top:9px">
+                <label for="customerDeleteConfirmation">Exact deletion confirmation</label>
+                <input id="customerDeleteConfirmation" autocomplete="off" spellcheck="false">
+              </div>
+              <label id="customerDetachRow" class="checkrow hidden" for="customerDetachAws">
+                <input id="customerDetachAws" type="checkbox">
+                <span>Detach this customer's saved AWS connection metadata. External AWS resources are not deleted.</span>
+              </label>
+              <div class="manage-actions">
+                <button id="cancelCustomerDelete" class="secondary" type="button">Cancel</button>
+                <button id="applyCustomerDelete" class="danger" type="button" disabled>Delete permanently</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -331,6 +401,8 @@ button:disabled{opacity:.42;cursor:not-allowed}
   let marketplaceSubscriptionActive = false;
   let currentMarketplaceOffer = null;
   let currentMarketplaceQuote = null;
+  let currentOrgDeletePlan = null;
+  let currentCustomerDeletePlan = null;
   let inlineScrollTop = 0;
   let fullscreenScrollTop = 0;
 
@@ -449,7 +521,7 @@ button:disabled{opacity:.42;cursor:not-allowed}
 
     const initResult=await request("ui/initialize",{
       protocolVersion:"2026-01-26",
-      appInfo:{name:"vodia-setup",version:"1.9.0"},
+      appInfo:{name:"vodia-setup",version:"1.10.0"},
       appCapabilities:{availableDisplayModes:["inline","fullscreen"]}
     });
     post({jsonrpc:"2.0",method:"ui/notifications/initialized",params:{}});
@@ -492,6 +564,7 @@ button:disabled{opacity:.42;cursor:not-allowed}
     });
     if(preselect && rows.some(c=>c.id===preselect)) sel.value=preselect;
     else if(rows.length===1) sel.value=rows[0].id;
+    $("manageCustomer").disabled=!sel.value;
     onCustomerChanged();
     reportSize();
   }
@@ -515,6 +588,7 @@ button:disabled{opacity:.42;cursor:not-allowed}
     });
     if(keep && rows.some(o=>o.id===keep)) sel.value=keep;
     else if(rows.length===1) sel.value=rows[0].id;
+    $("manageOrg").disabled=!sel.value;
   }
 
   async function refreshCustomers(preselect){
@@ -632,6 +706,30 @@ button:disabled{opacity:.42;cursor:not-allowed}
 
   function onCustomerChanged(){ resetAws(); }
 
+  function selectedOrgName(){
+    return $("orgSelect").selectedOptions?.[0]?.textContent||"";
+  }
+
+  function selectedCustomerName(){
+    return $("customerSelect").selectedOptions?.[0]?.textContent||"";
+  }
+
+  function closeOrgDelete(){
+    currentOrgDeletePlan=null;
+    $("orgDeleteBox").classList.add("hidden");
+    $("orgDeleteConfirmation").value="";
+    $("orgDetachAws").checked=false;
+    $("applyOrgDelete").disabled=true;
+  }
+
+  function closeCustomerDelete(){
+    currentCustomerDeletePlan=null;
+    $("customerDeleteBox").classList.add("hidden");
+    $("customerDeleteConfirmation").value="";
+    $("customerDetachAws").checked=false;
+    $("applyCustomerDelete").disabled=true;
+  }
+
   async function refreshAll(){
     setMsg("orgMsg",""); setMsg("customerMsg","");
     await refreshIdentity();
@@ -665,11 +763,19 @@ button:disabled{opacity:.42;cursor:not-allowed}
   $("orgSelect").addEventListener("change",()=>{
     renderCustomers();
     $("newCustomer").classList.add("hidden");
+    $("orgManageBox").classList.add("hidden");
+    $("customerManageBox").classList.add("hidden");
+    closeOrgDelete();
+    closeCustomerDelete();
+    $("manageOrg").disabled=!orgId();
     reportSize();
   });
 
   $("customerSelect").addEventListener("change",async()=>{
     onCustomerChanged();
+    $("customerManageBox").classList.add("hidden");
+    closeCustomerDelete();
+    $("manageCustomer").disabled=!customerId();
     const id=customerId();
     if(id){
       try{
@@ -714,6 +820,187 @@ button:disabled{opacity:.42;cursor:not-allowed}
       await refreshCustomers(id);
       reportSize();
     }catch(e){setMsg("customerMsg",e.message);reportSize()}
+  });
+
+  $("manageOrg").addEventListener("click",()=>{
+    const id=orgId();
+    if(!id) return;
+    const opening=$("orgManageBox").classList.contains("hidden");
+    $("orgManageBox").classList.toggle("hidden",!opening);
+    if(opening){
+      $("orgRenameName").value=selectedOrgName();
+      setMsg("orgManageMsg","");
+      closeOrgDelete();
+      $("orgRenameName").focus();
+    }
+    reportSize();
+  });
+
+  $("renameOrg").addEventListener("click",async()=>{
+    const organizationId=orgId();
+    const name=$("orgRenameName").value.trim();
+    if(!organizationId) return;
+    if(name.length<2){setMsg("orgManageMsg","Enter an organization name.");return}
+    try{
+      $("renameOrg").disabled=true;
+      setMsg("orgManageMsg","Renaming…");
+      await callTool("msp_rename_organization",{organizationId,name});
+      await refreshOrganizations(organizationId);
+      await refreshCustomers(customerId());
+      $("orgRenameName").value=selectedOrgName();
+      setMsg("orgManageMsg","Organization renamed.");
+    }catch(e){setMsg("orgManageMsg",e.message)}
+    finally{$("renameOrg").disabled=false;reportSize()}
+  });
+
+  $("deleteOrg").addEventListener("click",async()=>{
+    const organizationId=orgId();
+    if(!organizationId) return;
+    try{
+      $("deleteOrg").disabled=true;
+      setMsg("orgManageMsg","Checking organization dependencies…");
+      const r=dataFrom(await callTool("msp_plan_delete_organization",{organizationId}));
+      currentOrgDeletePlan=r;
+      const awsCount=Number(r.awsConnectionCount||0);
+      $("orgDeleteSummary").textContent=[
+        "Organization: "+(r.organization?.name||selectedOrgName()),
+        "Customers: "+Number(r.customerCount||0),
+        "Saved AWS connections: "+awsCount,
+        "Commercial audit rows retained: "+Number(r.commercialAuditCount||0),
+        r.lastOrganizationDeleteBlocked?"Deletion blocked: this is the final organization.":null,
+        "",
+        "External AWS resources are NOT deleted.",
+        "Required confirmation: "+r.confirmation
+      ].filter(x=>x!==null).join("\n");
+      $("orgDeleteConfirmation").value="";
+      $("orgDeleteConfirmation").placeholder=r.confirmation||"";
+      $("orgDetachRow").classList.toggle("hidden",awsCount===0);
+      $("orgDetachAws").checked=false;
+      $("applyOrgDelete").disabled=true;
+      $("orgDeleteBox").classList.remove("hidden");
+      setMsg("orgManageMsg",r.lastOrganizationDeleteBlocked?"This organization cannot be deleted until another organization exists.":"Review the impact and enter the exact confirmation.");
+    }catch(e){setMsg("orgManageMsg",e.message)}
+    finally{$("deleteOrg").disabled=false;reportSize()}
+  });
+
+  $("orgDeleteConfirmation").addEventListener("input",()=>{
+    const exact=currentOrgDeletePlan?.confirmation||"";
+    const awsCount=Number(currentOrgDeletePlan?.awsConnectionCount||0);
+    const detachOk=awsCount===0 || $("orgDetachAws").checked;
+    $("applyOrgDelete").disabled=!exact || $("orgDeleteConfirmation").value.trim()!==exact || !detachOk || Boolean(currentOrgDeletePlan?.lastOrganizationDeleteBlocked);
+  });
+  $("orgDetachAws").addEventListener("change",()=>$("orgDeleteConfirmation").dispatchEvent(new Event("input")));
+  $("cancelOrgDelete").addEventListener("click",()=>{closeOrgDelete();reportSize()});
+
+  $("applyOrgDelete").addEventListener("click",async()=>{
+    const organizationId=orgId();
+    const confirmation=$("orgDeleteConfirmation").value.trim();
+    if(!organizationId || !currentOrgDeletePlan || confirmation!==currentOrgDeletePlan.confirmation) return;
+    try{
+      $("applyOrgDelete").disabled=true;
+      setMsg("orgManageMsg","Deleting organization…");
+      await callTool("msp_apply_delete_organization",{
+        organizationId,
+        confirmation,
+        detachAwsConnections:Boolean($("orgDetachAws").checked)
+      });
+      $("orgManageBox").classList.add("hidden");
+      closeOrgDelete();
+      await refreshOrganizations();
+      await refreshCustomers();
+      setMsg("orgMsg","Organization deleted.");
+    }catch(e){setMsg("orgManageMsg",e.message)}
+    finally{$("applyOrgDelete").disabled=false;reportSize()}
+  });
+
+  $("manageCustomer").addEventListener("click",()=>{
+    const id=customerId();
+    if(!id) return;
+    const opening=$("customerManageBox").classList.contains("hidden");
+    $("customerManageBox").classList.toggle("hidden",!opening);
+    if(opening){
+      $("customerRenameName").value=selectedCustomerName();
+      setMsg("customerManageMsg","");
+      closeCustomerDelete();
+      $("customerRenameName").focus();
+    }
+    reportSize();
+  });
+
+  $("renameCustomer").addEventListener("click",async()=>{
+    const id=customerId();
+    const name=$("customerRenameName").value.trim();
+    if(!id) return;
+    if(name.length<2){setMsg("customerManageMsg","Enter a customer name.");return}
+    try{
+      $("renameCustomer").disabled=true;
+      setMsg("customerManageMsg","Renaming…");
+      await callTool("msp_rename_customer",{customerId:id,name});
+      await refreshCustomers(id);
+      $("customerRenameName").value=selectedCustomerName();
+      setMsg("customerManageMsg","Customer renamed.");
+    }catch(e){setMsg("customerManageMsg",e.message)}
+    finally{$("renameCustomer").disabled=false;reportSize()}
+  });
+
+  $("deleteCustomer").addEventListener("click",async()=>{
+    const id=customerId();
+    if(!id) return;
+    try{
+      $("deleteCustomer").disabled=true;
+      setMsg("customerManageMsg","Checking customer dependencies…");
+      const r=dataFrom(await callTool("msp_plan_delete_customer",{customerId:id}));
+      currentCustomerDeletePlan=r;
+      const hasAws=Boolean(r.awsConnection);
+      $("customerDeleteSummary").textContent=[
+        "Customer: "+(r.customer?.name||selectedCustomerName()),
+        "Organization: "+(r.customer?.organizationName||selectedOrgName()),
+        "Saved AWS connection: "+(hasAws?"Yes":"No"),
+        "Commercial audit rows retained: "+Number(r.commercialAuditCount||0),
+        "",
+        "External AWS resources are NOT deleted.",
+        "Required confirmation: "+r.confirmation
+      ].join("\n");
+      $("customerDeleteConfirmation").value="";
+      $("customerDeleteConfirmation").placeholder=r.confirmation||"";
+      $("customerDetachRow").classList.toggle("hidden",!hasAws);
+      $("customerDetachAws").checked=false;
+      $("applyCustomerDelete").disabled=true;
+      $("customerDeleteBox").classList.remove("hidden");
+      setMsg("customerManageMsg","Review the impact and enter the exact confirmation.");
+    }catch(e){setMsg("customerManageMsg",e.message)}
+    finally{$("deleteCustomer").disabled=false;reportSize()}
+  });
+
+  $("customerDeleteConfirmation").addEventListener("input",()=>{
+    const exact=currentCustomerDeletePlan?.confirmation||"";
+    const hasAws=Boolean(currentCustomerDeletePlan?.awsConnection);
+    const detachOk=!hasAws || $("customerDetachAws").checked;
+    $("applyCustomerDelete").disabled=!exact || $("customerDeleteConfirmation").value.trim()!==exact || !detachOk;
+  });
+  $("customerDetachAws").addEventListener("change",()=>$("customerDeleteConfirmation").dispatchEvent(new Event("input")));
+  $("cancelCustomerDelete").addEventListener("click",()=>{closeCustomerDelete();reportSize()});
+
+  $("applyCustomerDelete").addEventListener("click",async()=>{
+    const id=customerId();
+    const confirmation=$("customerDeleteConfirmation").value.trim();
+    if(!id || !currentCustomerDeletePlan || confirmation!==currentCustomerDeletePlan.confirmation) return;
+    try{
+      $("applyCustomerDelete").disabled=true;
+      setMsg("customerManageMsg","Deleting customer…");
+      const organizationId=orgId();
+      await callTool("msp_apply_delete_customer",{
+        customerId:id,
+        confirmation,
+        detachAwsConnection:Boolean($("customerDetachAws").checked)
+      });
+      $("customerManageBox").classList.add("hidden");
+      closeCustomerDelete();
+      await refreshOrganizations(organizationId);
+      await refreshCustomers();
+      setMsg("customerMsg","Customer deleted.");
+    }catch(e){setMsg("customerManageMsg",e.message)}
+    finally{$("applyCustomerDelete").disabled=false;reportSize()}
   });
 
   $("checkAws").addEventListener("click",async()=>{
