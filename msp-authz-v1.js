@@ -116,6 +116,105 @@ export function requireMspAdmin(extra) {
   return { identity, bootstrap: false };
 }
 
+// v0.14.9.52 guarded organization/customer lifecycle
+export function requireOrganizationAdmin(extra, organizationId) {
+  const admin = requireMspAdmin(extra);
+  const org = db.prepare("SELECT id,name,created_at AS createdAt FROM organizations WHERE id=?").get(organizationId);
+  if (!org) throw new Error("ORGANIZATION_NOT_FOUND");
+  if (!isBootstrap(admin.identity.subject)) {
+    const ok = db.prepare(`
+      SELECT 1 FROM memberships
+       WHERE subject=? AND organization_id=? AND customer_id IS NULL AND role='MSP_ADMIN'
+       LIMIT 1
+    `).get(admin.identity.subject, organizationId);
+    if (!ok) throw new Error("ORGANIZATION_ACCESS_DENIED");
+  }
+  return { ...admin, organization: org };
+}
+
+export function getCustomerDeletePreview(extra, customerId) {
+  const access = requireCustomerAccess(extra, customerId, ["MSP_ADMIN"]);
+  const customer = db.prepare(`
+    SELECT c.id,c.name,c.status,c.organization_id AS organizationId,o.name AS organizationName,
+           c.created_at AS createdAt
+      FROM customers c JOIN organizations o ON o.id=c.organization_id
+     WHERE c.id=?
+  `).get(customerId);
+  if (!customer) throw new Error("CUSTOMER_NOT_FOUND");
+  const membershipCount = Number(db.prepare("SELECT COUNT(*) AS n FROM memberships WHERE customer_id=?").get(customerId)?.n || 0);
+  const auditCount = Number(db.prepare("SELECT COUNT(*) AS n FROM commercial_audit WHERE customer_id=?").get(customerId)?.n || 0);
+  return {
+    customer,
+    membershipCount,
+    commercialAuditCount: auditCount,
+    auditRetention: "Commercial audit rows are retained after deletion.",
+    confirmation: `DELETE CUSTOMER ${customer.id}`,
+    requestedBy: access.identity.subject
+  };
+}
+
+export function getOrganizationDeletePreview(extra, organizationId) {
+  const access = requireOrganizationAdmin(extra, organizationId);
+  const organizationCount = Number(db.prepare("SELECT COUNT(*) AS n FROM organizations").get()?.n || 0);
+  const customers = db.prepare(`
+    SELECT id,name,status,created_at AS createdAt
+      FROM customers
+     WHERE organization_id=?
+     ORDER BY name
+  `).all(organizationId);
+  const membershipCount = Number(db.prepare("SELECT COUNT(*) AS n FROM memberships WHERE organization_id=?").get(organizationId)?.n || 0);
+  const auditCount = Number(db.prepare("SELECT COUNT(*) AS n FROM commercial_audit WHERE organization_id=?").get(organizationId)?.n || 0);
+  return {
+    organization: access.organization,
+    organizationCount,
+    customers,
+    customerCount: customers.length,
+    membershipCount,
+    commercialAuditCount: auditCount,
+    auditRetention: "Commercial audit rows are retained after deletion.",
+    confirmation: `DELETE ORGANIZATION ${access.organization.id}`,
+    requestedBy: access.identity.subject
+  };
+}
+
+export function deleteCustomerRecord(extra, customerId) {
+  const preview = getCustomerDeletePreview(extra, customerId);
+  const out = db.prepare("DELETE FROM customers WHERE id=?").run(customerId);
+  if (Number(out.changes || 0) !== 1) throw new Error("CUSTOMER_DELETE_FAILED");
+  return preview;
+}
+
+export function deleteOrganizationRecord(extra, organizationId) {
+  const preview = getOrganizationDeletePreview(extra, organizationId);
+  if (preview.organizationCount <= 1) {
+    throw new Error("LAST_ORGANIZATION_DELETE_BLOCKED: create another organization before deleting the final MSP organization.");
+  }
+  const out = db.prepare("DELETE FROM organizations WHERE id=?").run(organizationId);
+  if (Number(out.changes || 0) !== 1) throw new Error("ORGANIZATION_DELETE_FAILED");
+  return preview;
+}
+
+export function renameOrganizationRecord(extra, organizationId, name) {
+  const access = requireOrganizationAdmin(extra, organizationId);
+  const clean = String(name || "").trim();
+  if (clean.length < 2 || clean.length > 160) throw new Error("INVALID_ORGANIZATION_NAME");
+  const out = db.prepare("UPDATE organizations SET name=? WHERE id=?").run(clean, organizationId);
+  if (Number(out.changes || 0) !== 1) throw new Error("ORGANIZATION_RENAME_FAILED");
+  return { organization: { ...access.organization, name: clean }, requestedBy: access.identity.subject };
+}
+
+export function renameCustomerRecord(extra, customerId, name) {
+  const access = requireCustomerAccess(extra, customerId, ["MSP_ADMIN"]);
+  const clean = String(name || "").trim();
+  if (clean.length < 2 || clean.length > 160) throw new Error("INVALID_CUSTOMER_NAME");
+  const out = db.prepare("UPDATE customers SET name=? WHERE id=?").run(clean, customerId);
+  if (Number(out.changes || 0) !== 1) throw new Error("CUSTOMER_RENAME_FAILED");
+  return {
+    customer: { ...access.customer, name: clean },
+    requestedBy: access.identity.subject
+  };
+}
+
 export function requireCustomerAccess(extra, customerId, allowedRoles = ["MSP_ADMIN","CUSTOMER_ADMIN","OPERATOR","READ_ONLY"]) {
   const identity = requireOAuthSubject(extra);
   const customer = db.prepare(`
@@ -214,6 +313,41 @@ export function registerMspAuthzTools(server, ctx) {
       scopedAudit("msp_create_customer", { organizationId, customerId: id, subject: identity.subject });
       return scopedSuccess({ customer: { id, organizationId, name: name.trim(), status: "active" }, changesMade: true }, { operation: "MSP_CUSTOMER_CREATE", readOnly: false }, "MSP customer created.");
     } catch (error) { return failure(error, "MSP customer creation"); }
+  });
+
+  server.registerTool("msp_rename_organization", {
+    title: "Rename MSP organization",
+    description: "Renames an MSP organization. Requires MSP administrator access.",
+    inputSchema: { organizationId: z.string().uuid(), name: z.string().min(2).max(160) },
+    outputSchema: toolOutputSchema,
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false }
+  }, async ({ organizationId, name }, extra) => {
+    try {
+      const result = renameOrganizationRecord(extra, organizationId, name);
+      scopedAudit("msp_rename_organization", { organizationId, organizationName: result.organization.name, subject: result.requestedBy });
+      return scopedSuccess({ organization: result.organization, changesMade: true },
+        { operation: "MSP_ORGANIZATION_RENAME", readOnly: false }, "MSP organization renamed.");
+    } catch (error) { return failure(error, "MSP organization rename"); }
+  });
+
+  server.registerTool("msp_rename_customer", {
+    title: "Rename MSP customer",
+    description: "Renames a customer. Requires MSP administrator access.",
+    inputSchema: { customerId: z.string().uuid(), name: z.string().min(2).max(160) },
+    outputSchema: toolOutputSchema,
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false }
+  }, async ({ customerId, name }, extra) => {
+    try {
+      const result = renameCustomerRecord(extra, customerId, name);
+      scopedAudit("msp_rename_customer", {
+        organizationId: result.customer.organizationId,
+        customerId,
+        customerName: result.customer.name,
+        subject: result.requestedBy
+      });
+      return scopedSuccess({ customer: result.customer, changesMade: true },
+        { operation: "MSP_CUSTOMER_RENAME", readOnly: false }, "MSP customer renamed.");
+    } catch (error) { return failure(error, "MSP customer rename"); }
   });
 
   server.registerTool("msp_grant_membership", {
