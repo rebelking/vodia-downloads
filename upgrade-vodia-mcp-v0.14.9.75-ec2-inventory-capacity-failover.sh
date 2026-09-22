@@ -520,6 +520,93 @@ if 'VODIA_EC2_INVENTORY_UI_V75' not in s:
       ec2InventoryLoadedCustomerV75=null;
       $("ec2InventoryV75")?.classList.add("hidden");''',1)
 
+# ---------------------------------------------------------------------------
+# UI polish: + New organization/customer becomes Cancel while form is open.
+# ---------------------------------------------------------------------------
+if 'VODIA_CREATE_CANCEL_TOGGLE_V75' not in s:
+    marker_anchor='const VODIA_MARKETPLACE_PRODUCT_ID='
+    mi=s.find(marker_anchor)
+    if mi<0:
+        raise SystemExit("PATCH ERROR: Marketplace product ID anchor missing for create/cancel marker")
+    mle=s.find('\\n',mi)
+    s=s[:mle+1]+'  const VODIA_CREATE_CANCEL_TOGGLE_V75 = true;\\n'+s[mle+1:]
+
+    old_org='''  $("toggleOrg").addEventListener("click",()=>{
+    $("newOrg").classList.toggle("hidden");
+    if(!$("newOrg").classList.contains("hidden")) $("orgName").focus();
+    reportSize();
+  });'''
+    new_org='''  function setNewOrgOpenV75(open){
+    $("newOrg").classList.toggle("hidden",!open);
+    $("toggleOrg").textContent=open?"Cancel":"+ New organization";
+    if(open){
+      $("orgManageBox")?.classList.add("hidden");
+      setMsg("orgMsg","");
+      $("orgName")?.focus();
+    }else{
+      $("orgName").value="";
+      setMsg("orgMsg","");
+    }
+    reportSize();
+  }
+
+  $("toggleOrg").addEventListener("click",()=>{
+    setNewOrgOpenV75($("newOrg").classList.contains("hidden"));
+  });'''
+    if old_org not in s:
+        raise SystemExit("PATCH ERROR: toggleOrg handler anchor missing")
+    s=s.replace(old_org,new_org,1)
+
+    old_customer='''  $("toggleCustomer").addEventListener("click",()=>{
+    if(!orgId()){ setMsg("customerMsg","Select an organization first."); return; }
+    $("newCustomer").classList.toggle("hidden");
+    if(!$("newCustomer").classList.contains("hidden")) $("customerName").focus();
+    reportSize();
+  });'''
+    new_customer='''  function setNewCustomerOpenV75(open){
+    $("newCustomer").classList.toggle("hidden",!open);
+    $("toggleCustomer").textContent=open?"Cancel":"+ New customer";
+    if(open){
+      $("customerManageBox")?.classList.add("hidden");
+      setMsg("customerMsg","");
+      $("customerName")?.focus();
+    }else{
+      $("customerName").value="";
+      setMsg("customerMsg","");
+    }
+    reportSize();
+  }
+
+  $("toggleCustomer").addEventListener("click",()=>{
+    if(!orgId()){ setMsg("customerMsg","Select an organization first."); return; }
+    setNewCustomerOpenV75($("newCustomer").classList.contains("hidden"));
+  });'''
+    if old_customer not in s:
+        raise SystemExit("PATCH ERROR: toggleCustomer handler anchor missing")
+    s=s.replace(old_customer,new_customer,1)
+
+    # Keep button labels in sync when forms are closed by other workflows.
+    s=s.replace('$("newCustomer").classList.add("hidden");\\n    $("orgManageBox")',
+                '$("newCustomer").classList.add("hidden");\\n    $("toggleCustomer").textContent="+ New customer";\\n    $("orgManageBox")',1)
+    s=s.replace('$("newOrg").classList.add("hidden");\\n      await refreshOrganizations(id);',
+                '$("newOrg").classList.add("hidden");\\n      $("toggleOrg").textContent="+ New organization";\\n      await refreshOrganizations(id);',1)
+    s=s.replace('$("newCustomer").classList.add("hidden");\\n      await refreshOrganizations(organizationId);',
+                '$("newCustomer").classList.add("hidden");\\n      $("toggleCustomer").textContent="+ New customer";\\n      await refreshOrganizations(organizationId);',1)
+
+    org_manage='''    const opening=$("orgManageBox").classList.contains("hidden");
+    $("orgManageBox").classList.toggle("hidden",!opening);'''
+    if org_manage in s:
+        s=s.replace(org_manage,'''    const opening=$("orgManageBox").classList.contains("hidden");
+    if(opening && !$("newOrg").classList.contains("hidden")) setNewOrgOpenV75(false);
+    $("orgManageBox").classList.toggle("hidden",!opening);''',1)
+
+    customer_manage='''    const opening=$("customerManageBox").classList.contains("hidden");
+    $("customerManageBox").classList.toggle("hidden",!opening);'''
+    if customer_manage in s:
+        s=s.replace(customer_manage,'''    const opening=$("customerManageBox").classList.contains("hidden");
+    if(opening && !$("newCustomer").classList.contains("hidden")) setNewCustomerOpenV75(false);
+    $("customerManageBox").classList.toggle("hidden",!opening);''',1)
+
 # Version/debug markers.
 s=re.sub(r'uiVersion:"0\.14\.9\.\d+"','uiVersion:"0.14.9.75"',s)
 s=re.sub(r'appInfo:\{name:"vodia-setup",version:"[^"]+"\}','appInfo:{name:"vodia-setup",version:"1.33.0"}',s,count=1)
@@ -567,10 +654,10 @@ if not scripts: raise SystemExit("VALIDATION ERROR: no inline script found")
 Path(sys.argv[2]).write_text("\n".join(scripts))
 PY
 node --check "$TMP/staged/inline.js" >/dev/null || fail "guided UI JavaScript invalid"
-for marker in   'VODIA_EC2_INVENTORY_UI_V75'   'EC2 machines in this AWS account'   'aws_list_customer_ec2_instances'   'refreshEc2InventoryV75'; do
+for marker in   'VODIA_EC2_INVENTORY_UI_V75'   'EC2 machines in this AWS account'   'aws_list_customer_ec2_instances'   'refreshEc2InventoryV75'   'VODIA_CREATE_CANCEL_TOGGLE_V75'   'setNewOrgOpenV75'   'setNewCustomerOpenV75'; do
   grep -Fq "$marker" "$TMP/staged/msp-guided-app.html" || fail "UI marker missing: $marker"
 done
-echo "PASS: EC2 account inventory UI present"
+echo "PASS: EC2 account inventory UI + create/cancel toggles present"
 
 if [[ "$DRY_RUN_ONLY" == "1" ]]; then
   echo
@@ -625,4 +712,5 @@ echo "PASS: UI shows Name, instance ID, state, type, Region/AZ, IPs, VPC/subnet 
 echo "PASS: One-click launch retries alternate public subnets/AZs only for insufficient-capacity errors."
 echo "PASS: Marketplace SSH username follows usage instructions when they explicitly name ubuntu."
 echo "PASS: DryRun wording now distinguishes request validation from live capacity."
+echo "PASS: + New organization and + New customer change to Cancel while their create forms are open."
 echo "Backup: $BACKUP_DIR"
