@@ -1,0 +1,2642 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vodia Setup</title>
+<style>
+:root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color-scheme:light dark}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;height:auto;min-height:0;background:transparent;color:CanvasText;overflow:visible}
+body{padding:10px}
+body.fullscreen{height:100vh;overflow-y:auto}
+.wrap{width:100%;max-width:760px;margin:auto}
+body.fullscreen .wrap{max-width:860px}
+.card{width:100%;border:1px solid color-mix(in srgb,CanvasText 14%,transparent);border-radius:12px;padding:15px;background:Canvas}
+.top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+h1{font-size:19px;line-height:1.2;margin:0 0 3px}
+.sub{font-size:12px;opacity:.66;margin:0}
+.status{display:flex;align-items:center;gap:6px;font-size:11px;white-space:nowrap;padding:5px 8px;border-radius:999px;background:color-mix(in srgb,CanvasText 7%,transparent)}
+.top-actions{display:flex;align-items:center;gap:7px}
+.expandbtn{width:auto;border:1px solid color-mix(in srgb,CanvasText 18%,transparent);background:transparent;color:CanvasText;padding:5px 8px;border-radius:8px;font-size:11px;font-weight:650;cursor:pointer}
+.dot{width:7px;height:7px;border-radius:50%;background:#999}
+.status.ok .dot{background:#22a06b}.status.bad .dot{background:#d1242f}
+.setup-scroll{max-height:520px;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;margin-top:14px}
+body.fullscreen .setup-scroll{max-height:none;overflow:visible}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:0 0 14px}
+.step{font-size:11px;text-align:center;padding:7px 5px;border-radius:8px;background:color-mix(in srgb,CanvasText 6%,transparent);opacity:.58}
+.step.active{opacity:1;font-weight:700;background:color-mix(in srgb,CanvasText 11%,transparent)}
+.panel{border:1px solid color-mix(in srgb,CanvasText 10%,transparent);border-radius:12px;padding:13px}
+.field{margin-bottom:12px}.field:last-child{margin-bottom:0}
+.labelrow{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+label{font-size:12px;font-weight:650}.required{opacity:.65}
+.linkbtn{width:auto!important;border:0!important;background:transparent!important;color:CanvasText!important;padding:2px 0!important;margin:0!important;font-size:11px!important;font-weight:650!important;text-decoration:underline;text-underline-offset:2px}
+input,select,button{font:inherit;border-radius:9px}
+input,select{width:100%;padding:9px 10px;border:1px solid color-mix(in srgb,CanvasText 18%,transparent);background:Canvas;color:CanvasText}
+button{border:1px solid color-mix(in srgb,CanvasText 18%,transparent);padding:9px 11px;cursor:pointer;font-weight:650}
+button.primary{background:#111;color:#fff;border-color:#111}
+button.secondary{background:transparent;color:CanvasText}
+button:disabled{opacity:.42;cursor:not-allowed}
+.createbox{margin-top:7px;padding:9px;border-radius:9px;background:color-mix(in srgb,CanvasText 5%,transparent)}
+.createbox .row{display:grid;grid-template-columns:1fr auto;gap:7px}
+.createbox button{margin:0}
+.msg{font-size:11px;min-height:15px;margin-top:5px;opacity:.72}
+.aws{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding:11px 12px;border-radius:11px;border:1px solid color-mix(in srgb,CanvasText 10%,transparent)}
+.aws-title{font-size:12px;font-weight:700}.aws-sub{font-size:11px;opacity:.65;margin-top:2px}
+.aws-connect-form{margin-top:8px;padding:12px;border-radius:11px;border:1px solid color-mix(in srgb,CanvasText 10%,transparent);background:color-mix(in srgb,CanvasText 4%,transparent)}
+.aws-connect-form .field{margin-bottom:10px}
+.aws-connect-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}
+.aws-connect-actions button{width:auto}
+.secret-note{font-size:10px;opacity:.62;margin-top:5px}
+.step-panel{margin-top:10px}
+.step-panel h2{font-size:14px;margin:0 0 5px}
+.step-panel p{font-size:11px;opacity:.68;margin:0 0 12px}
+.region-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end}
+.region-row button{white-space:nowrap}
+.guided-box{margin-top:9px;padding:12px;border-radius:11px;border:1px solid color-mix(in srgb,CanvasText 10%,transparent);background:color-mix(in srgb,CanvasText 3%,transparent)}
+.guided-title{font-size:12px;font-weight:750;margin-bottom:4px}
+.guided-copy{font-size:11px;opacity:.68;line-height:1.45;margin-bottom:10px}
+.codebox{width:100%;min-height:165px;padding:9px;border:1px solid color-mix(in srgb,CanvasText 14%,transparent);border-radius:9px;background:color-mix(in srgb,CanvasText 5%,transparent);color:CanvasText;font:11px/1.4 ui-monospace,SFMono-Regular,Consolas,monospace;resize:vertical}
+.twocol{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.threecol{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.nav-actions{display:flex;justify-content:space-between;gap:8px;margin-top:12px}
+.nav-actions button{width:auto}
+.summarybox{font-size:11px;line-height:1.5;white-space:pre-wrap;padding:10px;border-radius:9px;background:color-mix(in srgb,CanvasText 5%,transparent);margin-top:8px}
+.marketplace-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}
+.marketplace-actions button{width:auto}
+.checkrow{display:flex;align-items:flex-start;gap:7px;font-size:11px;line-height:1.4;margin-top:8px}
+.checkrow input{width:auto;margin:2px 0 0;flex:0 0 auto}
+.legal-links{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;margin-top:7px}
+.legal-links a{color:CanvasText;text-underline-offset:2px}
+.badge{display:inline-flex;align-items:center;padding:4px 7px;border-radius:999px;font-size:10px;background:color-mix(in srgb,CanvasText 7%,transparent);white-space:nowrap}
+.actions{display:flex;justify-content:flex-end;margin-top:10px}
+.actions button{font-size:11px;padding:7px 9px}
+.label-actions{display:flex;gap:9px;align-items:center}
+.managebox{margin-top:7px;padding:10px;border-radius:9px;border:1px solid color-mix(in srgb,CanvasText 10%,transparent);background:color-mix(in srgb,CanvasText 3%,transparent)}
+.manage-row{display:grid;grid-template-columns:1fr auto;gap:7px;align-items:end}
+.manage-actions{display:flex;gap:7px;justify-content:flex-end;flex-wrap:wrap;margin-top:8px}
+.manage-actions button{width:auto;font-size:11px;padding:7px 9px}
+button.danger{background:#b42318;color:#fff;border-color:#b42318}
+.dangerbox{margin-top:9px;padding:10px;border-radius:9px;border:1px solid color-mix(in srgb,#d1242f 38%,transparent);background:color-mix(in srgb,#d1242f 6%,Canvas)}
+.dangerbox .summarybox{margin-top:0}
+.hidden{display:none!important}
+@media(max-width:600px){.top{display:block}.top-actions{margin-top:8px}.status{display:inline-flex}.createbox .row,.twocol,.threecol{grid-template-columns:1fr}.aws{align-items:flex-start;flex-direction:column}.aws button{width:100%}}
+.ec2-config-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.ec2-config-grid>.field{margin-bottom:0}
+.review-mount .guided-box{margin-top:10px}
+@media(max-width:600px){.ec2-config-grid{grid-template-columns:1fr}}
+
+.debugbtn{width:auto;border:1px solid color-mix(in srgb,CanvasText 18%,transparent);background:transparent;color:CanvasText;padding:5px 8px;border-radius:8px;font-size:11px;font-weight:650;cursor:pointer}
+.debugbtn.live{border-color:#22a06b}
+.debug-drawer{margin-top:10px;border:1px solid color-mix(in srgb,CanvasText 14%,transparent);border-radius:11px;background:color-mix(in srgb,CanvasText 3%,transparent);overflow:hidden}
+.debug-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;border-bottom:1px solid color-mix(in srgb,CanvasText 10%,transparent)}
+.debug-title{font-size:11px;font-weight:750}.debug-actions{display:flex;gap:6px;flex-wrap:wrap}
+.debug-actions button{width:auto;font-size:10px;padding:5px 7px}
+.debug-console{max-height:230px;overflow:auto;padding:8px 10px;font:10px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;word-break:break-word}
+.debug-line{padding:3px 0;border-bottom:1px dotted color-mix(in srgb,CanvasText 8%,transparent)}
+.debug-line:last-child{border-bottom:0}
+.debug-ok{opacity:.78}.debug-error{color:#ff6b6b}.debug-call{color:#7db7ff}.debug-info{opacity:.65}
+
+.contextbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px;padding:9px 10px;border:1px solid color-mix(in srgb,CanvasText 10%,transparent);border-radius:10px;background:color-mix(in srgb,CanvasText 4%,transparent)}
+.context-main{min-width:0}.context-title{font-size:11px;font-weight:750}.context-copy{font-size:10px;opacity:.68;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:540px}
+.contextbar button{width:auto;font-size:10px;padding:6px 8px}
+
+.deployment-monitor{margin-top:12px;border:1px solid color-mix(in srgb,CanvasText 16%,transparent);border-radius:12px;padding:12px;background:color-mix(in srgb,CanvasText 4%,transparent)}
+.deployment-monitor-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.deployment-monitor-title{font-weight:750}.deployment-monitor-badge{font-size:10px;font-weight:750;border-radius:999px;padding:4px 8px;background:color-mix(in srgb,CanvasText 10%,transparent)}
+.deployment-monitor-select{margin:0 0 9px}.deployment-monitor-select label{display:block;font-size:10px;font-weight:700;margin-bottom:4px}.deployment-monitor-output{white-space:pre-wrap;word-break:break-word;margin:0;padding:10px;border-radius:9px;background:color-mix(in srgb,CanvasText 6%,transparent);font:11px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace}
+.deployment-monitor-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:9px}.deployment-monitor-actions button{width:auto}
+.deployment-monitor-note{font-size:10px;opacity:.72;margin-top:8px}
+
+.danger-button{width:auto;background:#b42318;color:#fff;border-color:#b42318}.danger-button:hover{background:#912018}.danger-button:disabled{opacity:.45}
+.termination-box{margin-top:10px;border:1px solid #b42318;border-radius:10px;padding:10px;background:color-mix(in srgb,#b42318 8%,Canvas)}
+.termination-warning{white-space:pre-wrap;word-break:break-word;font:11px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace;margin-bottom:9px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card" data-product-inventory="v0.14.9.72" data-aws-inventory="v0.14.9.71" data-terminate-release="v0.14.9.70" data-deployment-monitor="v0.14.9.69" data-verified-ec2-result="v0.14.9.68" data-subscription-usage="v0.14.9.67" data-customer-context="v0.14.9.65" data-developer-trace="v0.14.9.64" data-inline-js-repair="v0.14.9.57" data-deployment-safety="v0.14.9.58" data-subscription-picker="v0.14.9.59" data-subscription-first-name="v0.14.9.60" data-consolidated-ui="v0.14.9.61" data-validate-button-fix="v0.14.9.62" data-review-parity="v0.14.9.63" data-marketplace-approval-fix="v0.14.9.56" data-existing-aws-guard="v0.14.9.55">
+    <div class="top">
+      <div>
+        <h1>Vodia Setup</h1>
+        <p class="sub">Choose the customer, Marketplace subscription, EC2 configuration, then review and deploy.</p>
+      </div>
+      <div class="top-actions">
+        <button id="expandBtn" class="expandbtn" type="button" hidden>Expand</button>
+        <button id="debugBtn" class="debugbtn live" type="button">Debug</button>
+        <div id="authStatus" class="status"><span class="dot"></span><span>Connecting…</span></div>
+      </div>
+    </div>
+
+    <div id="debugDrawer" class="debug-drawer hidden">
+      <div class="debug-head">
+        <div>
+          <div class="debug-title">Developer Trace <span id="debugState">LIVE</span></div>
+          <div class="secret-note">Shows browser/card events and MCP tool calls. Sensitive fields are redacted.</div>
+        </div>
+        <div class="debug-actions">
+          <button id="debugCopy" class="secondary" type="button">Copy</button>
+          <button id="debugClear" class="secondary" type="button">Clear</button>
+        </div>
+      </div>
+      <div id="debugConsole" class="debug-console"></div>
+    </div>
+    <div id="setupScroll" class="setup-scroll">
+      <div class="steps" aria-label="Setup steps">
+        <div class="step active">1 · Customer</div>
+        <div class="step">2 · Marketplace</div>
+        <div class="step">3 · Configure EC2</div>
+        <div class="step">4 · Review &amp; Deploy</div>
+      </div>
+
+      <div id="customerContextBar" class="contextbar hidden">
+        <div class="context-main">
+          <div class="context-title">Current customer</div>
+          <div id="customerContextText" class="context-copy">No customer selected</div>
+        </div>
+        <button id="changeCustomerBtn" class="secondary" type="button">Change customer</button>
+      </div>
+
+      <div id="customerPanel" class="panel">
+        <div class="field">
+          <div class="labelrow">
+            <label for="orgSelect">Organization <span class="required">*</span></label>
+            <div class="label-actions">
+              <button id="toggleOrg" class="linkbtn" type="button">+ New organization</button>
+              <button id="manageOrg" class="linkbtn" type="button" disabled>Manage</button>
+            </div>
+          </div>
+          <select id="orgSelect" required><option value="">Loading…</option></select>
+          <div id="newOrg" class="createbox hidden">
+            <div class="row">
+              <input id="orgName" maxlength="160" placeholder="Organization name" autocomplete="organization">
+              <button id="createOrg" class="primary" type="button">Create</button>
+            </div>
+            <div id="orgMsg" class="msg"></div>
+          </div>
+          <div id="orgManageBox" class="managebox hidden">
+            <div class="manage-row">
+              <div>
+                <label for="orgRenameName">Organization name</label>
+                <input id="orgRenameName" maxlength="160" autocomplete="organization">
+              </div>
+              <button id="renameOrg" class="secondary" type="button">Rename</button>
+            </div>
+            <div class="manage-actions">
+              <button id="deleteOrg" class="danger" type="button">Delete organization</button>
+            </div>
+            <div id="orgManageMsg" class="msg"></div>
+            <div id="orgDeleteBox" class="dangerbox hidden">
+              <div id="orgDeleteSummary" class="summarybox"></div>
+              <div class="field" style="margin-top:9px">
+                <label for="orgDeleteConfirmation">Exact deletion confirmation</label>
+                <input id="orgDeleteConfirmation" autocomplete="off" spellcheck="false">
+              </div>
+              <label id="orgDetachRow" class="checkrow hidden" for="orgDetachAws">
+                <input id="orgDetachAws" type="checkbox">
+                <span>Detach saved AWS connection metadata for customers in this organization. External AWS resources are not deleted.</span>
+              </label>
+              <div class="manage-actions">
+                <button id="cancelOrgDelete" class="secondary" type="button">Cancel</button>
+                <button id="applyOrgDelete" class="danger" type="button" disabled>Delete permanently</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="labelrow">
+            <label for="customerSelect">Customer <span class="required">*</span></label>
+            <div class="label-actions">
+              <button id="toggleCustomer" class="linkbtn" type="button">+ New customer</button>
+              <button id="manageCustomer" class="linkbtn" type="button" disabled>Manage</button>
+            </div>
+          </div>
+          <select id="customerSelect" required disabled><option value="">Select organization first</option></select>
+          <div id="newCustomer" class="createbox hidden">
+            <div class="row">
+              <input id="customerName" maxlength="160" placeholder="Customer name" autocomplete="organization">
+              <button id="createCustomer" class="primary" type="button">Create</button>
+            </div>
+            <div id="customerMsg" class="msg"></div>
+          </div>
+          <div id="customerManageBox" class="managebox hidden">
+            <div class="manage-row">
+              <div>
+                <label for="customerRenameName">Customer name</label>
+                <input id="customerRenameName" maxlength="160" autocomplete="organization">
+              </div>
+              <button id="renameCustomer" class="secondary" type="button">Rename</button>
+            </div>
+            <div class="manage-actions">
+              <button id="deleteCustomer" class="danger" type="button">Delete customer</button>
+            </div>
+            <div id="customerManageMsg" class="msg"></div>
+            <div id="customerDeleteBox" class="dangerbox hidden">
+              <div id="customerDeleteSummary" class="summarybox"></div>
+              <div class="field" style="margin-top:9px">
+                <label for="customerDeleteConfirmation">Exact deletion confirmation</label>
+                <input id="customerDeleteConfirmation" autocomplete="off" spellcheck="false">
+              </div>
+              <label id="customerDetachRow" class="checkrow hidden" for="customerDetachAws">
+                <input id="customerDetachAws" type="checkbox">
+                <span>Detach this customer's saved AWS connection metadata. External AWS resources are not deleted.</span>
+              </label>
+              <div class="manage-actions">
+                <button id="cancelCustomerDelete" class="secondary" type="button">Cancel</button>
+                <button id="applyCustomerDelete" class="danger" type="button" disabled>Delete permanently</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="awsSection">
+        <div class="aws">
+          <div>
+            <div class="aws-title">AWS connection <span class="required">*</span></div>
+            <div id="awsMsg" class="aws-sub">Select a customer to check its connection.</div>
+          </div>
+          <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
+            <span id="awsBadge" class="badge">Waiting</span>
+            <button id="connectAws" class="primary" type="button" disabled>Connect AWS</button>
+            <button id="checkAws" class="secondary" type="button" disabled>Check</button>
+          </div>
+        </div>
+
+        <div id="awsHostedSetup" class="guided-box hidden">
+          <div class="guided-title">Connect AWS automatically <span class="badge">Recommended</span></div>
+          <div class="guided-copy">Vodia generates the customer-specific External ID and a ready-to-run AWS CloudShell setup. The customer only returns the 12-digit AWS account ID printed by the command.</div>
+          <button id="prepareHostedAws" class="primary" type="button">Generate AWS setup</button>
+          <div id="awsHostedInstructions" class="hidden" style="margin-top:10px">
+            <label for="awsCloudShellScript">AWS CloudShell command</label>
+            <textarea id="awsCloudShellScript" class="codebox" readonly spellcheck="false"></textarea>
+            <div class="aws-connect-actions">
+              <button id="copyAwsScript" class="secondary" type="button">Copy command</button>
+            </div>
+            <div class="field">
+              <label for="awsAccountId">AWS account ID after running the command <span class="required">*</span></label>
+              <input id="awsAccountId" inputmode="numeric" maxlength="12" placeholder="123456789012" autocomplete="off">
+            </div>
+            <button id="verifyHostedAws" class="primary" type="button">Verify &amp; Connect</button>
+          </div>
+          <div id="awsHostedMsg" class="msg"></div>
+        </div>
+
+        <div id="manualAwsToggleRow" class="actions hidden">
+          <button id="toggleManualAws" class="linkbtn" type="button">Advanced: enter role ARN and External ID manually</button>
+        </div>
+
+        <div id="awsConnectForm" class="aws-connect-form hidden">
+          <div class="aws-title" style="margin-bottom:4px">Connect customer's AWS account</div>
+          <div class="aws-sub" style="margin-bottom:10px">Enter the deployment role ARN and External ID supplied for this customer.</div>
+          <div class="field">
+            <label for="awsRoleArn">Vodia deployment role ARN <span class="required">*</span></label>
+            <input id="awsRoleArn" type="text" autocomplete="off" spellcheck="false"
+              placeholder="arn:aws:iam::123456789012:role/VodiaMCPDeploymentRole">
+          </div>
+          <div class="field">
+            <label for="awsExternalId">External ID <span class="required">*</span></label>
+            <input id="awsExternalId" type="password" autocomplete="new-password" spellcheck="false"
+              placeholder="External ID">
+            <div class="secret-note">Used only to test and save this customer's AWS connection. It is not displayed again after saving.</div>
+          </div>
+          <div id="awsConnectMsg" class="msg"></div>
+          <div class="aws-connect-actions">
+            <button id="cancelAws" class="secondary" type="button">Cancel</button>
+            <button id="saveAws" class="primary" type="button">Test &amp; Connect</button>
+          </div>
+        </div>
+
+        <div id="awsContinueRow" class="actions hidden">
+          <button id="continueAws" class="primary" type="button">Next: Choose AWS Region →</button>
+        </div>
+      </div>
+
+      <div id="marketplaceStepPanel" class="panel step-panel hidden">
+        <h2>2 · Marketplace</h2>
+        <p>Choose an active Vodia AWS Marketplace subscription or start another subscription.</p>
+        <div id="marketplaceMount"></div>
+        <div class="nav-actions">
+          <button id="backMarketplaceToCustomer" class="secondary" type="button">Back</button>
+          <button id="continueMarketplace" class="primary" type="button" disabled>Continue to Configure EC2</button>
+        </div>
+      </div>
+
+      <div id="awsStepPanel" class="panel step-panel hidden">
+        <h2>2 · AWS</h2>
+        <p id="awsStepSummary">AWS connection verified. Choose the deployment region.</p>
+        <div class="region-row">
+          <div>
+            <label for="regionSelect">Deployment region <span class="required">*</span></label>
+            <select id="regionSelect" disabled><option value="">Load regions first</option></select>
+          </div>
+          <button id="loadRegions" class="secondary" type="button">Load regions</button>
+        </div>
+        <div id="regionMsg" class="msg"></div>
+        <div class="nav-actions">
+          <button id="backToCustomer" class="secondary" type="button">Back</button>
+          <button id="continueDeploy" class="primary" type="button" disabled>Continue to Deploy</button>
+        </div>
+      </div>
+
+      <div id="deployStepPanel" class="panel step-panel hidden">
+        <h2>3 · Deploy</h2>
+        <p id="deployStepSummary">Choose a Marketplace subscription, name the PBX deployment, configure AWS, and create a no-change deployment plan.</p>
+        <div class="twocol">
+          <div class="field">
+            <label for="pbxName">PBX name <span class="required">*</span></label>
+            <input id="pbxName" maxlength="128" placeholder="Enter a unique PBX deployment name" value="">
+            <div class="secret-note">This names the EC2/PBX deployment. It is separate from the AWS Marketplace subscription you selected.</div>
+          </div>
+          <div class="field">
+            <label for="instanceType">Instance type <span class="required">*</span></label>
+            <select id="instanceType" disabled><option value="">Load AWS network first</option></select>
+            <div class="secret-note">Free-plan labels indicate AWS eligibility, not guaranteed zero cost. Micro sizes are best for trials; t3.medium is recommended for production.</div>
+          </div>
+        </div>
+        <div class="threecol">
+          <div class="field">
+            <label for="vpcSelect">VPC <span class="required">*</span></label>
+            <select id="vpcSelect" disabled><option value="">Load network first</option></select>
+          </div>
+          <div class="field">
+            <label for="subnetSelect">Subnet <span class="required">*</span></label>
+            <select id="subnetSelect" disabled><option value="">Load network first</option></select>
+          </div>
+          <div class="field">
+            <label for="securityGroupSelect">Security group <span class="required">*</span></label>
+            <select id="securityGroupSelect" disabled><option value="">Load network first</option></select>
+          </div>
+        </div>
+        <div class="twocol">
+          <div class="field">
+            <label for="keyPairSelect">SSH key pair</label>
+            <select id="keyPairSelect" disabled><option value="">No key pair</option></select>
+          </div>
+          <div class="field">
+            <label for="storageGiB">Storage (GiB)</label>
+            <input id="storageGiB" type="number" min="8" max="16384" value="20">
+            <div class="secret-note">20 GiB is the testing default. Increase it for production, recordings, or longer retention.</div>
+          </div>
+        </div>
+        <button id="loadNetwork" class="secondary" type="button">Load AWS network</button>
+        <div id="marketplaceBox" class="guided-box">
+          <div class="guided-title">Vodia AWS Marketplace <span id="marketplaceBadge" class="badge">Checking…</span></div>
+          <div id="marketplaceMsg" class="guided-copy">Checking this AWS account for an active Vodia subscription…</div>
+          <div id="marketplaceSubscriptionSummary" class="summarybox hidden"></div>
+          <div id="marketplaceAgreementBox" class="field hidden" style="margin-top:10px">
+            <label for="marketplaceAgreementSelect">Active subscription used for this deployment</label>
+            <select id="marketplaceAgreementSelect"></select>
+            <div class="secret-note">Choose which active AWS Marketplace agreement to bind to the deployment record. You can also start another subscription below.</div>
+          </div>
+          <div class="marketplace-actions">
+            <button id="checkMarketplace" class="secondary" type="button">Check subscription</button>
+            <button id="viewMarketplaceOffer" class="primary hidden" type="button">View plans &amp; subscribe</button>
+          </div>
+          <div id="marketplaceOfferBox" class="hidden" style="margin-top:12px">
+            <div id="marketplaceOfferSummary" class="summarybox"></div>
+            <div id="marketplaceOfferField" class="field hidden" style="margin-top:10px">
+              <label for="marketplaceOfferSelect">AWS Marketplace offer</label>
+              <select id="marketplaceOfferSelect"></select>
+            </div>
+            <div class="twocol" style="margin-top:10px">
+              <div class="field">
+                <label for="marketplacePlanSelect">Vodia plan <span class="required">*</span></label>
+                <select id="marketplacePlanSelect"></select>
+              </div>
+              <div class="field">
+                <label for="marketplaceQuantity">Quantity</label>
+                <input id="marketplaceQuantity" type="number" min="1" step="1" value="1">
+              </div>
+            </div>
+            <div id="marketplacePlanDetails" class="summarybox"></div>
+            <label class="checkrow" for="marketplaceAutoRenew">
+              <input id="marketplaceAutoRenew" type="checkbox">
+              <span>Enable automatic renewal when the selected AWS offer supports it.</span>
+            </label>
+            <div id="marketplaceLegal" class="legal-links"></div>
+            <div class="marketplace-actions">
+              <button id="prepareMarketplaceQuote" class="primary" type="button">Prepare AWS quote</button>
+            </div>
+          </div>
+          <div id="marketplaceQuoteBox" class="hidden" style="margin-top:12px">
+            <div id="marketplaceQuoteSummary" class="summarybox"></div>
+            <div class="field" style="margin-top:10px">
+              <label for="marketplaceApproval">Exact subscription approval <span class="required">*</span></label>
+              <input id="marketplaceApproval" autocomplete="off" spellcheck="false">
+              <div class="secret-note">Accepting the quote can create AWS Marketplace charges. Enter the exact approval shown above.</div>
+            </div>
+            <button id="acceptMarketplaceQuote" class="primary" type="button" disabled>Accept subscription</button>
+          </div>
+        </div>
+        <div id="deployMsg" class="msg"></div>
+        <div id="planSummary" class="summarybox hidden"></div>
+        <div id="approvalBox" class="guided-box hidden">
+          <label for="deploymentApproval">Exact deployment approval</label>
+          <input id="deploymentApproval" autocomplete="off" spellcheck="false">
+          <div class="secret-note">Launching EC2 can create AWS charges. Paste the exact approval shown above.</div>
+          <button id="applyDeployment" class="primary" type="button" style="margin-top:9px" disabled>Deploy Vodia PBX</button>
+        </div>
+        <div class="nav-actions">
+          <button id="backToAws" class="secondary" type="button">Back</button>
+          <button id="planDeployment" class="primary" type="button" disabled>Validate &amp; Create Plan</button>
+        </div>
+      </div>
+
+      <div id="reviewStepPanel" class="panel step-panel hidden">
+        <h2>4 · Review &amp; Deploy</h2>
+        <p>Review the validated Marketplace-backed EC2 plan. Deployment occurs only after the exact approval is entered.</p>
+        <div id="reviewMount"></div>
+        <div class="nav-actions">
+          <button id="backToConfigure" class="secondary" type="button">Back to Configure EC2</button>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="refresh" class="secondary" type="button">Refresh</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const VODIA_MARKETPLACE_PRODUCT_ID="prod-v5qnz6xf6wu5u";
+  let rpcId = 1;
+  const pending = new Map();
+  let initialized = false;
+  let hostContext = {
+    displayMode: "inline",
+    availableDisplayModes: [],
+    theme: null
+  };
+  let allCustomers = [];
+  let currentAwsConnection = null;
+  let currentStep = 1;
+  let selectedRegion = "";
+  let currentNetwork = null;
+  let currentDeploymentPlan = null;
+  let marketplaceSubscriptionActive = false;
+  let currentMarketplaceSubscription = null;
+  let currentMarketplaceOffer = null;
+  let currentMarketplaceQuote = null;
+  let creatingNewMarketplaceSubscription = false;
+  let currentOrgDeletePlan = null;
+  let currentCustomerDeletePlan = null;
+  let inlineScrollTop = 0;
+  let fullscreenScrollTop = 0;
+  let debugEntries = [];
+  let debugSeq = 0;
+  const DEBUG_MAX = 250;
+
+  const $ = (id) => document.getElementById(id);
+  const orgId = () => $("orgSelect").value;
+  const customerId = () => $("customerSelect").value;
+  const setMsg = (id,text) => { $(id).textContent=text||""; };
+
+  function redactDebug(value,depth=0){
+    if(depth>5) return "[depth-limit]";
+    if(value===null || value===undefined) return value;
+    if(typeof value==="string"){
+      if(value.length>1200) return value.slice(0,1200)+"…";
+      return value;
+    }
+    if(typeof value!=="object") return value;
+    if(Array.isArray(value)) return value.slice(0,30).map(v=>redactDebug(v,depth+1));
+    const out={};
+    const deny=/external.?id|secret|password|authorization|credential|access.?key|token|approval|confirmation|private.?key/i;
+    for(const [k,v] of Object.entries(value)){
+      out[k]=deny.test(k)?"<REDACTED>":redactDebug(v,depth+1);
+    }
+    return out;
+  }
+
+  function debugString(value){
+    if(value===undefined) return "";
+    if(typeof value==="string") return value;
+    try{return JSON.stringify(redactDebug(value))}catch{return String(value)}
+  }
+
+  function renderDebug(){
+    const box=$("debugConsole");
+    if(!box) return;
+    box.innerHTML="";
+    debugEntries.forEach(entry=>{
+      const line=document.createElement("div");
+      line.className="debug-line debug-"+entry.kind;
+      line.textContent=entry.text;
+      box.appendChild(line);
+    });
+    box.scrollTop=box.scrollHeight;
+  }
+
+  function debugLog(kind,label,payload){
+    const stamp=new Date().toISOString().slice(11,23);
+    const body=payload===undefined?"":(" "+debugString(payload));
+    debugEntries.push({kind,text:stamp+" #"+(++debugSeq)+" "+label+body});
+    if(debugEntries.length>DEBUG_MAX) debugEntries=debugEntries.slice(-DEBUG_MAX);
+    renderDebug();
+  }
+
+  function debugSnapshot(){
+    debugLog("info","STATE",{
+      step:currentStep,
+      displayMode:hostContext?.displayMode,
+      customerId:customerId?.(),
+      region:selectedRegion,
+      marketplaceActive:marketplaceSubscriptionActive,
+      hasNetwork:Boolean(currentNetwork),
+      hasPlan:Boolean(currentDeploymentPlan),
+      pbxName:$("pbxName")?.value||"",
+      instanceType:$("instanceType")?.value||"",
+      subnet:$("subnetSelect")?.value||"",
+      securityGroup:$("securityGroupSelect")?.value||""
+    });
+  }
+
+  function post(msg){ window.parent.postMessage(msg, "*"); }
+
+  let resizeTimer = null;
+  function reportSize(){
+    clearTimeout(resizeTimer);
+    resizeTimer=setTimeout(()=>{
+      const width=Math.ceil(document.body.scrollWidth);
+      const height=Math.ceil(document.body.scrollHeight);
+      post({
+        jsonrpc:"2.0",
+        method:"ui/notifications/size-changed",
+        params:{width,height}
+      });
+    },40);
+  }
+
+  function applyHostContext(update={}){
+    hostContext={...hostContext,...update};
+    const mode=hostContext.displayMode||"inline";
+    const fullscreen=mode==="fullscreen";
+    const canFullscreen=Array.isArray(hostContext.availableDisplayModes)
+      && hostContext.availableDisplayModes.includes("fullscreen");
+
+    document.body.classList.toggle("fullscreen",fullscreen);
+    document.documentElement.dataset.displayMode=mode;
+
+    const btn=$("expandBtn");
+    btn.hidden=!canFullscreen;
+    btn.textContent=fullscreen?"Collapse":"Expand";
+
+    if(hostContext.theme==="light" || hostContext.theme==="dark"){
+      document.documentElement.style.colorScheme=hostContext.theme;
+    }
+
+    requestAnimationFrame(()=>{
+      if(fullscreen){
+        window.scrollTo({top:inlineScrollTop,left:0,behavior:"auto"});
+      }else{
+        $("setupScroll").scrollTop=Math.max(0,fullscreenScrollTop||inlineScrollTop);
+      }
+      reportSize();
+    });
+  }
+
+  window.addEventListener("message", (event) => {
+    if (event.source !== window.parent) return;
+    const m = event.data;
+    if (!m || m.jsonrpc !== "2.0") return;
+
+    if (m.id && pending.has(m.id)) {
+      const {resolve,reject}=pending.get(m.id);
+      pending.delete(m.id);
+      if (m.error) reject(new Error(m.error.message || "Host request failed"));
+      else resolve(m.result);
+      return;
+    }
+
+    if(m.method==="ui/notifications/host-context-changed"){
+      applyHostContext(m.params||{});
+    }
+  });
+
+  function request(method, params={}) {
+    const id=rpcId++;
+    post({jsonrpc:"2.0",id,method,params});
+    return new Promise((resolve,reject)=>{
+      pending.set(id,{resolve,reject});
+      setTimeout(()=>{
+        if(pending.has(id)){pending.delete(id);reject(new Error("Host request timed out"))}
+      },15000);
+    });
+  }
+
+  window.addEventListener("error",event=>{
+    debugLog("error","BROWSER ERROR",{
+      message:event.message,
+      source:event.filename,
+      line:event.lineno,
+      column:event.colno
+    });
+  });
+  window.addEventListener("unhandledrejection",event=>{
+    debugLog("error","UNHANDLED PROMISE",{
+      message:event.reason?.message||String(event.reason),
+      stack:event.reason?.stack||null
+    });
+  });
+
+  async function requestDisplayMode(mode){
+    const current=hostContext.displayMode||"inline";
+    if(mode==="fullscreen"){
+      inlineScrollTop=$("setupScroll").scrollTop;
+    }else if(current==="fullscreen"){
+      fullscreenScrollTop=window.scrollY;
+    }
+
+    try{
+      let result;
+      if(window.openai?.requestDisplayMode){
+        result=await window.openai.requestDisplayMode({mode});
+      }else{
+        result=await request("ui/request-display-mode",{mode});
+      }
+      applyHostContext({displayMode:result?.mode||current});
+      return result?.mode||current;
+    }catch(_e){
+      applyHostContext({displayMode:current});
+      return current;
+    }
+  }
+
+  async function initBridge(){
+    if (window.openai?.callTool) {
+      applyHostContext({
+        displayMode:window.openai.displayMode||"inline",
+        availableDisplayModes:Array.isArray(window.openai.availableDisplayModes)
+          ? window.openai.availableDisplayModes
+          : [],
+        theme:window.openai.theme||null
+      });
+      return;
+    }
+
+    const initResult=await request("ui/initialize",{
+      protocolVersion:"2026-01-26",
+      appInfo:{name:"vodia-setup",version:"1.28.0"},
+      appCapabilities:{availableDisplayModes:["inline","fullscreen"]}
+    });
+    post({jsonrpc:"2.0",method:"ui/notifications/initialized",params:{}});
+    initialized=true;
+    applyHostContext(initResult?.hostContext||{});
+  }
+
+  async function callTool(name,args={}){
+    const started=performance.now();
+    debugLog("call","→ "+name,redactDebug(args));
+    try{
+      let result;
+      if(window.openai?.callTool) result=await window.openai.callTool(name,args);
+      else{
+        if(!initialized) await initBridge();
+        result=await request("tools/call",{name,arguments:args});
+      }
+      const ms=Math.round(performance.now()-started);
+      debugLog(result?.isError?"error":"ok","← "+name+" "+ms+"ms",redactDebug(result));
+      return result;
+    }catch(error){
+      const ms=Math.round(performance.now()-started);
+      debugLog("error","✕ "+name+" "+ms+"ms",{
+        message:error?.message||String(error),
+        stack:error?.stack||null
+      });
+      throw error;
+    }
+  }
+
+  function toolErrorText(result){
+    if(!result) return "";
+    const text=(result.content||[]).filter(x=>x?.type==="text"&&x?.text).map(x=>x.text).join("\n").trim();
+    if(text) return text;
+    const sc=result.structuredContent;
+    const candidate=sc?.error?.message||sc?.error||sc?.message||sc?.data?.error||sc?.result?.error;
+    if(candidate) return typeof candidate==="string"?candidate:JSON.stringify(candidate);
+    return "";
+  }
+
+  function dataFrom(result){
+    const sc=result?.structuredContent;
+    if(sc?.data && typeof sc.data==="object") return sc.data;
+    if(sc?.result && typeof sc.result==="object") return sc.result;
+    if(sc && typeof sc==="object") return sc;
+    const text=(result?.content||[]).find(x=>x?.type==="text")?.text;
+    if(text){try{return JSON.parse(text)}catch{}}
+    return result||{};
+  }
+
+  function setStatus(ok,text){
+    $("authStatus").className="status "+(ok?"ok":"bad");
+    $("authStatus").querySelector("span:last-child").textContent=text;
+  }
+
+  function renderCustomers(preselect){
+    const sel=$("customerSelect");
+    const organizationId=orgId();
+    const rows=allCustomers.filter(c=>c.organizationId===organizationId);
+    sel.disabled=!organizationId;
+    sel.innerHTML=organizationId?'<option value="">Select customer…</option>':'<option value="">Select organization first</option>';
+    rows.forEach(c=>{
+      const op=document.createElement("option");
+      op.value=c.id;
+      op.textContent=c.name;
+      sel.appendChild(op);
+    });
+    if(preselect && rows.some(c=>c.id===preselect)) sel.value=preselect;
+    else if(rows.length===1) sel.value=rows[0].id;
+    $("manageCustomer").disabled=!sel.value;
+    onCustomerChanged();
+    reportSize();
+  }
+
+  async function refreshIdentity(){
+    const r=dataFrom(await callTool("msp_get_my_identity",{}));
+    const ident=r.identity||{};
+    setStatus(Boolean(ident.authenticated),ident.authenticated?"OAuth connected":"OAuth required");
+  }
+
+  async function refreshOrganizations(preselect){
+    const r=dataFrom(await callTool("msp_list_organizations",{}));
+    const rows=r.organizations||[];
+    const sel=$("orgSelect");
+    const keep=preselect||sel.value;
+    sel.innerHTML='<option value="">Select organization…</option>';
+    rows.forEach(o=>{
+      const op=document.createElement("option");
+      op.value=o.id; op.textContent=o.name;
+      sel.appendChild(op);
+    });
+    if(keep && rows.some(o=>o.id===keep)) sel.value=keep;
+    else if(rows.length===1) sel.value=rows[0].id;
+    $("manageOrg").disabled=!sel.value;
+  }
+
+  async function refreshCustomers(preselect){
+    const r=dataFrom(await callTool("msp_list_customers",{}));
+    allCustomers=r.customers||[];
+    renderCustomers(preselect);
+  }
+
+  function consolidateGuidedLayout(){
+    const marketMount=$("marketplaceMount");
+    const market=$("marketplaceBox");
+    if(marketMount && market && market.parentElement!==marketMount){
+      marketMount.appendChild(market);
+    }
+
+    const configure=$("awsStepPanel");
+    if(configure){
+      const legacyBack=$("backToCustomer");
+      const legacyContinue=$("continueDeploy");
+      const legacyBackDeploy=$("backToAws");
+      if(legacyBack) legacyBack.classList.add("hidden");
+      if(legacyContinue) legacyContinue.classList.add("hidden");
+      if(legacyBackDeploy) legacyBackDeploy.classList.add("hidden");
+      const h=configure.querySelector("h2");
+      if(h) h.textContent="3 · Configure EC2";
+      if($("awsStepSummary")) $("awsStepSummary").textContent=
+        "Choose the AWS region, then name the PBX and configure its EC2 settings.";
+
+      let grid=$("ec2ConfigGrid");
+      if(!grid){
+        grid=document.createElement("div");
+        grid.id="ec2ConfigGrid";
+        grid.className="ec2-config-grid";
+        const regionMsg=$("regionMsg");
+        regionMsg?.insertAdjacentElement("afterend",grid);
+      }
+      ["pbxName","instanceType","vpcSelect","subnetSelect","securityGroupSelect","keyPairSelect","storageGiB"].forEach(id=>{
+        const el=$(id);
+        const field=el?.closest(".field");
+        if(field && field.parentElement!==grid) grid.appendChild(field);
+      });
+      const load=$("loadNetwork");
+      if(load && load.parentElement!==configure) configure.appendChild(load);
+      const plan=$("planDeployment");
+      if(plan && plan.parentElement!==configure){
+        const actions=document.createElement("div");
+        actions.className="nav-actions";
+        actions.id="configurePlanActions";
+        const back=document.createElement("button");
+        back.id="configureBackToMarketplace";
+        back.className="secondary";
+        back.type="button";
+        back.textContent="Back to Marketplace";
+        back.addEventListener("click",()=>setStep(2));
+        actions.appendChild(back);
+        actions.appendChild(plan);
+        configure.appendChild(actions);
+      }
+      const oldBack=$("backToCustomer");
+      if(oldBack) oldBack.textContent="Back to Marketplace";
+      const cont=$("continueDeploy");
+      if(cont) cont.textContent="Load EC2 options";
+    }
+
+    const review=$("reviewMount");
+    if(review){
+      review.classList.add("review-mount");
+      ["deployMsg","planSummary","approvalBox"].forEach(id=>{
+        const el=$(id);
+        if(el && el.parentElement!==review) review.appendChild(el);
+      });
+    }
+
+    const old=$("deployStepPanel");
+    if(old){
+      old.hidden=true;
+      old.classList.add("hidden");
+      old.setAttribute("aria-hidden","true");
+    }
+    reportSize();
+  }
+
+  function setStep(step){
+    currentStep=step;
+    if(step!==2){
+      if(marketplaceMonitorTimer){clearTimeout(marketplaceMonitorTimer);marketplaceMonitorTimer=null;}
+    }else if(currentMonitoredDeployment&&!document.hidden){
+      queueMicrotask(()=>refreshMarketplaceDeploymentMonitor(false));
+    }
+    debugLog("info","STEP",{step});
+    document.querySelectorAll(".step").forEach((el,index)=>{
+      el.classList.toggle("active",index===step-1);
+    });
+    const views={
+      customerPanel:step===1,
+      awsSection:step===1,
+      marketplaceStepPanel:step===2,
+      awsStepPanel:step===3,
+      reviewStepPanel:step===4
+    };
+    Object.entries(views).forEach(([id,visible])=>{
+      const el=$(id);
+      if(!el) throw new Error("Setup view is missing: "+id);
+      el.hidden=!visible;
+      el.classList.toggle("hidden",!visible);
+      el.setAttribute("aria-hidden",visible?"false":"true");
+    });
+    const old=$("deployStepPanel");
+    if(old){old.hidden=true;old.classList.add("hidden");old.setAttribute("aria-hidden","true");}
+    requestAnimationFrame(()=>{
+      const target=step===1?$("customerPanel")
+        :step===2?$("marketplaceStepPanel")
+        :step===3?$("awsStepPanel")
+        :$("reviewStepPanel");
+      $("setupScroll").scrollTo({top:0,left:0,behavior:"auto"});
+      target?.scrollIntoView({block:"nearest",behavior:"auto"});
+      reportSize();
+    });
+  }
+
+  function renderAwsConnection(connection){
+    currentAwsConnection=connection||null;
+    const selected=Boolean(customerId());
+    const connected=Boolean(connection?.configured);
+
+    $("checkAws").disabled=!selected;
+    $("connectAws").disabled=!selected;
+    $("awsConnectForm").classList.add("hidden");
+    $("awsHostedSetup").classList.add("hidden");
+    $("manualAwsToggleRow").classList.add("hidden");
+
+    if(connected){
+      $("awsBadge").textContent="Connected";
+      setMsg("awsMsg","AWS account "+(connection.account||"")+" is connected.");
+      $("connectAws").textContent="Reconnect";
+      $("connectAws").classList.remove("hidden");
+      $("checkAws").classList.remove("hidden");
+      $("awsConnectForm").classList.add("hidden");
+      $("awsContinueRow").classList.remove("hidden");
+      updateCustomerContext();
+    }else{
+      $("awsBadge").textContent=selected?"Required":"Waiting";
+      setMsg("awsMsg",selected?"Enter the AWS role ARN and External ID below to connect this customer.":"Select a customer to connect AWS.");
+      $("connectAws").textContent="Connect AWS";
+      $("connectAws").classList.add("hidden");
+      $("checkAws").classList.add("hidden");
+      $("awsContinueRow").classList.add("hidden");
+      if(selected){
+        $("awsRoleArn").value="";
+        $("awsExternalId").value="";
+        setMsg("awsConnectMsg","");
+        $("awsHostedSetup").classList.remove("hidden");
+        $("manualAwsToggleRow").classList.remove("hidden");
+      }else{
+        $("awsHostedSetup").classList.add("hidden");
+        $("manualAwsToggleRow").classList.add("hidden");
+        $("awsConnectForm").classList.add("hidden");
+      }
+      if(currentStep>1) setStep(1);
+      updateCustomerContext();
+    }
+  }
+
+  function resetAws(){
+    currentAwsConnection=null;
+    $("awsRoleArn").value="";
+    $("awsExternalId").value="";
+    setMsg("awsConnectMsg","");
+    $("regionSelect").innerHTML='<option value="">Load regions first</option>';
+    $("regionSelect").disabled=true;
+    $("continueDeploy").disabled=true;
+    selectedRegion="";
+    currentNetwork=null;
+    currentDeploymentPlan=null;
+    marketplaceSubscriptionActive=false;
+    currentMarketplaceOffer=null;
+    currentMarketplaceQuote=null;
+    $("awsHostedInstructions").classList.add("hidden");
+    $("awsCloudShellScript").value="";
+    $("awsAccountId").value="";
+    setMsg("awsHostedMsg","");
+    $("planSummary").classList.add("hidden");
+    $("approvalBox").classList.add("hidden");
+    $("marketplaceBadge").textContent="Checking…";
+    $("viewMarketplaceOffer").classList.add("hidden");
+    $("marketplaceOfferBox").classList.add("hidden");
+    $("marketplaceQuoteBox").classList.add("hidden");
+    $("marketplaceApproval").value="";
+    $("acceptMarketplaceQuote").disabled=true;
+    setMsg("marketplaceMsg","Checking this AWS account for an active Vodia subscription…");
+    setMsg("deployMsg","");
+    setMsg("regionMsg","");
+    updatePlanButton();
+    renderAwsConnection(null);
+  }
+
+  function onCustomerChanged(){ resetAws(); }
+
+  function selectedOrgName(){
+    return $("orgSelect").selectedOptions?.[0]?.textContent||"";
+  }
+
+  function selectedCustomerName(){
+    return $("customerSelect").selectedOptions?.[0]?.textContent||"";
+  }
+  function updateCustomerContext(){
+    const bar=$("customerContextBar");
+    const text=$("customerContextText");
+    if(!bar||!text) return;
+    const org=selectedOrgName();
+    const customer=selectedCustomerName();
+    const account=currentAwsConnection?.account||"AWS not connected";
+    const visible=Boolean(customerId());
+    bar.classList.toggle("hidden",!visible);
+    text.textContent=[org,customer,account].filter(Boolean).join(" · ");
+  }
+
+
+  function closeOrgDelete(){
+    currentOrgDeletePlan=null;
+    $("orgDeleteBox").classList.add("hidden");
+    $("orgDeleteConfirmation").value="";
+    $("orgDetachAws").checked=false;
+    $("applyOrgDelete").disabled=true;
+  }
+
+  function closeCustomerDelete(){
+    currentCustomerDeletePlan=null;
+    $("customerDeleteBox").classList.add("hidden");
+    $("customerDeleteConfirmation").value="";
+    $("customerDetachAws").checked=false;
+    $("applyCustomerDelete").disabled=true;
+  }
+
+  async function refreshAll(){
+    setMsg("orgMsg",""); setMsg("customerMsg","");
+    await refreshIdentity();
+    await refreshOrganizations();
+    await refreshCustomers();
+    const id=customerId();
+    if(id){
+      try{
+        const r=dataFrom(await callTool("msp_get_customer_aws_connection",{customerId:id}));
+        renderAwsConnection(r.connection||null);
+      }catch(e){
+        $("awsBadge").textContent="Error";
+        setMsg("awsMsg",e.message);
+      }
+    }
+  }
+
+  $("toggleOrg").addEventListener("click",()=>{
+    $("newOrg").classList.toggle("hidden");
+    if(!$("newOrg").classList.contains("hidden")) $("orgName").focus();
+    reportSize();
+  });
+
+  $("toggleCustomer").addEventListener("click",()=>{
+    if(!orgId()){ setMsg("customerMsg","Select an organization first."); return; }
+    $("newCustomer").classList.toggle("hidden");
+    if(!$("newCustomer").classList.contains("hidden")) $("customerName").focus();
+    reportSize();
+  });
+
+  $("orgSelect").addEventListener("change",()=>{
+    renderCustomers();
+    $("newCustomer").classList.add("hidden");
+    $("orgManageBox").classList.add("hidden");
+    $("customerManageBox").classList.add("hidden");
+    closeOrgDelete();
+    closeCustomerDelete();
+    $("manageOrg").disabled=!orgId();
+    updateCustomerContext();
+    reportSize();
+  });
+
+  $("customerSelect").addEventListener("change",async()=>{
+    onCustomerChanged();
+    $("customerManageBox").classList.add("hidden");
+    closeCustomerDelete();
+    $("manageCustomer").disabled=!customerId();
+    const id=customerId();
+    if(id){
+      try{
+        $("awsBadge").textContent="Checking…";
+        const r=dataFrom(await callTool("msp_get_customer_aws_connection",{customerId:id}));
+        renderAwsConnection(r.connection||null);
+      }catch(e){
+        $("awsBadge").textContent="Error";
+        setMsg("awsMsg",e.message);
+      }
+    }
+    updateCustomerContext();
+    reportSize();
+  });
+
+  $("createOrg").addEventListener("click",async()=>{
+    const name=$("orgName").value.trim();
+    if(name.length<2){setMsg("orgMsg","Enter an organization name.");return}
+    try{
+      setMsg("orgMsg","Creating…");
+      const r=dataFrom(await callTool("msp_create_organization",{name}));
+      const id=r.organization?.id;
+      $("orgName").value="";
+      $("newOrg").classList.add("hidden");
+      await refreshOrganizations(id);
+      await refreshCustomers();
+      reportSize();
+    }catch(e){setMsg("orgMsg",e.message);reportSize()}
+  });
+
+  $("createCustomer").addEventListener("click",async()=>{
+    const organizationId=orgId();
+    const name=$("customerName").value.trim();
+    if(!organizationId){setMsg("customerMsg","Select an organization first.");return}
+    if(name.length<2){setMsg("customerMsg","Enter a customer name.");return}
+    try{
+      setMsg("customerMsg","Creating…");
+      const r=dataFrom(await callTool("msp_create_customer",{organizationId,name}));
+      const id=r.customer?.id;
+      $("customerName").value="";
+      $("newCustomer").classList.add("hidden");
+      await refreshOrganizations(organizationId);
+      await refreshCustomers(id);
+      reportSize();
+    }catch(e){setMsg("customerMsg",e.message);reportSize()}
+  });
+
+  $("manageOrg").addEventListener("click",()=>{
+    const id=orgId();
+    if(!id) return;
+    const opening=$("orgManageBox").classList.contains("hidden");
+    $("orgManageBox").classList.toggle("hidden",!opening);
+    if(opening){
+      $("orgRenameName").value=selectedOrgName();
+      setMsg("orgManageMsg","");
+      closeOrgDelete();
+      $("orgRenameName").focus();
+    }
+    reportSize();
+  });
+
+  $("renameOrg").addEventListener("click",async()=>{
+    const organizationId=orgId();
+    const name=$("orgRenameName").value.trim();
+    if(!organizationId) return;
+    if(name.length<2){setMsg("orgManageMsg","Enter an organization name.");return}
+    try{
+      $("renameOrg").disabled=true;
+      setMsg("orgManageMsg","Renaming…");
+      await callTool("msp_rename_organization",{organizationId,name});
+      await refreshOrganizations(organizationId);
+      await refreshCustomers(customerId());
+      $("orgRenameName").value=selectedOrgName();
+      setMsg("orgManageMsg","Organization renamed.");
+    }catch(e){setMsg("orgManageMsg",e.message)}
+    finally{$("renameOrg").disabled=false;reportSize()}
+  });
+
+  $("deleteOrg").addEventListener("click",async()=>{
+    const organizationId=orgId();
+    if(!organizationId) return;
+    try{
+      $("deleteOrg").disabled=true;
+      setMsg("orgManageMsg","Checking organization dependencies…");
+      const r=dataFrom(await callTool("msp_plan_delete_organization",{organizationId}));
+      currentOrgDeletePlan=r;
+      const awsCount=Number(r.awsConnectionCount||0);
+      $("orgDeleteSummary").textContent=[
+        "Organization: "+(r.organization?.name||selectedOrgName()),
+        "Customers: "+Number(r.customerCount||0),
+        "Saved AWS connections: "+awsCount,
+        "Commercial audit rows retained: "+Number(r.commercialAuditCount||0),
+        r.lastOrganizationDeleteBlocked?"Deletion blocked: this is the final organization.":null,
+        "",
+        "External AWS resources are NOT deleted.",
+        "Required confirmation: "+r.confirmation
+      ].filter(x=>x!==null).join("\n");
+      $("orgDeleteConfirmation").value="";
+      $("orgDeleteConfirmation").placeholder=r.confirmation||"";
+      $("orgDetachRow").classList.toggle("hidden",awsCount===0);
+      $("orgDetachAws").checked=false;
+      $("applyOrgDelete").disabled=true;
+      $("orgDeleteBox").classList.remove("hidden");
+      setMsg("orgManageMsg",r.lastOrganizationDeleteBlocked?"This organization cannot be deleted until another organization exists.":"Review the impact and enter the exact confirmation.");
+    }catch(e){setMsg("orgManageMsg",e.message)}
+    finally{$("deleteOrg").disabled=false;reportSize()}
+  });
+
+  $("orgDeleteConfirmation").addEventListener("input",()=>{
+    const exact=currentOrgDeletePlan?.confirmation||"";
+    const awsCount=Number(currentOrgDeletePlan?.awsConnectionCount||0);
+    const detachOk=awsCount===0 || $("orgDetachAws").checked;
+    $("applyOrgDelete").disabled=!exact || $("orgDeleteConfirmation").value.trim()!==exact || !detachOk || Boolean(currentOrgDeletePlan?.lastOrganizationDeleteBlocked);
+  });
+  $("orgDetachAws").addEventListener("change",()=>$("orgDeleteConfirmation").dispatchEvent(new Event("input")));
+  $("cancelOrgDelete").addEventListener("click",()=>{closeOrgDelete();reportSize()});
+
+  $("applyOrgDelete").addEventListener("click",async()=>{
+    const organizationId=orgId();
+    const confirmation=$("orgDeleteConfirmation").value.trim();
+    if(!organizationId || !currentOrgDeletePlan || confirmation!==currentOrgDeletePlan.confirmation) return;
+    try{
+      $("applyOrgDelete").disabled=true;
+      setMsg("orgManageMsg","Deleting organization…");
+      await callTool("msp_apply_delete_organization",{
+        organizationId,
+        confirmation,
+        detachAwsConnections:Boolean($("orgDetachAws").checked)
+      });
+      $("orgManageBox").classList.add("hidden");
+      closeOrgDelete();
+      await refreshOrganizations();
+      await refreshCustomers();
+      setMsg("orgMsg","Organization deleted.");
+    }catch(e){setMsg("orgManageMsg",e.message)}
+    finally{$("applyOrgDelete").disabled=false;reportSize()}
+  });
+
+  $("manageCustomer").addEventListener("click",()=>{
+    const id=customerId();
+    if(!id) return;
+    const opening=$("customerManageBox").classList.contains("hidden");
+    $("customerManageBox").classList.toggle("hidden",!opening);
+    if(opening){
+      $("customerRenameName").value=selectedCustomerName();
+      setMsg("customerManageMsg","");
+      closeCustomerDelete();
+      $("customerRenameName").focus();
+    }
+    reportSize();
+  });
+
+  $("renameCustomer").addEventListener("click",async()=>{
+    const id=customerId();
+    const name=$("customerRenameName").value.trim();
+    if(!id) return;
+    if(name.length<2){setMsg("customerManageMsg","Enter a customer name.");return}
+    try{
+      $("renameCustomer").disabled=true;
+      setMsg("customerManageMsg","Renaming…");
+      await callTool("msp_rename_customer",{customerId:id,name});
+      await refreshCustomers(id);
+      $("customerRenameName").value=selectedCustomerName();
+      setMsg("customerManageMsg","Customer renamed.");
+    }catch(e){setMsg("customerManageMsg",e.message)}
+    finally{$("renameCustomer").disabled=false;reportSize()}
+  });
+
+  $("deleteCustomer").addEventListener("click",async()=>{
+    const id=customerId();
+    if(!id) return;
+    try{
+      $("deleteCustomer").disabled=true;
+      setMsg("customerManageMsg","Checking customer dependencies…");
+      const r=dataFrom(await callTool("msp_plan_delete_customer",{customerId:id}));
+      currentCustomerDeletePlan=r;
+      const hasAws=Boolean(r.awsConnection);
+      $("customerDeleteSummary").textContent=[
+        "Customer: "+(r.customer?.name||selectedCustomerName()),
+        "Organization: "+(r.customer?.organizationName||selectedOrgName()),
+        "Saved AWS connection: "+(hasAws?"Yes":"No"),
+        "Commercial audit rows retained: "+Number(r.commercialAuditCount||0),
+        "",
+        "External AWS resources are NOT deleted.",
+        "Required confirmation: "+r.confirmation
+      ].join("\n");
+      $("customerDeleteConfirmation").value="";
+      $("customerDeleteConfirmation").placeholder=r.confirmation||"";
+      $("customerDetachRow").classList.toggle("hidden",!hasAws);
+      $("customerDetachAws").checked=false;
+      $("applyCustomerDelete").disabled=true;
+      $("customerDeleteBox").classList.remove("hidden");
+      setMsg("customerManageMsg","Review the impact and enter the exact confirmation.");
+    }catch(e){setMsg("customerManageMsg",e.message)}
+    finally{$("deleteCustomer").disabled=false;reportSize()}
+  });
+
+  $("customerDeleteConfirmation").addEventListener("input",()=>{
+    const exact=currentCustomerDeletePlan?.confirmation||"";
+    const hasAws=Boolean(currentCustomerDeletePlan?.awsConnection);
+    const detachOk=!hasAws || $("customerDetachAws").checked;
+    $("applyCustomerDelete").disabled=!exact || $("customerDeleteConfirmation").value.trim()!==exact || !detachOk;
+  });
+  $("customerDetachAws").addEventListener("change",()=>$("customerDeleteConfirmation").dispatchEvent(new Event("input")));
+  $("cancelCustomerDelete").addEventListener("click",()=>{closeCustomerDelete();reportSize()});
+
+  $("applyCustomerDelete").addEventListener("click",async()=>{
+    const id=customerId();
+    const confirmation=$("customerDeleteConfirmation").value.trim();
+    if(!id || !currentCustomerDeletePlan || confirmation!==currentCustomerDeletePlan.confirmation) return;
+    try{
+      $("applyCustomerDelete").disabled=true;
+      setMsg("customerManageMsg","Deleting customer…");
+      const organizationId=orgId();
+      await callTool("msp_apply_delete_customer",{
+        customerId:id,
+        confirmation,
+        detachAwsConnection:Boolean($("customerDetachAws").checked)
+      });
+      $("customerManageBox").classList.add("hidden");
+      closeCustomerDelete();
+      await refreshOrganizations(organizationId);
+      await refreshCustomers();
+      setMsg("customerMsg","Customer deleted.");
+    }catch(e){setMsg("customerManageMsg",e.message)}
+    finally{$("applyCustomerDelete").disabled=false;reportSize()}
+  });
+
+  $("checkAws").addEventListener("click",async()=>{
+    const id=customerId();
+    if(!id) return;
+    try{
+      $("awsBadge").textContent="Checking…";
+      setMsg("awsMsg","Checking saved AWS connection…");
+      const r=dataFrom(await callTool("msp_get_customer_aws_connection",{customerId:id}));
+      renderAwsConnection(r.connection||null);
+    }catch(e){
+      $("awsBadge").textContent="Error";
+      setMsg("awsMsg",e.message);
+    }
+    reportSize();
+  });
+
+  $("connectAws").addEventListener("click",()=>{
+    if(!customerId()) return;
+    setMsg("awsConnectMsg","");
+    if(currentAwsConnection?.roleArn){
+      $("awsRoleArn").value=currentAwsConnection.roleArn;
+    }
+    $("awsExternalId").value="";
+    $("awsConnectForm").classList.remove("hidden");
+    $("awsRoleArn").focus();
+    reportSize();
+  });
+
+  $("toggleManualAws").addEventListener("click",()=>{
+    const opening=$("awsConnectForm").classList.contains("hidden");
+    $("awsConnectForm").classList.toggle("hidden",!opening);
+    $("toggleManualAws").textContent=opening
+      ?"Hide manual AWS connection"
+      :"Advanced: enter role ARN and External ID manually";
+    if(opening) $("awsRoleArn").focus();
+    reportSize();
+  });
+
+  $("prepareHostedAws").addEventListener("click",async()=>{
+    const id=customerId();
+    if(!id) return;
+    try{
+      $("prepareHostedAws").disabled=true;
+      $("prepareHostedAws").textContent="Generating…";
+      setMsg("awsHostedMsg","Generating a customer-specific AWS setup…");
+      const r=dataFrom(await callTool("msp_prepare_customer_aws_onboarding",{customerId:id}));
+      const onboarding=r.onboarding||{};
+
+      if(onboarding.alreadyConnected){
+        const verified=dataFrom(await callTool("msp_get_customer_aws_connection",{customerId:id}));
+        if(!verified.connection?.configured) throw new Error("Existing AWS connection did not verify.");
+        $("awsHostedInstructions").classList.add("hidden");
+        $("awsCloudShellScript").value="";
+        renderAwsConnection(verified.connection);
+        setMsg("awsHostedMsg","Existing AWS connection verified. No new External ID or AWS setup is required.");
+        setMsg("awsMsg","AWS account "+(verified.connection.account||"")+" is already connected. Continuing to the Vodia Marketplace subscription.");
+        if(typeof advanceToMarketplaceStep==="function") await advanceToMarketplaceStep();
+        return;
+      }
+
+      if(!onboarding.cloudShellScript) throw new Error("AWS setup command was not returned.");
+      $("awsCloudShellScript").value=onboarding.cloudShellScript;
+      $("awsHostedInstructions").classList.remove("hidden");
+      setMsg("awsHostedMsg","Open AWS CloudShell as an administrator, run the command, then enter the printed 12-digit AWS account ID.");
+    }catch(e){
+      setMsg("awsHostedMsg",e.message);
+    }finally{
+      $("prepareHostedAws").disabled=false;
+      $("prepareHostedAws").textContent="Generate AWS setup";
+      reportSize();
+    }
+  });
+
+  $("copyAwsScript").addEventListener("click",async()=>{
+    const field=$("awsCloudShellScript");
+    const text=field.value;
+    if(!text) return;
+
+    // Clipboard API access is commonly denied inside an embedded MCP frame.
+    // execCommand runs synchronously inside the user's click and is therefore
+    // the most reliable path here despite being the older browser API.
+    field.focus({preventScroll:true});
+    field.select();
+    field.setSelectionRange(0,text.length);
+    let copied=false;
+    try{ copied=document.execCommand("copy"); }catch(_e){}
+    if(copied){
+      setMsg("awsHostedMsg","AWS CloudShell command copied.");
+      return;
+    }
+
+    try{
+      if(!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
+      await navigator.clipboard.writeText(text);
+      setMsg("awsHostedMsg","AWS CloudShell command copied.");
+    }catch(_e){
+      field.focus({preventScroll:true});
+      field.select();
+      field.setSelectionRange(0,text.length);
+      setMsg("awsHostedMsg","Command selected. Copy it with Ctrl+C or Command+C.");
+    }
+  });
+
+  $("verifyHostedAws").addEventListener("click",async()=>{
+    const id=customerId();
+    const accountId=$("awsAccountId").value.trim();
+    if(!id) return;
+    if(!/^\d{12}$/.test(accountId)){
+      setMsg("awsHostedMsg","Enter the 12-digit AWS account ID printed by CloudShell.");
+      return;
+    }
+    try{
+      $("verifyHostedAws").disabled=true;
+      $("verifyHostedAws").textContent="Verifying…";
+      setMsg("awsHostedMsg","Testing the generated Vodia deployment role…");
+      const completion=dataFrom(await callTool("msp_complete_customer_aws_onboarding",{customerId:id,accountId}));
+      const verified=dataFrom(await callTool("msp_get_customer_aws_connection",{customerId:id}));
+      if(!verified.connection?.configured) throw new Error("AWS connection did not verify after setup.");
+      renderAwsConnection(verified.connection);
+      $("awsHostedInstructions").classList.add("hidden");
+      $("awsCloudShellScript").value="";
+      setMsg("awsMsg",completion.reusedExisting
+        ?"Existing AWS connection verified. No replacement External ID was used."
+        :"AWS connection verified and saved securely.");
+      if(typeof advanceToMarketplaceStep==="function") await advanceToMarketplaceStep();
+    }catch(e){
+      setMsg("awsHostedMsg",e.message);
+    }finally{
+      $("verifyHostedAws").disabled=false;
+      $("verifyHostedAws").textContent="Verify & Connect";
+      reportSize();
+    }
+  });
+
+  $("cancelAws").addEventListener("click",()=>{
+    $("awsExternalId").value="";
+    setMsg("awsConnectMsg","");
+    if(currentAwsConnection?.configured){
+      $("awsConnectForm").classList.add("hidden");
+    }else{
+      setMsg("awsConnectMsg","AWS connection is required to continue.");
+    }
+    reportSize();
+  });
+
+  $("saveAws").addEventListener("click",async()=>{
+    const id=customerId();
+    const roleArn=$("awsRoleArn").value.trim();
+    const externalId=$("awsExternalId").value.trim();
+
+    if(!id){setMsg("awsConnectMsg","Select a customer first.");return}
+    if(!/^arn:aws:iam::\d{12}:role\/(?:[^/]+\/)*VodiaMCPDeploymentRole$/.test(roleArn)){
+      setMsg("awsConnectMsg","Enter the VodiaMCPDeploymentRole ARN.");
+      return;
+    }
+    if(externalId.length<8){
+      setMsg("awsConnectMsg","Enter the External ID.");
+      return;
+    }
+
+    try{
+      $("saveAws").disabled=true;
+      $("saveAws").textContent="Testing…";
+      setMsg("awsConnectMsg","Testing STS AssumeRole…");
+      await callTool("msp_save_customer_aws_connection",{
+        customerId:id,
+        roleArn,
+        externalId
+      });
+
+      // Do not trust the write response shape for UI state. Re-read the
+      // canonical customer-scoped connection after the save completes.
+      $("awsExternalId").value="";
+      setMsg("awsConnectMsg","Verifying saved AWS connection…");
+      const verified=dataFrom(await callTool("msp_get_customer_aws_connection",{customerId:id}));
+      const connection=verified.connection||null;
+
+      if(!connection?.configured){
+        renderAwsConnection(null);
+        throw new Error("AWS connection did not verify after save. Check the role trust policy and External ID, then try again.");
+      }
+
+      renderAwsConnection(connection);
+      $("awsConnectForm").classList.add("hidden");
+      setMsg("awsMsg","AWS connection verified and saved securely.");
+      setMsg("awsConnectMsg","");
+    }catch(e){
+      $("awsExternalId").value="";
+      $("awsConnectForm").classList.remove("hidden");
+      $("awsBadge").textContent=currentAwsConnection?.configured?"Connected":"Required";
+      setMsg("awsConnectMsg",e.message);
+    }finally{
+      $("saveAws").disabled=false;
+      $("saveAws").textContent="Test & Connect";
+      reportSize();
+    }
+  });
+
+  function promptForPbxDeploymentName(agreementId){
+    setStep(3);
+    loadDeploymentRegions().catch(e=>setMsg("regionMsg",e.message));
+    currentDeploymentPlan=null;
+    try{sessionStorage.removeItem("vodiaDeploymentPlan");}catch(_e){}
+    if($("approvalBox")){
+      $("approvalBox").classList.add("hidden");
+      $("approvalBox").dataset.planId="";
+      $("approvalBox").dataset.confirmation="";
+    }
+    if($("planSummary")) $("planSummary").classList.add("hidden");
+    const input=$("pbxName");
+    input.value="";
+    input.placeholder="Enter a unique PBX deployment name";
+    setMsg("deployMsg",
+      "Marketplace subscription "+(agreementId||"")+" is ready. Name this PBX deployment, then validate the EC2 plan.");
+    requestAnimationFrame(()=>{
+      input.scrollIntoView({behavior:"smooth",block:"center"});
+      input.focus();
+    });
+    reportSize();
+  }
+
+  function marketplaceText(value){
+    if(value===null || value===undefined || value==="") return "Not specified";
+    if(typeof value==="string" || typeof value==="number" || typeof value==="boolean") return String(value);
+    try{return JSON.stringify(value)}catch{return String(value)}
+  }
+
+  function marketplacePrice(plan){
+    if(!plan) return "Price unavailable";
+    const price=marketplaceText(plan.price);
+    const currency=plan.currencyCode||"";
+    return [currency,price].filter(Boolean).join(" ")+(plan.unit?(" / "+plan.unit):"");
+  }
+
+  function updatePlanButton(){
+    const ready=Boolean(
+      currentNetwork &&
+      selectedRegion &&
+      $("pbxName")?.value.trim() &&
+      $("instanceType")?.value &&
+      $("subnetSelect")?.value &&
+      $("securityGroupSelect")?.value
+    );
+    $("planDeployment").disabled=!ready;
+  }
+
+  let marketplaceMonitorTimer=null;
+  let marketplaceMonitorGeneration=0;
+  let marketplaceMonitorBusy=false;
+  let currentMonitoredDeployment=null;
+  let marketplaceMonitoredDeployments=[];
+  let currentTerminationPlan=null;
+
+  function ensureMarketplaceDeploymentMonitor(){
+    let box=$("marketplaceDeploymentMonitor");
+    if(box) return box;
+    const summary=$("marketplaceSubscriptionSummary");
+    if(!summary) return null;
+    box=document.createElement("section");
+    box.id="marketplaceDeploymentMonitor";
+    box.className="deployment-monitor hidden";
+    box.innerHTML=`<div class="deployment-monitor-head"><span class="deployment-monitor-title">Live deployment monitor</span><span id="marketplaceMonitorBadge" class="deployment-monitor-badge">Waiting</span></div><div class="deployment-monitor-select"><label for="marketplaceMonitorSelect">Deployment to monitor</label><select id="marketplaceMonitorSelect"></select></div><pre id="marketplaceMonitorOutput" class="deployment-monitor-output"></pre><div class="deployment-monitor-actions"><button id="refreshMarketplaceMonitor" class="secondary" type="button">Refresh machine status</button><button id="planMarketplaceTermination" class="danger-button" type="button">Terminate &amp; release</button><span id="marketplaceMonitorActivity" class="muted"></span></div><div id="marketplaceTerminationBox" class="termination-box hidden"><div id="marketplaceTerminationWarning" class="termination-warning"></div><label for="marketplaceTerminationApproval">Exact approval phrase</label><input id="marketplaceTerminationApproval" autocomplete="off" spellcheck="false"><div class="deployment-monitor-actions"><button id="applyMarketplaceTermination" class="danger-button" type="button">Permanently terminate instance</button><button id="cancelMarketplaceTermination" class="secondary" type="button">Cancel</button></div><div id="marketplaceTerminationMsg" class="msg"></div></div><div class="deployment-monitor-note">AWS machine status and Vodia application readiness are separate. EC2 running does not by itself mean that the PBX web service is ready.</div>`;
+    summary.insertAdjacentElement("afterend",box);
+    $("refreshMarketplaceMonitor").addEventListener("click",()=>refreshMarketplaceDeploymentMonitor(true));
+    $("planMarketplaceTermination").addEventListener("click",planMarketplaceTermination);
+    $("applyMarketplaceTermination").addEventListener("click",applyMarketplaceTermination);
+    $("cancelMarketplaceTermination").addEventListener("click",cancelMarketplaceTermination);
+    $("marketplaceMonitorSelect").addEventListener("change",event=>{
+      const selected=marketplaceMonitoredDeployments.find(item=>
+        (item.region+"|"+item.instanceId)===event.target.value
+      );
+      if(selected) startMarketplaceDeploymentMonitor(selected);
+    });
+    return box;
+  }
+
+  function terminationToolError(result,fallback){
+    if(!result?.isError) return "";
+    return (typeof toolErrorText==="function"?toolErrorText(result):"")||fallback;
+  }
+
+  function cancelMarketplaceTermination(){
+    currentTerminationPlan=null;
+    if($("marketplaceTerminationApproval")) $("marketplaceTerminationApproval").value="";
+    $("marketplaceTerminationBox")?.classList.add("hidden");
+    if($("marketplaceTerminationMsg")) setMsg("marketplaceTerminationMsg","");
+    reportSize();
+  }
+
+  async function planMarketplaceTermination(){
+    const deployment=currentMonitoredDeployment;
+    if(!deployment?.instanceId||!deployment?.region) return;
+    try{
+      $("planMarketplaceTermination").disabled=true;
+      $("planMarketplaceTermination").textContent="Checking…";
+      const raw=await callTool("aws_marketplace_plan_terminate_vodia_pbx",{
+        customerId:customerId(),
+        region:deployment.region,
+        instanceId:deployment.instanceId
+      });
+      const error=terminationToolError(raw,"Termination preflight failed.");
+      if(error) throw new Error(error);
+      const plan=dataFrom(raw);
+      if(!plan?.planId||!plan?.confirmation) throw new Error("Termination planner did not return an approval.");
+      currentTerminationPlan=plan;
+      const deleting=Array.isArray(plan.volumesDeletedOnTermination)?plan.volumesDeletedOnTermination:[];
+      const preserved=Array.isArray(plan.volumesPreservedAfterTermination)?plan.volumesPreservedAfterTermination:[];
+      $("marketplaceTerminationWarning").textContent=[
+        "PERMANENT AND IRREVERSIBLE",
+        "PBX: "+(plan.deployment?.name||deployment.pbxName||"Vodia PBX"),
+        "Instance: "+deployment.instanceId,
+        "Region: "+deployment.region,
+        "Current state: "+(plan.deployment?.state||deployment.instanceState||"unknown"),
+        "EBS volumes deleted on termination: "+(deleting.length?deleting.map(v=>v.volumeId||v.deviceName).join(", "):"none reported"),
+        "EBS volumes preserved: "+(preserved.length?preserved.map(v=>v.volumeId||v.deviceName).join(", "):"none reported"),
+        "The deployment slot is released only after AWS confirms TERMINATED.",
+        "",
+        "Required approval: "+plan.confirmation
+      ].join("\n");
+      $("marketplaceTerminationApproval").value="";
+      $("marketplaceTerminationApproval").placeholder=plan.confirmation;
+      $("marketplaceTerminationBox").classList.remove("hidden");
+      setMsg("marketplaceTerminationMsg","Review the permanent data-loss warning, then enter the exact approval phrase.");
+    }catch(e){
+      currentTerminationPlan=null;
+      $("marketplaceTerminationBox")?.classList.remove("hidden");
+      $("marketplaceTerminationWarning").textContent="Termination preflight failed. No AWS resource was changed.";
+      setMsg("marketplaceTerminationMsg",e.message||String(e));
+    }finally{
+      $("planMarketplaceTermination").disabled=false;
+      $("planMarketplaceTermination").textContent="Terminate & release";
+      reportSize();
+    }
+  }
+
+  async function applyMarketplaceTermination(){
+    if(!currentTerminationPlan?.planId) return;
+    const confirmation=$("marketplaceTerminationApproval").value.trim();
+    if(confirmation!==currentTerminationPlan.confirmation){
+      setMsg("marketplaceTerminationMsg","Enter the exact approval phrase shown above.");
+      return;
+    }
+    try{
+      $("applyMarketplaceTermination").disabled=true;
+      $("applyMarketplaceTermination").textContent="Terminating…";
+      const raw=await callTool("aws_marketplace_apply_terminate_vodia_pbx",{
+        planId:currentTerminationPlan.planId,
+        confirmation
+      });
+      const error=terminationToolError(raw,"Termination request failed.");
+      if(error) throw new Error(error);
+      const result=dataFrom(raw);
+      if(result.instanceId!==currentMonitoredDeployment?.instanceId){
+        throw new Error("Termination result returned a different instance ID; refresh status immediately.");
+      }
+      currentMonitoredDeployment={...currentMonitoredDeployment,instanceState:result.state||"shutting-down"};
+      currentTerminationPlan=null;
+      $("marketplaceTerminationBox").classList.add("hidden");
+      setMsg("marketplaceMsg","Termination requested. Monitoring AWS; the deployment slot remains locked until AWS confirms terminated.");
+      renderMarketplaceDeploymentMonitor({...result,pbxName:currentMonitoredDeployment.pbxName});
+      await refreshMarketplaceDeploymentMonitor(true);
+    }catch(e){
+      setMsg("marketplaceTerminationMsg",e.message||String(e));
+    }finally{
+      $("applyMarketplaceTermination").disabled=false;
+      $("applyMarketplaceTermination").textContent="Permanently terminate instance";
+      reportSize();
+    }
+  }
+
+  function stopMarketplaceDeploymentMonitor(clearDeployment=false){
+    marketplaceMonitorGeneration++;
+    if(marketplaceMonitorTimer){clearTimeout(marketplaceMonitorTimer);marketplaceMonitorTimer=null;}
+    marketplaceMonitorBusy=false;
+    if(clearDeployment) currentMonitoredDeployment=null;
+  }
+
+  function renderMarketplaceDeploymentMonitor(status,error=null){
+    const box=ensureMarketplaceDeploymentMonitor();
+    if(!box) return;
+    box.classList.remove("hidden");
+    const deployment=currentMonitoredDeployment||{};
+    const state=String(status?.state||deployment.instanceState||"unknown").toLowerCase();
+    $("marketplaceMonitorBadge").textContent=error?"Error":state;
+    if($("planMarketplaceTermination")){
+      $("planMarketplaceTermination").disabled=Boolean(error||["shutting-down","terminated"].includes(state));
+      $("planMarketplaceTermination").textContent=state==="shutting-down"?"Termination pending":state==="terminated"?"Instance terminated":"Terminate & release";
+    }
+    const events=Array.isArray(status?.scheduledEvents)?status.scheduledEvents:[];
+    const checked=status?.checkedAt?new Date(status.checkedAt).toLocaleString():new Date().toLocaleString();
+    const lines=[
+      "PBX: "+(status?.pbxName||deployment.pbxName||"Unknown"),
+      "Instance ID: "+(status?.instanceId||deployment.instanceId||"Unknown"),
+      "Region: "+(status?.region||deployment.region||"Unknown"),
+      "EC2 state: "+state,
+      "AWS status checks: "+(status?.statusChecksAvailable
+        ?(status.statusCheckSummary+" · system="+(status.systemStatus||"unknown")+" · instance="+(status.instanceStatus||"unknown"))
+        :(status?.statusChecksError?"Unavailable · "+status.statusChecksError:"Waiting for AWS")),
+      "Instance type: "+(status?.instanceType||"Unknown"),
+      "AMI: "+(status?.imageId||"Unknown"),
+      "Availability Zone: "+(status?.availabilityZone||"Unknown"),
+      "Public IP: "+(status?.publicIpAddress||"Not assigned"),
+      "Public DNS: "+(status?.publicDnsName||"Not assigned"),
+      "Private IP: "+(status?.privateIpAddress||"Unknown"),
+      "VPC / Subnet: "+[status?.vpcId,status?.subnetId].filter(Boolean).join(" / "),
+      "Security groups: "+((status?.securityGroupIds||[]).join(", ")||"Unknown"),
+      "Marketplace agreement: "+(status?.marketplaceAgreementId||deployment.agreementId||"Unknown"),
+      "Vodia PBX readiness: "+(status?.pbxApplicationReadiness||"NOT_CHECKED"),
+      events.length?("Scheduled AWS events: "+events.map(event=>event.code||event.description).filter(Boolean).join(", ")):"Scheduled AWS events: none",
+      "Last checked: "+checked
+    ];
+    if(error) lines.push("Poll error: "+error);
+    $("marketplaceMonitorOutput").textContent=lines.join("\n");
+    $("marketplaceMonitorActivity").textContent=marketplaceMonitorBusy?"Checking AWS…":(error?"Automatic retry scheduled":"Monitoring while this step is open");
+    reportSize();
+  }
+
+  function marketplaceMonitorDelay(state,error=false){
+    if(error) return 30000;
+    return ["pending","stopping","shutting-down"].includes(String(state||"").toLowerCase())?5000:30000;
+  }
+
+  function scheduleMarketplaceDeploymentMonitor(state,error=false){
+    if(marketplaceMonitorTimer){clearTimeout(marketplaceMonitorTimer);marketplaceMonitorTimer=null;}
+    const terminal=["stopped","terminated"].includes(String(state||"").toLowerCase());
+    if(terminal||currentStep!==2||document.hidden||!currentMonitoredDeployment) return;
+    const generation=marketplaceMonitorGeneration;
+    marketplaceMonitorTimer=setTimeout(()=>{
+      if(generation===marketplaceMonitorGeneration) refreshMarketplaceDeploymentMonitor(false);
+    },marketplaceMonitorDelay(state,error));
+  }
+
+  async function refreshMarketplaceDeploymentMonitor(manual=false){
+    const deployment=currentMonitoredDeployment;
+    if(!deployment?.instanceId||!deployment?.region||marketplaceMonitorBusy) return;
+    const generation=marketplaceMonitorGeneration;
+    marketplaceMonitorBusy=true;
+    if($("refreshMarketplaceMonitor")) $("refreshMarketplaceMonitor").disabled=true;
+    if($("marketplaceMonitorActivity")) $("marketplaceMonitorActivity").textContent="Checking AWS…";
+    try{
+      const status=dataFrom(await callTool("aws_get_vodia_pbx_deployment_status",{
+        customerId:customerId(),
+        region:deployment.region,
+        instanceId:deployment.instanceId
+      }));
+      if(generation!==marketplaceMonitorGeneration) return;
+      if(status.instanceId!==deployment.instanceId) throw new Error("AWS returned a different instance ID; status was rejected.");
+      marketplaceMonitorBusy=false;
+      renderMarketplaceDeploymentMonitor({...status,region:deployment.region});
+      if(status.agreementReleased){
+        setMsg("marketplaceMsg","AWS confirmed the instance is terminated. The Vodia deployment slot has been released.");
+        cancelMarketplaceTermination();
+        await checkMarketplaceSubscription();
+        return;
+      }
+      scheduleMarketplaceDeploymentMonitor(status.state,false);
+    }catch(e){
+      if(generation!==marketplaceMonitorGeneration) return;
+      marketplaceMonitorBusy=false;
+      renderMarketplaceDeploymentMonitor(null,e.message||String(e));
+      scheduleMarketplaceDeploymentMonitor(deployment.instanceState,true);
+    }finally{
+      marketplaceMonitorBusy=false;
+      if($("refreshMarketplaceMonitor")) $("refreshMarketplaceMonitor").disabled=false;
+      if(manual) reportSize();
+    }
+  }
+
+  function startMarketplaceDeploymentMonitor(deployment){
+    if(!deployment?.instanceId||!deployment?.region){
+      stopMarketplaceDeploymentMonitor(true);
+      $("marketplaceDeploymentMonitor")?.classList.add("hidden");
+      return;
+    }
+    const same=currentMonitoredDeployment?.instanceId===deployment.instanceId
+      && currentMonitoredDeployment?.region===deployment.region;
+    currentMonitoredDeployment={...deployment};
+    ensureMarketplaceDeploymentMonitor()?.classList.remove("hidden");
+    if(!same){
+      stopMarketplaceDeploymentMonitor(false);
+      renderMarketplaceDeploymentMonitor({
+        ...deployment,
+        state:deployment.instanceState,
+        pbxApplicationReadiness:"NOT_CHECKED"
+      });
+    }
+    if(currentStep===2&&!document.hidden) refreshMarketplaceDeploymentMonitor(false);
+  }
+
+  function configureMarketplaceDeploymentMonitor(deployments){
+    marketplaceMonitoredDeployments=(deployments||[]).filter(item=>item?.instanceId&&item?.region);
+    if(!marketplaceMonitoredDeployments.length){
+      stopMarketplaceDeploymentMonitor(true);
+      $("marketplaceDeploymentMonitor")?.classList.add("hidden");
+      return;
+    }
+    ensureMarketplaceDeploymentMonitor();
+    const select=$("marketplaceMonitorSelect");
+    const previous=currentMonitoredDeployment
+      ?(currentMonitoredDeployment.region+"|"+currentMonitoredDeployment.instanceId):"";
+    select.innerHTML="";
+    marketplaceMonitoredDeployments.forEach(item=>{
+      const option=document.createElement("option");
+      option.value=item.region+"|"+item.instanceId;
+      option.textContent=[item.pbxName||"Vodia PBX",item.instanceId,item.region,item.instanceState||null].filter(Boolean).join(" · ");
+      select.appendChild(option);
+    });
+    const selected=marketplaceMonitoredDeployments.find(item=>(item.region+"|"+item.instanceId)===previous)
+      || marketplaceMonitoredDeployments[0];
+    select.value=selected.region+"|"+selected.instanceId;
+    startMarketplaceDeploymentMonitor(selected);
+  }
+
+  document.addEventListener("visibilitychange",()=>{
+    if(document.hidden){
+      if(marketplaceMonitorTimer){clearTimeout(marketplaceMonitorTimer);marketplaceMonitorTimer=null;}
+    }else if(currentStep===2&&currentMonitoredDeployment){
+      refreshMarketplaceDeploymentMonitor(false);
+    }
+  });
+
+  function renderMarketplaceSubscription(active,message,subscription=null){
+    currentMarketplaceSubscription=subscription||currentMarketplaceSubscription;
+    const agreements=Array.isArray(currentMarketplaceSubscription?.agreements)
+      ? currentMarketplaceSubscription.agreements : [];
+    const inventory=currentMarketplaceSubscription?.inventory||{};
+    const inventoryInstances=Array.isArray(inventory.instances)?inventory.instances:[];
+    const availableAgreements=agreements.filter(a=>a?.deploymentUsage?.status==="AVAILABLE");
+    marketplaceSubscriptionActive=Boolean(active && availableAgreements.length>0);
+
+    const usedCount=agreements.length-availableAgreements.length;
+    $("marketplaceBadge").textContent=!active?"Required":(availableAgreements.length?"Available":"In use");
+
+    // Always allow another Marketplace purchase path when current agreements are already assigned.
+    $("viewMarketplaceOffer").classList.remove("hidden");
+    $("viewMarketplaceOffer").textContent=active?"Start another subscription":"View plans & subscribe";
+
+    const pickerBox=$("marketplaceAgreementBox");
+    const picker=$("marketplaceAgreementSelect");
+    const previous=picker?.value||"";
+
+    if(picker){
+      picker.innerHTML="";
+      agreements.forEach((agreement,index)=>{
+        const op=document.createElement("option");
+        const id=agreement?.agreementId||agreement?.id||"";
+        const usage=agreement?.deploymentUsage||{status:"RECONCILIATION_NEEDED"};
+        const available=usage.status==="AVAILABLE";
+        op.value=id;
+        op.disabled=!available;
+        const awsStatus=agreement?.status||"ACTIVE";
+        const usageText=usage.status||"UNKNOWN";
+        const attached=[
+          usage.pbxName||null,
+          usage.instanceId||null,
+          usage.region||null,
+          usage.instanceState||null
+        ].filter(Boolean).join(" · ");
+        op.textContent="Subscription "+(index+1)+" · "+id+" · "+awsStatus+" · "+usageText+(attached?(" · "+attached):"");
+        picker.appendChild(op);
+      });
+
+      if(previous && availableAgreements.some(a=>(a?.agreementId||a?.id)===previous)) picker.value=previous;
+      else if(availableAgreements[0]) picker.value=availableAgreements[0].agreementId||availableAgreements[0].id||"";
+      else picker.value="";
+      picker.disabled=availableAgreements.length===0;
+    }
+    if(pickerBox) pickerBox.classList.toggle("hidden",!active||agreements.length===0);
+
+    const summary=$("marketplaceSubscriptionSummary");
+    if(active||inventoryInstances.length){
+      $("marketplaceOfferBox").classList.add("hidden");
+      $("marketplaceQuoteBox").classList.add("hidden");
+      currentMarketplaceQuote=null;
+
+      const selectedId=picker?.value||null;
+      const lines=[
+        "Vodia AWS Marketplace subscriptions",
+        "AWS account: "+(currentAwsConnection?.account||"Unknown"),
+        "Product: Vodia PBX",
+        "Product ID: "+VODIA_MARKETPLACE_PRODUCT_ID,
+        "AWS status: ACTIVE",
+        "Active agreement(s): "+agreements.length,
+        "Available for deployment: "+availableAgreements.length,
+        "Already assigned / used: "+usedCount,
+        selectedId?("Selected AVAILABLE agreement: "+selectedId):"Selected agreement: none available",
+        "",
+        "AWS Vodia PBX inventory",
+        "Live instances found: "+inventoryInstances.length,
+        "Running: "+(inventory.runningInstanceCount??inventoryInstances.filter(row=>row.instanceState==="running").length),
+        "Stopped: "+(inventory.stoppedInstanceCount??inventoryInstances.filter(row=>row.instanceState==="stopped").length),
+        "Regions scanned: "+(inventory.regionsScanned??"Unknown"),
+        "Discovery: AWS Marketplace product code "+(inventory.marketplaceProductCode||"not configured")+" plus Vodia tags",
+        "Last inventory check: "+(inventory.checkedAt?new Date(inventory.checkedAt).toLocaleString():"Unknown")
+      ];
+      if((inventory.duplicateAgreementIds||[]).length){
+        lines.push("WARNING: duplicate active EC2 instances use the same Marketplace agreement.");
+        lines.push("Duplicate agreement(s): "+inventory.duplicateAgreementIds.join(", "));
+      }
+      for(const machine of inventoryInstances){
+        lines.push("");
+        lines.push((machine.duplicateAgreement?"DUPLICATE · ":"")+String(machine.instanceState||"unknown").toUpperCase()+": "+(machine.pbxName||"Vodia PBX"));
+        lines.push("Instance: "+(machine.instanceId||"Unknown"));
+        lines.push("Region / AZ: "+[machine.region,machine.availabilityZone].filter(Boolean).join(" / "));
+        lines.push("Type: "+(machine.instanceType||"Unknown"));
+        lines.push("Public IP: "+(machine.publicIpAddress||"Not assigned"));
+        lines.push("Launch time: "+(machine.launchTime?new Date(machine.launchTime).toLocaleString():"Unknown"));
+        lines.push("Agreement: "+(machine.agreementId||"UNBOUND"));
+        lines.push("Verified by: "+(machine.marketplaceProductCodeVerified?"AWS Marketplace product code":"Vodia MCP tags"));
+        if(machine.duplicateAgreement) lines.push("Duplicate count on this agreement: "+machine.duplicateCount);
+      }
+      for(const agreement of agreements){
+        const usage=agreement?.deploymentUsage||{};
+        if(usage.status==="AVAILABLE") continue;
+        lines.push("");
+        lines.push("IN USE: "+(agreement.agreementId||agreement.id||"agreement"));
+        if(usage.pbxName) lines.push("PBX: "+usage.pbxName);
+        if(usage.instanceId) lines.push("Instance: "+usage.instanceId);
+        if(usage.region) lines.push("Region: "+usage.region);
+        if(usage.instanceState) lines.push("Instance state: "+usage.instanceState);
+      }
+      summary.textContent=lines.join("\n");
+      summary.classList.remove("hidden");
+    }else{
+      summary.classList.add("hidden");
+      if(pickerBox) pickerBox.classList.add("hidden");
+    }
+
+    const monitoredDeployments=inventoryInstances.length?inventoryInstances:agreements.filter(agreement=>{
+      const usage=agreement?.deploymentUsage||{};
+      return usage.instanceId&&usage.region&&usage.status!=="AVAILABLE";
+    }).map(agreement=>({...(agreement.deploymentUsage||{}),agreementId:agreement.agreementId||agreement.id||null}));
+    if(monitoredDeployments.length){
+      configureMarketplaceDeploymentMonitor(monitoredDeployments);
+    }else{
+      configureMarketplaceDeploymentMonitor([]);
+    }
+
+    setMsg("marketplaceMsg",message||(active
+      ?(availableAgreements.length
+        ?"Choose an AVAILABLE subscription for this deployment. Agreements already assigned to a PBX are locked."
+        :"All active subscriptions are already assigned. Start another subscription before deploying another PBX.")
+      :"No active Vodia agreement was found. Review the live AWS offer and subscribe before deployment."));
+
+    if($("continueMarketplace")) $("continueMarketplace").disabled=!marketplaceSubscriptionActive;
+    updatePlanButton();
+    reportSize();
+  }
+
+  async function checkMarketplaceSubscription(){
+    const id=customerId();
+    if(!id) return false;
+    try{
+      $("checkMarketplace").disabled=true;
+      $("checkMarketplace").textContent="Checking…";
+      $("marketplaceBadge").textContent="Checking…";
+      const r=dataFrom(await callTool("aws_marketplace_check_subscription",{
+        customerId:id,
+        productId:VODIA_MARKETPLACE_PRODUCT_ID
+      }));
+      renderMarketplaceSubscription(Boolean(r.active),null,r);
+      return Boolean(r.active && (r.availableAgreementCount??0)>0);
+    }catch(e){
+      marketplaceSubscriptionActive=false;
+      $("marketplaceBadge").textContent="Error";
+      $("viewMarketplaceOffer").classList.remove("hidden");
+      setMsg("marketplaceMsg",e.message);
+      updatePlanButton();
+      return false;
+    }finally{
+      $("checkMarketplace").disabled=false;
+      $("checkMarketplace").textContent="Check subscription";
+      reportSize();
+    }
+  }
+
+  function renderMarketplacePlan(){
+    const index=Number($("marketplacePlanSelect").value);
+    const plan=currentMarketplaceOffer?.plans?.[index];
+    if(!plan){ setMsg("marketplacePlanDetails","Select a plan."); return; }
+    $("marketplacePlanDetails").textContent=[
+      "Plan: "+(plan.displayName||plan.dimensionKey),
+      "Price: "+marketplacePrice(plan),
+      plan.selector?.value?("Term: "+plan.selector.value):null,
+      plan.description||null
+    ].filter(Boolean).join("\n");
+  }
+
+  function renderMarketplaceOffer(offer){
+    currentMarketplaceOffer=offer;
+    currentMarketplaceQuote=null;
+    $("marketplaceQuoteBox").classList.add("hidden");
+    const seller=offer?.seller?.displayName||offer?.seller?.sellerProfileId||marketplaceText(offer?.seller);
+    $("marketplaceOfferSummary").textContent=[
+      "Product: Vodia PBX",
+      "Seller: "+seller,
+      "Pricing model: "+marketplaceText(offer?.pricingModel),
+      "AWS Offer ID: "+(offer?.offerId||"Unavailable"),
+      offer?.refundPolicy?("Refund policy: "+marketplaceText(offer.refundPolicy)):null
+    ].filter(Boolean).join("\n");
+
+    const offers=Array.isArray(offer?.availableOffers)?offer.availableOffers:[];
+    const offerField=$("marketplaceOfferField");
+    const offerSelect=$("marketplaceOfferSelect");
+    offerSelect.innerHTML="";
+    offers.forEach(row=>{
+      const op=document.createElement("option");
+      op.value=row.offerId;
+      const badges=(row.badges||[]).map(x=>x.displayName||x.badgeType).filter(Boolean);
+      op.textContent=(row.offerName||row.purchaseOptionName||row.offerId)+(badges.length?(" — "+badges.join(" · ")):"");
+      offerSelect.appendChild(op);
+    });
+    if(offer?.offerId) offerSelect.value=offer.offerId;
+    offerField.classList.toggle("hidden",offers.length<=1);
+
+    const plans=Array.isArray(offer?.plans)?offer.plans:[];
+    const planSelect=$("marketplacePlanSelect");
+    planSelect.innerHTML="";
+    plans.forEach((plan,index)=>{
+      const op=document.createElement("option");
+      op.value=String(index);
+      op.textContent=(plan.displayName||plan.dimensionKey)+" — "+marketplacePrice(plan)+(plan.selector?.value?(" — "+plan.selector.value):"");
+      planSelect.appendChild(op);
+    });
+    planSelect.disabled=plans.length===0;
+    $("prepareMarketplaceQuote").disabled=plans.length===0;
+    $("marketplaceAutoRenew").checked=false;
+    $("marketplaceAutoRenew").disabled=!offer?.autoRenewAvailable;
+    renderMarketplacePlan();
+
+    const legal=$("marketplaceLegal");
+    legal.innerHTML="";
+    (offer?.legalDocuments||[]).forEach((doc,index)=>{
+      if(!doc?.url) return;
+      const a=document.createElement("a");
+      a.href=doc.url;
+      a.target="_blank";
+      a.rel="noopener noreferrer";
+      a.textContent=doc.type||("Legal document "+(index+1));
+      legal.appendChild(a);
+    });
+    $("marketplaceOfferBox").classList.remove("hidden");
+    setMsg("marketplaceMsg",plans.length
+      ?"Live pricing and terms loaded from AWS Marketplace. Select a plan and prepare a quote before accepting anything."
+      :"AWS returned the offer, but no purchasable Vodia plans were found for this account.");
+    reportSize();
+  }
+
+  async function loadMarketplaceOffer(offerId){
+    const id=customerId();
+    if(!id) return;
+    try{
+      $("viewMarketplaceOffer").disabled=true;
+      $("viewMarketplaceOffer").textContent="Loading offer…";
+      setMsg("marketplaceMsg","Loading buyer-specific Vodia pricing and legal terms from AWS Marketplace…");
+      const args={customerId:id,productId:VODIA_MARKETPLACE_PRODUCT_ID};
+      if(offerId) args.offerId=offerId;
+      const r=dataFrom(await callTool("aws_marketplace_present_vodia_offer",args));
+      if(!r.offer?.offerId) throw new Error("AWS Marketplace did not return an available Vodia offer for this account.");
+      renderMarketplaceOffer(r.offer);
+    }catch(e){
+      $("marketplaceOfferBox").classList.add("hidden");
+      setMsg("marketplaceMsg",e.message);
+    }finally{
+      $("viewMarketplaceOffer").disabled=false;
+      $("viewMarketplaceOffer").textContent=marketplaceSubscriptionActive?"Start another subscription":"View plans & subscribe";
+      reportSize();
+    }
+  }
+
+  $("marketplaceAgreementSelect").addEventListener("change",()=>{
+    renderMarketplaceSubscription(Boolean(currentMarketplaceSubscription?.active),null,currentMarketplaceSubscription);
+    if(!$("pbxName").value.trim()){
+      setMsg("deployMsg","Subscription selected. Enter a unique PBX deployment name before validating the EC2 plan.");
+    }
+  });
+  $("checkMarketplace").addEventListener("click",checkMarketplaceSubscription);
+  $("viewMarketplaceOffer").addEventListener("click",()=>{
+    creatingNewMarketplaceSubscription=marketplaceSubscriptionActive;
+    loadMarketplaceOffer();
+  });
+  $("marketplaceOfferSelect").addEventListener("change",()=>loadMarketplaceOffer($("marketplaceOfferSelect").value));
+  $("marketplacePlanSelect").addEventListener("change",renderMarketplacePlan);
+
+  $("prepareMarketplaceQuote").addEventListener("click",async()=>{
+    const id=customerId();
+    const index=Number($("marketplacePlanSelect").value);
+    const plan=currentMarketplaceOffer?.plans?.[index];
+    const quantity=Number($("marketplaceQuantity").value||1);
+    if(!id||!plan){setMsg("marketplaceMsg","Select a Vodia Marketplace plan first.");return}
+    if(!Number.isInteger(quantity)||quantity<1){setMsg("marketplaceMsg","Quantity must be a whole number of at least 1.");return}
+    try{
+      $("prepareMarketplaceQuote").disabled=true;
+      $("prepareMarketplaceQuote").textContent="Preparing quote…";
+      setMsg("marketplaceMsg","Asking AWS to calculate the selected agreement charges and estimated taxes…");
+      const r=dataFrom(await callTool("aws_marketplace_prepare_vodia_purchase",{
+        customerId:id,
+        productId:VODIA_MARKETPLACE_PRODUCT_ID,
+        offerId:currentMarketplaceOffer.offerId,
+        dimensionKey:plan.dimensionKey,
+        quantity,
+        selectorValue:plan.selector?.value||undefined,
+        autoRenew:Boolean(currentMarketplaceOffer.autoRenewAvailable && $("marketplaceAutoRenew").checked)
+      }));
+      if(!r.agreementRequestId||!r.confirmation) throw new Error("AWS did not return a complete Marketplace quote.");
+      currentMarketplaceQuote=r;
+      const charge=r.chargeSummary||{};
+      const currency=charge.currencyCode||r.selectedPlan?.currencyCode||"USD";
+      const expected=(charge.expectedCharges||[]).map(x=>
+        "Expected charge ("+(x.timing||"timing unavailable")+"): "+currency+" "+(x.amount??"usage based")
+      );
+      $("marketplaceQuoteSummary").textContent=[
+        "AWS quote prepared — subscription not yet accepted",
+        "Plan: "+(r.selectedPlan?.displayName||plan.displayName||plan.dimensionKey),
+        "Quantity: "+quantity,
+        "Agreement value before tax: "+currency+" "+(charge.newAgreementValue??"usage based"),
+        charge.newAgreementValueAfterTax!==undefined?("Agreement value after tax: "+currency+" "+charge.newAgreementValueAfterTax):null,
+        charge.estimatedTaxes?.totalAmount!==undefined?("Estimated taxes: "+currency+" "+charge.estimatedTaxes.totalAmount):null,
+        ...expected,
+        "Auto-renew: "+(r.selectedPlan?.autoRenew?"Enabled":"Disabled"),
+        "Quote expires: "+r.expiresAt,
+        "",
+        "Required approval: "+r.confirmation
+      ].filter(x=>x!==null).join("\n");
+      $("marketplaceApproval").value="";
+      $("marketplaceApproval").placeholder=r.confirmation;
+      $("acceptMarketplaceQuote").disabled=true;
+      $("marketplaceQuoteBox").classList.remove("hidden");
+      setMsg("marketplaceMsg","Review the AWS-calculated quote. The subscription is created only after the exact approval is entered.");
+    }catch(e){
+      currentMarketplaceQuote=null;
+      $("marketplaceQuoteBox").classList.add("hidden");
+      setMsg("marketplaceMsg",e.message);
+    }finally{
+      $("prepareMarketplaceQuote").disabled=false;
+      $("prepareMarketplaceQuote").textContent="Prepare AWS quote";
+      reportSize();
+    }
+  });
+
+  $("marketplaceApproval").addEventListener("input",()=>{
+    $("acceptMarketplaceQuote").disabled=$("marketplaceApproval").value.trim()!==currentMarketplaceQuote?.confirmation;
+  });
+
+  $("acceptMarketplaceQuote").addEventListener("click",async()=>{
+    const confirmation=$("marketplaceApproval").value.trim();
+    if(!currentMarketplaceQuote?.agreementRequestId || confirmation!==currentMarketplaceQuote.confirmation){
+      setMsg("marketplaceMsg","Enter the exact approval shown in the AWS quote.");
+      return;
+    }
+    try{
+      $("acceptMarketplaceQuote").disabled=true;
+      $("acceptMarketplaceQuote").textContent="Accepting…";
+      setMsg("marketplaceMsg","Accepting the explicitly approved AWS Marketplace agreement…");
+      const r=dataFrom(await callTool("aws_marketplace_accept_vodia_purchase",{
+        agreementRequestId:currentMarketplaceQuote.agreementRequestId,
+        confirmation
+      }));
+      if(!r.agreementId) throw new Error("AWS did not confirm the Marketplace agreement acceptance.");
+      currentMarketplaceQuote=null;
+      $("marketplaceApproval").value="";
+      const active=r.subscriptionActive || await checkMarketplaceSubscription();
+      if(active){
+        await checkMarketplaceSubscription();
+        if($("marketplaceAgreementSelect") && r.agreementId){
+          const exists=[...$("marketplaceAgreementSelect").options].some(o=>o.value===r.agreementId);
+          if(exists) $("marketplaceAgreementSelect").value=r.agreementId;
+          renderMarketplaceSubscription(true,
+            "New Vodia Marketplace subscription is active. Now name the PBX deployment.",
+            currentMarketplaceSubscription);
+        }
+        if(creatingNewMarketplaceSubscription){
+          promptForPbxDeploymentName(r.agreementId);
+        }
+        creatingNewMarketplaceSubscription=false;
+      }else{
+        $("marketplaceBadge").textContent="Activating";
+        setMsg("marketplaceMsg","AWS accepted agreement "+r.agreementId+". Activation is still propagating; press Check subscription in a moment.");
+      }
+    }catch(e){
+      setMsg("marketplaceMsg",e.message);
+    }finally{
+      $("acceptMarketplaceQuote").textContent="Accept subscription";
+      $("acceptMarketplaceQuote").disabled=true;
+      reportSize();
+    }
+  });
+
+  async function advanceToAwsStep(){
+    if(!currentAwsConnection?.configured) return;
+    setStep(2);
+    await checkMarketplaceSubscription();
+  }
+
+  async function loadDeploymentRegions(){
+    const id=customerId();
+    if(!id || !currentAwsConnection?.configured) return;
+    try{
+      $("loadRegions").disabled=true;
+      $("loadRegions").textContent="Loading…";
+      setMsg("regionMsg","Loading available EC2 regions…");
+      const r=dataFrom(await callTool("aws_list_deployment_regions",{customerId:id}));
+      const regions=Array.isArray(r.regions)?r.regions:[];
+      const sel=$("regionSelect");
+      sel.innerHTML='<option value="">Select region…</option>';
+      regions
+        .filter(x=>x?.regionName)
+        .sort((a,b)=>String(a.regionName).localeCompare(String(b.regionName)))
+        .forEach(x=>{
+          const op=document.createElement("option");
+          op.value=x.regionName;
+          op.textContent=x.regionName;
+          sel.appendChild(op);
+        });
+      sel.disabled=regions.length===0;
+      if(regions.length===1){
+        sel.value=regions[0].regionName;
+        selectedRegion=regions[0].regionName;
+        $("continueDeploy").disabled=false;
+      }
+      setMsg("regionMsg",regions.length?("Found "+regions.length+" available region(s)."):"No deployment regions were returned.");
+    }catch(e){
+      setMsg("regionMsg",e.message);
+    }finally{
+      $("loadRegions").disabled=false;
+      $("loadRegions").textContent="Load regions";
+      reportSize();
+    }
+  }
+
+  $("continueAws").addEventListener("click",advanceToAwsStep);
+  $("backMarketplaceToCustomer").addEventListener("click",()=>setStep(1));
+  $("continueMarketplace").addEventListener("click",async()=>{
+    if(!marketplaceSubscriptionActive) return;
+    setStep(3);
+    await loadDeploymentRegions();
+  });
+  $("backToConfigure").addEventListener("click",()=>setStep(3));
+
+  $("loadRegions").addEventListener("click",loadDeploymentRegions);
+
+  $("regionSelect").addEventListener("change",()=>{
+    selectedRegion=$("regionSelect").value;
+    $("continueDeploy").disabled=!selectedRegion;
+    currentNetwork=null;
+    currentDeploymentPlan=null;
+    updatePlanButton();
+    reportSize();
+  });
+
+  $("backToCustomer").addEventListener("click",()=>setStep(2));
+
+  $("continueDeploy").addEventListener("click",()=>{
+    selectedRegion=$("regionSelect").value;
+    if(!selectedRegion) return;
+    setStep(3);
+    $("loadNetwork").click();
+  });
+
+  $("backToAws").addEventListener("click",()=>setStep(2));
+
+  function fillSelect(id,rows,valueKey,labelFn,emptyLabel){
+    const sel=$(id);
+    sel.innerHTML='<option value="">'+emptyLabel+'</option>';
+    rows.forEach(row=>{
+      const op=document.createElement("option");
+      op.value=row[valueKey]||"";
+      op.textContent=labelFn(row);
+      sel.appendChild(op);
+    });
+    sel.disabled=rows.length===0;
+  }
+
+  function filterNetworkForVpc(){
+    if(!currentNetwork) return;
+    const vpcId=$("vpcSelect").value;
+    const subnets=(currentNetwork.subnets||[]).filter(x=>!vpcId||x.vpcId===vpcId);
+    const groups=(currentNetwork.securityGroups||[]).filter(x=>!vpcId||x.vpcId===vpcId);
+    fillSelect("subnetSelect",subnets,"subnetId",x=>x.subnetId+" · "+(x.availabilityZone||"")+" · "+(x.cidrBlock||""),"Select subnet…");
+    fillSelect("securityGroupSelect",groups,"groupId",x=>x.groupName+" · "+x.groupId,"Select security group…");
+    const publicSubnet=subnets.find(x=>x.mapPublicIpOnLaunch) || subnets[0];
+    if(publicSubnet) $("subnetSelect").value=publicSubnet.subnetId;
+    const defaultGroup=groups.find(x=>x.groupName==="default") || groups[0];
+    if(defaultGroup) $("securityGroupSelect").value=defaultGroup.groupId;
+    updatePlanButton();
+  }
+
+  $("vpcSelect").addEventListener("change",filterNetworkForVpc);
+
+  ["pbxName","instanceType","subnetSelect","securityGroupSelect","regionSelect"].forEach(id=>{
+    $(id)?.addEventListener("input",updatePlanButton);
+    $(id)?.addEventListener("change",updatePlanButton);
+  });
+
+
+  $("loadNetwork").addEventListener("click",async()=>{
+    const id=customerId();
+    if(!id || !selectedRegion) return;
+    try{
+      $("loadNetwork").disabled=true;
+      $("loadNetwork").textContent="Loading…";
+      setMsg("deployMsg","Loading VPCs, subnets, security groups, and key pairs…");
+      const r=dataFrom(await callTool("aws_discover_deployment_network",{customerId:id,region:selectedRegion}));
+      currentNetwork=r;
+      updatePlanButton();
+      const vpcs=Array.isArray(r.vpcs)?r.vpcs:[];
+      fillSelect("vpcSelect",vpcs,"vpcId",x=>x.vpcId+" · "+(x.cidrBlock||"")+(x.isDefault?" · default":""),"Select VPC…");
+      const preferred=vpcs.find(x=>x.isDefault)||vpcs[0];
+      if(preferred) $("vpcSelect").value=preferred.vpcId;
+      filterNetworkForVpc();
+      const keys=Array.isArray(r.keyPairs)?r.keyPairs:[];
+      fillSelect("keyPairSelect",keys,"keyName",x=>x.keyName,"No key pair");
+      $("keyPairSelect").disabled=false;
+      let types=Array.isArray(r.instanceTypes)?r.instanceTypes:[];
+      if(!types.length){
+        types=[
+          {instanceType:"t3.micro",vcpus:2,memoryMiB:1024,freePlanEligible:true},
+          {instanceType:"t3.small",vcpus:2,memoryMiB:2048,freePlanEligible:true},
+          {instanceType:"t3.medium",vcpus:2,memoryMiB:4096,recommended:true},
+          {instanceType:"t3.large",vcpus:2,memoryMiB:8192}
+        ];
+      }
+      fillSelect("instanceType",types,"instanceType",x=>{
+        const flags=[];
+        if(x.freePlanEligible) flags.push("Free-plan eligible");
+        if(x.recommended) flags.push("Recommended");
+        const memory=x.memoryMiB?((x.memoryMiB/1024).toLocaleString()+" GiB RAM"):"";
+        const specs=[x.vcpus?(x.vcpus+" vCPU"):"",memory].filter(Boolean).join(" · ");
+        return x.instanceType+(flags.length?(" — "+flags.join(" · ")):"")+(specs?(" — "+specs):"");
+      },"Select instance type…");
+      const defaultType=types.find(x=>x.recommended)||types.find(x=>x.instanceType==="t3.medium")||types[0];
+      if(defaultType) $("instanceType").value=defaultType.instanceType;
+      const warning=r.instanceTypesWarning?" Instance types could not be verified for this region; the deployment DryRun will validate your choice.":"";
+      setMsg("deployMsg","AWS network and instance types loaded. Review the selections before creating the deployment plan."+warning);
+      updatePlanButton();
+    }catch(e){
+      currentNetwork=null;
+      updatePlanButton();
+      setMsg("deployMsg",e.message);
+    }finally{
+      $("loadNetwork").disabled=false;
+      $("loadNetwork").textContent=currentNetwork?"Reload EC2 options":"Load EC2 options";
+      reportSize();
+    }
+  });
+
+  $("planDeployment").addEventListener("click",async()=>{
+    const id=customerId();
+    const name=$("pbxName").value.trim();
+    const instanceType=$("instanceType").value.trim();
+    const subnetId=$("subnetSelect").value;
+    const securityGroupId=$("securityGroupSelect").value;
+    const keyName=$("keyPairSelect").value;
+    const storageGiB=Number($("storageGiB").value||20);
+    if(!name){
+      setMsg("deployMsg","Enter a unique PBX deployment name. The Marketplace subscription and PBX name are separate.");
+      $("pbxName").focus();
+      return;
+    }
+    if(!id||!selectedRegion||!instanceType||!subnetId||!securityGroupId){
+      setMsg("deployMsg","Complete the region, instance type, subnet, and security-group fields.");
+      return;
+    }
+    try{
+      $("planDeployment").disabled=true;
+      $("planDeployment").textContent="Validating…";
+      setMsg("deployMsg","Checking Vodia Marketplace subscription and running an EC2 DryRun…");
+      const subscription=dataFrom(await callTool("aws_marketplace_check_subscription",{
+        customerId:id,
+        productId:VODIA_MARKETPLACE_PRODUCT_ID
+      }));
+      if(!subscription.active){
+        renderMarketplaceSubscription(false);
+        $("viewMarketplaceOffer").focus();
+        throw new Error("Choose View plans & subscribe above to activate the required Vodia AWS Marketplace agreement.");
+      }
+      renderMarketplaceSubscription(true);
+      const rawPlanResult=await callTool("aws_marketplace_plan_vodia_pbx_deployment",{
+        customerId:id,
+        productId:VODIA_MARKETPLACE_PRODUCT_ID,
+        agreementId:$("marketplaceAgreementSelect")?.value||undefined,
+        region:selectedRegion,
+        subnetId,
+        securityGroupIds:[securityGroupId],
+        instanceType,
+        iamInstanceProfileName:"VodiaPBXMarketplaceEntitlementRole",
+        keyName:keyName||undefined,
+        storageGiB,
+        associatePublicIp:true,
+        name
+      });
+      if(rawPlanResult?.isError){
+        throw new Error(toolErrorText(rawPlanResult)||"Deployment planner failed.");
+      }
+      const plan=dataFrom(rawPlanResult);
+      if(!plan.planId||!plan.confirmation){
+        const reason=
+          plan?.error?.message||
+          plan?.error||
+          plan?.message||
+          plan?.details?.message||
+          plan?.details?.error||
+          plan?.data?.error||
+          "The deployment planner did not return an approval.";
+        throw new Error(typeof reason==="string"?reason:JSON.stringify(reason));
+      }
+      currentDeploymentPlan=plan;
+      const persistedPlan={
+        planId:plan.planId,
+        confirmation:plan.confirmation,
+        customerId:customerId(),
+        savedAt:Date.now()
+      };
+      try{sessionStorage.setItem("vodiaDeploymentPlan",JSON.stringify(persistedPlan));}catch(_e){}
+      $("approvalBox").dataset.planId=plan.planId||"";
+      $("approvalBox").dataset.confirmation=plan.confirmation||"";
+      const selectedAgreementId=
+        plan.selectedAgreement?.agreementId||
+        $("marketplaceAgreementSelect")?.value||
+        currentMarketplaceSubscription?.agreements?.[0]?.agreementId||
+        "verified";
+      $("planSummary").textContent=[
+        "Plan validated — no instance launched",
+        "Marketplace agreement: "+selectedAgreementId,
+        "Marketplace: Vodia PBX — ACTIVE",
+        "AWS account: "+(currentAwsConnection?.account||"Unknown"),
+        "Product ID: "+VODIA_MARKETPLACE_PRODUCT_ID,
+        "Agreement: "+(plan.selectedAgreement?.agreementId||$("marketplaceAgreementSelect")?.value||"Active agreement"),
+        "PBX: "+name,
+        "Region: "+selectedRegion,
+        "Instance: "+instanceType,
+        "Subnet: "+subnetId,
+        "Security group: "+securityGroupId,
+        "Storage: "+storageGiB+" GiB",
+        "",
+        "Required approval: "+plan.confirmation
+      ].join("\n");
+      $("planSummary").classList.remove("hidden");
+      $("approvalBox").classList.remove("hidden");
+      $("deploymentApproval").value="";
+      $("deploymentApproval").placeholder=plan.confirmation;
+      setMsg("deployMsg","DryRun passed. No EC2 instance has been launched. Enter the exact approval below to deploy.");
+      $("deploymentApproval").focus();
+      setStep(4);
+    }catch(e){
+      currentDeploymentPlan=null;
+      $("planSummary").classList.add("hidden");
+      $("approvalBox").classList.add("hidden");
+      setMsg("deployMsg",e.message);
+    }finally{
+      updatePlanButton();
+      $("planDeployment").textContent="Validate & Create Plan";
+      reportSize();
+    }
+  });
+
+  function resolvedDeploymentPlan(){
+    if(currentDeploymentPlan?.planId) return currentDeploymentPlan;
+    const box=$("approvalBox");
+    if(box?.dataset?.planId && box?.dataset?.confirmation){
+      return {planId:box.dataset.planId,confirmation:box.dataset.confirmation};
+    }
+    try{
+      const saved=JSON.parse(sessionStorage.getItem("vodiaDeploymentPlan")||"null");
+      if(saved?.planId && saved?.confirmation && Date.now()-Number(saved.savedAt||0)<15*60*1000){
+        return saved;
+      }
+    }catch(_e){}
+    return null;
+  }
+
+  $("deploymentApproval").addEventListener("input",()=>{
+    const plan=resolvedDeploymentPlan();
+    const entered=$("deploymentApproval").value.trim();
+    const matches=Boolean(plan?.confirmation && entered===plan.confirmation);
+    $("applyDeployment").disabled=!matches;
+    setMsg("deployMsg",entered
+      ? (matches?"Approval matches. Ready to deploy.":"Approval does not exactly match the validated plan.")
+      : "Paste the exact approval from the validated plan.");
+  });
+
+  
+  const deploymentPollDelay=(ms)=>new Promise(resolve=>setTimeout(resolve,ms));
+
+  function renderDeploymentStatus(status){
+    const state=status?.state||"pending";
+    $("planSummary").textContent=[
+      state==="running" ? "Vodia PBX is running" : "Deployment status",
+      "Instance ID: "+(status?.instanceId||"pending"),
+      "State: "+state,
+      "Region: "+(status?.region||selectedRegion||""),
+      "Marketplace agreement: "+(
+        status?.agreementId||
+        launchResult?.agreementId||
+        $("marketplaceAgreementSelect")?.value||
+        "verified"
+      ),
+      "Public IP: "+(status?.publicIpAddress||"pending"),
+      "Public DNS: "+(status?.publicDnsName||"pending"),
+      "Instance type: "+(status?.instanceType||"pending"),
+      "AMI: "+(status?.imageId||"pending")
+    ].join("\n");
+    $("planSummary").classList.remove("hidden");
+  }
+
+  async function pollDeploymentStatus(launchResult){
+    const instanceId=launchResult?.instanceId;
+    const region=launchResult?.region||selectedRegion;
+    const id=customerId();
+    if(!instanceId||!region||!id) return;
+
+    renderDeploymentStatus(launchResult);
+    for(let attempt=0;attempt<24;attempt++){
+      if(attempt>0) await deploymentPollDelay(5000);
+      try{
+        const status=dataFrom(await callTool("aws_get_vodia_pbx_deployment_status",{
+          customerId:id,
+          region,
+          instanceId
+        }));
+        renderDeploymentStatus({...launchResult,...status,region});
+        const state=String(status?.state||"").toLowerCase();
+        if(state==="running"){
+          setMsg("deployMsg","Vodia PBX is running. The real AWS instance ID, public IP, and public DNS are shown above.");
+          return;
+        }
+        if(["stopped","shutting-down","terminated"].includes(state)){
+          setMsg("deployMsg","Vodia PBX deployment reached state: "+state+".");
+          return;
+        }
+        setMsg("deployMsg","Deployment is "+(state||"pending")+" — waiting for AWS network details…");
+      }catch(e){
+        setMsg("deployMsg","Instance launched, but automatic status refresh failed: "+e.message);
+        return;
+      }finally{
+        reportSize();
+      }
+    }
+    setMsg("deployMsg","Instance launched. AWS is still starting it; use Refresh or deployment status to check again.");
+  }
+
+$("applyDeployment").addEventListener("click",async()=>{
+    const plan=resolvedDeploymentPlan();
+    if(!plan?.planId){
+      setMsg("deployMsg","Deployment plan state was lost or expired. Click Validate & Create Plan again.");
+      return;
+    }
+    const confirmation=$("deploymentApproval").value.trim();
+    if(confirmation!==plan.confirmation){
+      setMsg("deployMsg","Enter the exact approval shown in the validated plan.");
+      return;
+    }
+    try{
+      $("applyDeployment").disabled=true;
+      $("applyDeployment").textContent="Deploying…";
+      setMsg("deployMsg","Launching the approved Vodia PBX EC2 instance…");
+      const result=dataFrom(await callTool("aws_marketplace_apply_vodia_pbx_deployment",{
+        planId:plan.planId,
+        confirmation
+      }));
+      $("planSummary").textContent=[
+        "Deployment started",
+        "Instance ID: "+(result.instanceId||"pending"),
+        "State: "+(result.state||"pending"),
+        "AWS verification: "+(result.launchVerifiedByDescribeInstances?"PASSED":"NOT CONFIRMED"),
+        "Instance ID source: "+(result.instanceIdSource||"unknown"),
+        "Region: "+(result.region||selectedRegion),
+        "Public IP: "+(result.publicIpAddress||"pending"),
+        "Public DNS: "+(result.publicDnsName||"pending")
+      ].join("\n");
+      $("approvalBox").classList.add("hidden");
+      $("applyDeployment").disabled=true;
+      setMsg("deployMsg","Vodia PBX deployment started successfully. Waiting for AWS to report running state and public network details…");
+      await pollDeploymentStatus(result);
+      currentDeploymentPlan=null;
+      try{sessionStorage.removeItem("vodiaDeploymentPlan");}catch(_e){}
+      $("approvalBox").dataset.planId="";
+      $("approvalBox").dataset.confirmation="";
+    }catch(e){
+      setMsg("deployMsg",e.message);
+    }finally{
+      if(!$("approvalBox").classList.contains("hidden")){
+        $("applyDeployment").disabled=$("deploymentApproval").value.trim()!==resolvedDeploymentPlan()?.confirmation;
+      }
+      $("applyDeployment").textContent="Deploy Vodia PBX";
+      reportSize();
+    }
+  });
+
+  $("debugBtn").addEventListener("click",()=>{
+    $("debugDrawer").classList.toggle("hidden");
+    debugSnapshot();
+    reportSize();
+  });
+  $("debugClear").addEventListener("click",()=>{
+    debugEntries=[];
+    debugSeq=0;
+    renderDebug();
+    debugLog("info","TRACE CLEARED");
+  });
+  $("debugCopy").addEventListener("click",async()=>{
+    const text=debugEntries.map(x=>x.text).join("\n");
+    try{
+      await navigator.clipboard.writeText(text);
+      debugLog("info","TRACE COPIED",{lines:debugEntries.length});
+    }catch(e){
+      debugLog("error","COPY FAILED",{message:e.message});
+    }
+  });
+
+  $("changeCustomerBtn").addEventListener("click",()=>{
+    setStep(1);
+    $("customerSelect").focus();
+    reportSize();
+  });
+  $("expandBtn").addEventListener("click",async()=>{
+    const canFullscreen=Array.isArray(hostContext.availableDisplayModes)
+      && hostContext.availableDisplayModes.includes("fullscreen");
+    if(!canFullscreen) return;
+    const next=hostContext.displayMode==="fullscreen"?"inline":"fullscreen";
+    await requestDisplayMode(next);
+  });
+
+  $("refresh").addEventListener("click",()=>refreshAll().catch(e=>setStatus(false,e.message)));
+
+  if("ResizeObserver" in window){
+    const ro=new ResizeObserver(()=>reportSize());
+    ro.observe(document.body);
+  }
+
+  window.addEventListener("load",reportSize);
+  window.addEventListener("resize",reportSize);
+
+  consolidateGuidedLayout();
+
+  debugLog("info","UI START",{
+    uiVersion:"0.14.9.72",
+    userAgent:navigator.userAgent,
+    hasOpenAiBridge:Boolean(window.openai?.callTool)
+  });
+
+  (async()=>{
+    try{
+      await initBridge();
+      await refreshAll();
+      setStep(1);
+      updateCustomerContext();
+      reportSize();
+    }catch(e){
+      setStatus(false,e.message);
+      reportSize();
+    }
+  })();
+})();
+</script>
+</body>
+</html>
