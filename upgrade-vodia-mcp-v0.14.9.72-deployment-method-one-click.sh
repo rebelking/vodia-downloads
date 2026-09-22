@@ -300,12 +300,24 @@ method='''        <div id="marketplaceMount"></div>
         <div class="nav-actions">'''
 s=s.replace(anchor,method,1)
 
-# State.
-state_anchor='''  let pendingNetworkReload = false;'''
-if state_anchor not in s: raise SystemExit("PATCH ERROR: state anchor missing")
-s=s.replace(state_anchor,state_anchor+'''
-  let deploymentMethod = "MANAGED_EC2";
-  let oneClickRecommendation = null;''',1)
+# State. Live cumulative UI variants do not all carry pendingNetworkReload,
+# so insert relative to whichever stable deployment-state declaration exists.
+if 'let deploymentMethod = "MANAGED_EC2";' not in s:
+    state_insert='''  let deploymentMethod = "MANAGED_EC2";
+  let oneClickRecommendation = null;
+'''
+    candidates=[
+        '  let pendingNetworkReload = false;\n',
+        '  let currentNetwork = null;\n',
+        '  let currentDeploymentPlan = null;\n',
+        '  let selectedRegion = "";\n'
+    ]
+    for candidate in candidates:
+        if candidate in s:
+            s=s.replace(candidate,candidate+state_insert,1)
+            break
+    else:
+        raise SystemExit("PATCH ERROR: no compatible deployment-state anchor found")
 
 # Add helpers before updatePlanButton.
 anchor='''  function updatePlanButton(){'''
