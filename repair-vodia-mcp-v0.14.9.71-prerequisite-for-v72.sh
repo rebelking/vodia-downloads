@@ -259,9 +259,10 @@ new='''        "PBX: "+name,
 if old not in s: raise SystemExit("PATCH ERROR: review summary anchor missing")
 s=s.replace(old,new,1)
 
-old='''      "AMI: "+(status?.imageId||launchResult?.imageId||"")
+if 'Marketplace AMI verified:' not in s:
+    old='''      "AMI: "+(status?.imageId||launchResult?.imageId||"")
     ].filter(Boolean).join("\\n");'''
-new='''      "AMI: "+(status?.imageId||launchResult?.imageId||""),
+    new='''      "AMI: "+(status?.imageId||launchResult?.imageId||""),
       "AMI name: "+(status?.marketplaceAmi?.imageName||launchResult?.marketplaceAmi?.imageName||""),
       "Marketplace AMI verified: "+((status?.marketplaceAmiVerified||launchResult?.marketplaceAmi?.verified)?"YES":"NO"),
       "PBX access URL: "+(status?.pbxAccessUrl||"waiting for public DNS/IP"),
@@ -270,8 +271,18 @@ new='''      "AMI: "+(status?.imageId||launchResult?.imageId||""),
         ?("Marketplace access instructions: "+(status?.marketplaceUsageInstructions||launchResult?.marketplaceAmi?.usageInstructions))
         :null
     ].filter(Boolean).join("\\n");'''
-if old not in s: raise SystemExit("PATCH ERROR: running summary anchor missing")
-s=s.replace(old,new,1)
+    if old in s:
+        s=s.replace(old,new,1)
+    else:
+        monitor='''      "AMI: "+(status?.imageId||"Unknown"),'''
+        monitor_new='''      "AMI: "+(status?.imageId||"Unknown"),
+      "AMI name: "+(status?.marketplaceAmi?.imageName||"Unknown"),
+      "Marketplace AMI verified: "+(status?.marketplaceAmiVerified?"YES":"NO"),
+      "PBX access URL: "+(status?.pbxAccessUrl||"waiting for public DNS/IP"),
+      "SSH username: "+(status?.sshUsername||"root"),
+      status?.marketplaceUsageInstructions?("Marketplace access instructions: "+status.marketplaceUsageInstructions):null,''';
+        if monitor not in s: raise SystemExit("PATCH ERROR: neither legacy nor live deployment-monitor AMI anchor was found")
+        s=s.replace(monitor,monitor_new,1)
 
 s=re.sub(r'uiVersion:"0\.14\.9\.\d+"','uiVersion:"0.14.9.71"',s)
 s=re.sub(r'appInfo:\{name:"vodia-setup",version:"[^"]+"\}','appInfo:{name:"vodia-setup",version:"1.29.0"}',s,count=1)
