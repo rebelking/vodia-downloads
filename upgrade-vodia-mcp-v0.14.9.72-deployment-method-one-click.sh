@@ -397,32 +397,42 @@ s=s.replace('''    setStep(3);
     applyDeploymentMethodUi();
     await loadDeploymentRegions();''',1)
 
-# Replace loadNetwork handler call with branch while preserving existing population code.
-old='''      setMsg("deployMsg","Loading VPCs, subnets, security groups, and key pairs…");
-      const r=dataFrom(await callTool("aws_discover_deployment_network",{customerId:id,region:requestedRegion}));
-      if(requestedRegion!==selectedRegion) return;
-      currentNetwork=r;'''
-new='''      const oneClick=deploymentMethod==="ONE_CLICK_MARKETPLACE";
-      setMsg("deployMsg",oneClick?"Resolving exact Vodia Marketplace AMI and preparing one-click AWS settings…":"Loading VPCs, subnets, security groups, and key pairs…");
-      let r;
-      if(oneClick){
-        const raw=await callTool("aws_marketplace_prepare_vodia_one_click",{
-          customerId:id,
-          productId:VODIA_MARKETPLACE_PRODUCT_ID,
-          agreementId:$("marketplaceAgreementSelect")?.value||undefined,
-          region:requestedRegion
-        });
-        if(raw?.isError) throw new Error(toolErrorText(raw)||"One-click preparation failed.");
-        oneClickRecommendation=dataFrom(raw);
-        r=oneClickRecommendation.network||{};
-      }else{
-        oneClickRecommendation=null;
-        r=dataFrom(await callTool("aws_discover_deployment_network",{customerId:id,region:requestedRegion}));
-      }
-      if(requestedRegion!==selectedRegion) return;
-      currentNetwork=r;'''
-if old not in s: raise SystemExit("PATCH ERROR: loadNetwork call anchor missing")
-s=s.replace(old,new,1)
+# Replace the network-discovery call inside the live loadNetwork handler.
+# Cumulative UIs vary in surrounding status text, so anchor on the tool call itself.
+load_start=s.find('$("loadNetwork").addEventListener("click",async()=>{')
+if load_start<0:
+    raise SystemExit("PATCH ERROR: loadNetwork handler missing")
+load_end=s.find('\n  $("planDeployment").addEventListener',load_start)
+if load_end<0:
+    raise SystemExit("PATCH ERROR: loadNetwork handler end missing")
+block=s[load_start:load_end]
+if 'aws_marketplace_prepare_vodia_one_click' not in block:
+    import re
+    pattern=r'(?P<indent>[ \t]*)const\s+r\s*=\s*dataFrom\(await\s+callTool\("aws_discover_deployment_network",\s*\{\s*customerId\s*:\s*id\s*,\s*region\s*:\s*requestedRegion\s*\}\s*\)\s*\)\s*;'
+    m=re.search(pattern,block,re.S)
+    if not m:
+        raise SystemExit("PATCH ERROR: compatible aws_discover_deployment_network call not found inside loadNetwork handler")
+    indent=m.group('indent')
+    replacement=indent+'''const oneClick=deploymentMethod==="ONE_CLICK_MARKETPLACE";
+'''+indent+'''let r;
+'''+indent+'''if(oneClick){
+'''+indent+'''  setMsg("deployMsg","Resolving exact Vodia Marketplace AMI and preparing one-click AWS settings…");
+'''+indent+'''  const raw=await callTool("aws_marketplace_prepare_vodia_one_click",{
+'''+indent+'''    customerId:id,
+'''+indent+'''    productId:VODIA_MARKETPLACE_PRODUCT_ID,
+'''+indent+'''    agreementId:$("marketplaceAgreementSelect")?.value||undefined,
+'''+indent+'''    region:requestedRegion
+'''+indent+'''  });
+'''+indent+'''  if(raw?.isError) throw new Error(toolErrorText(raw)||"One-click preparation failed.");
+'''+indent+'''  oneClickRecommendation=dataFrom(raw);
+'''+indent+'''  r=oneClickRecommendation.network||{};
+'''+indent+'''}else{
+'''+indent+'''  oneClickRecommendation=null;
+'''+indent+'''  r=dataFrom(await callTool("aws_discover_deployment_network",{customerId:id,region:requestedRegion}));
+'''+indent+'''}'''
+    block=block[:m.start()]+replacement+block[m.end():]
+    s=s[:load_start]+block+s[load_end:]
+
 
 # After current population has run, force one-click selections to backend recommendation.
 anchor='''      const warning=r.instanceTypesWarning?" Instance types could not be verified for this region; the deployment DryRun will validate your choice.":"";
