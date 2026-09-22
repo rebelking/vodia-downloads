@@ -2,8 +2,8 @@
 # Vodia MCP v0.14.9.72 — deployment method selector + Marketplace one-click defaults
 set -Eeuo pipefail
 
-APP="\${VODIA_MCP_APP_DIR:-/opt/vodia-mcp}"
-SERVICE="\${VODIA_MCP_SERVICE:-vodia-mcp}"
+APP="${VODIA_MCP_APP_DIR:-/opt/vodia-mcp}"
+SERVICE="${VODIA_MCP_SERVICE:-vodia-mcp}"
 UI="$APP/ui/msp-guided-app.html"
 GUIDED="$APP/msp-guided-app-v1.js"
 BACKEND="$APP/aws-marketplace-ec2-deploy-v1.js"
@@ -11,12 +11,12 @@ VERSION="$APP/version.js"
 TO_VER="0.14.9.72"
 V71_URL="https://raw.githubusercontent.com/rebelking/vodia-downloads/main/upgrade-vodia-mcp-v0.14.9.71-exact-marketplace-ami-access.sh"
 STAMP="$(date -u +%Y%m%d-%H%M%S)"
-BACKUP_DIR="\${VODIA_MCP_BACKUP_ROOT:-/var/backups}/vodia-mcp-v\${TO_VER}-deployment-method-$STAMP"
+BACKUP_DIR="${VODIA_MCP_BACKUP_ROOT:-/var/backups}/vodia-mcp-v${TO_VER}-deployment-method-$STAMP"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 fail(){ echo "FAIL: $*" >&2; exit 1; }
 
-[[ \${EUID} -eq 0 ]] || fail "run as root"
+[[ ${EUID} -eq 0 ]] || fail "run as root"
 for c in python3 node grep install systemctl curl; do command -v "$c" >/dev/null 2>&1 || fail "$c is required"; done
 for f in "$UI" "$GUIDED" "$BACKEND" "$VERSION"; do [[ -f "$f" ]] || fail "missing $f"; done
 
@@ -42,11 +42,11 @@ case "$CURRENT" in
     ;;
   0.14.9.71) ;;
   0.14.9.72) echo "v0.14.9.72 already installed; verification mode." ;;
-  *) fail "expected v0.14.9.70, .71, or .72; found \${CURRENT:-unknown}" ;;
+  *) fail "expected v0.14.9.70, .71, or .72; found ${CURRENT:-unknown}" ;;
 esac
 [[ "$CURRENT" == "0.14.9.71" || "$CURRENT" == "0.14.9.72" ]] || fail "v0.14.9.71 prerequisite did not complete"
 
-echo "=== Vodia MCP v\${TO_VER} — deployment method selector + one-click defaults ==="
+echo "=== Vodia MCP v${TO_VER} — deployment method selector + one-click defaults ==="
 mkdir -p "$TMP/staged"
 cp -a "$UI" "$TMP/staged/msp-guided-app.html"
 cp -a "$GUIDED" "$TMP/staged/msp-guided-app-v1.js"
