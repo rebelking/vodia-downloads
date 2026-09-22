@@ -15,6 +15,7 @@ BACKUP_DIR="${VODIA_MCP_BACKUP_ROOT:-/var/backups}/vodia-mcp-v${TO_VER}-deployme
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 fail(){ echo "FAIL: $*" >&2; exit 1; }
+DRY_RUN_ONLY="${VODIA_MCP_DRY_RUN:-0}"
 
 [[ ${EUID} -eq 0 ]] || fail "run as root"
 for c in python3 node grep install systemctl curl; do command -v "$c" >/dev/null 2>&1 || fail "$c is required"; done
@@ -530,6 +531,13 @@ grep -Fq 'ONE-CLICK MARKETPLACE SETTINGS' "$TMP/staged/msp-guided-app.html" || f
 grep -Fq 'aws_marketplace_prepare_vodia_one_click' "$TMP/staged/msp-guided-app.html" || fail "one-click tool invocation missing"
 grep -Fq 'uiVersion:"0.14.9.72"' "$TMP/staged/msp-guided-app.html" || fail "debug version marker missing"
 echo "PASS: deployment method selector + one-click UX present"
+
+if [[ "$DRY_RUN_ONLY" == "1" ]]; then
+  echo
+  echo "DRY RUN PASS: staged patch and validation completed successfully."
+  echo "DRY RUN: no live files changed, no service restarted, no AWS resources changed."
+  exit 0
+fi
 
 if [[ "$NEED_PATCH" == "1" ]]; then
 echo "[5/8] Backup"
