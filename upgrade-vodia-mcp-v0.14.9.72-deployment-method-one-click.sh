@@ -397,8 +397,9 @@ s=s.replace('''    setStep(3);
     applyDeploymentMethodUi();
     await loadDeploymentRegions();''',1)
 
-# Replace the network-discovery call inside the live loadNetwork handler.
-# Cumulative UIs vary in surrounding status text, so anchor on the tool call itself.
+# Replace the network-discovery statement inside the live loadNetwork handler.
+# Do not depend on argument formatting: locate the actual call text, then replace
+# the containing JS statement while preserving that original statement for managed mode.
 load_start=s.find('$("loadNetwork").addEventListener("click",async()=>{')
 if load_start<0:
     raise SystemExit("PATCH ERROR: loadNetwork handler missing")
@@ -407,12 +408,27 @@ if load_end<0:
     raise SystemExit("PATCH ERROR: loadNetwork handler end missing")
 block=s[load_start:load_end]
 if 'aws_marketplace_prepare_vodia_one_click' not in block:
-    import re
-    pattern=r'(?P<indent>[ \t]*)const\s+r\s*=\s*dataFrom\(await\s+callTool\("aws_discover_deployment_network",\s*\{\s*customerId\s*:\s*id\s*,\s*region\s*:\s*requestedRegion\s*\}\s*\)\s*\)\s*;'
-    m=re.search(pattern,block,re.S)
-    if not m:
-        raise SystemExit("PATCH ERROR: compatible aws_discover_deployment_network call not found inside loadNetwork handler")
-    indent=m.group('indent')
+    call_pos=block.find('callTool("aws_discover_deployment_network"')
+    if call_pos<0:
+        call_pos=block.find("callTool('aws_discover_deployment_network'")
+    if call_pos<0:
+        raise SystemExit("PATCH ERROR: aws_discover_deployment_network call not found anywhere inside loadNetwork handler")
+
+    stmt_start=block.rfind('\n',0,call_pos)+1
+    stmt_end=block.find(';',call_pos)
+    if stmt_end<0:
+        raise SystemExit("PATCH ERROR: network discovery statement terminator not found")
+    stmt_end+=1
+    original_stmt=block[stmt_start:stmt_end]
+    indent=original_stmt[:len(original_stmt)-len(original_stmt.lstrip())]
+    managed_stmt=original_stmt
+    if 'const r' in managed_stmt:
+        managed_stmt=managed_stmt.replace('const r','r',1)
+    elif 'let r' in managed_stmt:
+        managed_stmt=managed_stmt.replace('let r','r',1)
+    elif not managed_stmt.lstrip().startswith('r='):
+        raise SystemExit("PATCH ERROR: network discovery result is not assigned to r")
+
     replacement=indent+'''const oneClick=deploymentMethod==="ONE_CLICK_MARKETPLACE";
 '''+indent+'''let r;
 '''+indent+'''if(oneClick){
@@ -427,10 +443,9 @@ if 'aws_marketplace_prepare_vodia_one_click' not in block:
 '''+indent+'''  oneClickRecommendation=dataFrom(raw);
 '''+indent+'''  r=oneClickRecommendation.network||{};
 '''+indent+'''}else{
-'''+indent+'''  oneClickRecommendation=null;
-'''+indent+'''  r=dataFrom(await callTool("aws_discover_deployment_network",{customerId:id,region:requestedRegion}));
+'''+managed_stmt+''' 
 '''+indent+'''}'''
-    block=block[:m.start()]+replacement+block[m.end():]
+    block=block[:stmt_start]+replacement+block[stmt_end:]
     s=s[:load_start]+block+s[load_end:]
 
 
