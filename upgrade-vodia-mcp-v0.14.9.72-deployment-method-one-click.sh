@@ -41,10 +41,22 @@ case "$CURRENT" in
     CURRENT="$(read_version)"
     ;;
   0.14.9.71) ;;
-  0.14.9.72) echo "v0.14.9.72 already installed; verification mode." ;;
+  0.14.9.72) echo "v0.14.9.72 version detected; verifying cumulative markers." ;;
   *) fail "expected v0.14.9.70, .71, or .72; found ${CURRENT:-unknown}" ;;
 esac
 [[ "$CURRENT" == "0.14.9.71" || "$CURRENT" == "0.14.9.72" ]] || fail "v0.14.9.71 prerequisite did not complete"
+
+NEED_PATCH=0
+if [[ "$CURRENT" == "0.14.9.71" ]]; then
+  NEED_PATCH=1
+elif ! grep -Fq 'VODIA_DEPLOYMENT_METHOD_V72' "$BACKEND" || ! grep -Fq 'data-deployment-method="v0.14.9.72"' "$UI"; then
+  echo "[repair] Version reports v0.14.9.72 but cumulative v72 markers are missing; repairing live files."
+  NEED_PATCH=1
+fi
+
+if [[ "$NEED_PATCH" == "1" ]] && ! grep -Fq 'VODIA_EXACT_MARKETPLACE_AMI_V71' "$BACKEND"; then
+  fail "v0.14.9.71 exact Marketplace AMI backend marker is missing. Install the v71 repair prerequisite first."
+fi
 
 echo "=== Vodia MCP v${TO_VER} — deployment method selector + one-click defaults ==="
 mkdir -p "$TMP/staged"
@@ -53,7 +65,7 @@ cp -a "$GUIDED" "$TMP/staged/msp-guided-app-v1.js"
 cp -a "$BACKEND" "$TMP/staged/aws-marketplace-ec2-deploy-v1.js"
 cp -a "$VERSION" "$TMP/staged/version.js"
 
-if [[ "$CURRENT" != "$TO_VER" ]]; then
+if [[ "$NEED_PATCH" == "1" ]]; then
 echo "[1/8] Patch staged backend — NO LIVE CHANGES"
 python3 - "$TMP/staged/aws-marketplace-ec2-deploy-v1.js" <<'PY'
 from pathlib import Path
@@ -519,7 +531,7 @@ grep -Fq 'aws_marketplace_prepare_vodia_one_click' "$TMP/staged/msp-guided-app.h
 grep -Fq 'uiVersion:"0.14.9.72"' "$TMP/staged/msp-guided-app.html" || fail "debug version marker missing"
 echo "PASS: deployment method selector + one-click UX present"
 
-if [[ "$CURRENT" != "$TO_VER" ]]; then
+if [[ "$NEED_PATCH" == "1" ]]; then
 echo "[5/8] Backup"
 mkdir -p "$BACKUP_DIR"
 cp -a "$UI" "$BACKUP_DIR/msp-guided-app.html"
