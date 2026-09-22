@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
 # Vodia MCP v0.14.9.71 — exact Marketplace AMI binding + access instructions
 set -Eeuo pipefail
-APP="\${VODIA_MCP_APP_DIR:-/opt/vodia-mcp}"
-SERVICE="\${VODIA_MCP_SERVICE:-vodia-mcp}"
+APP="${VODIA_MCP_APP_DIR:-/opt/vodia-mcp}"
+SERVICE="${VODIA_MCP_SERVICE:-vodia-mcp}"
 UI="$APP/ui/msp-guided-app.html"
 GUIDED="$APP/msp-guided-app-v1.js"
 BACKEND="$APP/aws-marketplace-ec2-deploy-v1.js"
 VERSION="$APP/version.js"
 TO_VER="0.14.9.71"
 STAMP="$(date -u +%Y%m%d-%H%M%S)"
-BACKUP_DIR="\${VODIA_MCP_BACKUP_ROOT:-/var/backups}/vodia-mcp-v\${TO_VER}-exact-marketplace-ami-$STAMP"
+BACKUP_DIR="${VODIA_MCP_BACKUP_ROOT:-/var/backups}/vodia-mcp-v${TO_VER}-exact-marketplace-ami-$STAMP"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 fail(){ echo "FAIL: $*" >&2; exit 1; }
 
-[[ \${EUID} -eq 0 ]] || fail "run as root"
+[[ ${EUID} -eq 0 ]] || fail "run as root"
 for c in python3 node grep install systemctl curl; do command -v "$c" >/dev/null 2>&1 || fail "$c is required"; done
 for f in "$UI" "$GUIDED" "$BACKEND" "$VERSION"; do [[ -f "$f" ]] || fail "missing $f"; done
 
@@ -29,10 +29,10 @@ PY
 case "$CURRENT" in
   0.14.9.70) ;;
   0.14.9.71) echo "v0.14.9.71 already installed; verification mode." ;;
-  *) fail "expected v0.14.9.70; found \${CURRENT:-unknown}. Install through v0.14.9.70 first." ;;
+  *) fail "expected v0.14.9.70; found ${CURRENT:-unknown}. Install through v0.14.9.70 first." ;;
 esac
 
-echo "=== Vodia MCP v\${TO_VER} — exact Marketplace AMI binding + access instructions ==="
+echo "=== Vodia MCP v${TO_VER} — exact Marketplace AMI binding + access instructions ==="
 mkdir -p "$TMP/staged"
 cp -a "$UI" "$TMP/staged/msp-guided-app.html"
 cp -a "$GUIDED" "$TMP/staged/msp-guided-app-v1.js"
