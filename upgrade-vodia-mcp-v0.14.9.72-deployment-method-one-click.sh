@@ -449,34 +449,54 @@ if 'aws_marketplace_prepare_vodia_one_click' not in block:
     s=s[:load_start]+block+s[load_end:]
 
 
-# After current population has run, force one-click selections to backend recommendation.
-anchor='''      const warning=r.instanceTypesWarning?" Instance types could not be verified for this region; the deployment DryRun will validate your choice.":"";
-      setMsg("deployMsg","AWS network, regional SSH key pairs, and instance types loaded for "+requestedRegion+". Review the selections before creating the deployment plan."+warning);
-      updatePlanButton();'''
-if anchor not in s: raise SystemExit("PATCH ERROR: network completion anchor missing")
-replacement='''      const warning=r.instanceTypesWarning?" Instance types could not be verified for this region; the deployment DryRun will validate your choice.":"";
-      if(deploymentMethod==="ONE_CLICK_MARKETPLACE" && oneClickRecommendation?.defaults){
-        const d=oneClickRecommendation.defaults;
-        if(d.vpcId) $("vpcSelect").value=d.vpcId;
-        filterNetworkForVpc();
-        if(d.subnetId) $("subnetSelect").value=d.subnetId;
-        if(d.securityGroupId) $("securityGroupSelect").value=d.securityGroupId;
-        if(d.instanceType){
-          if(!Array.from($("instanceType").options).some(op=>op.value===d.instanceType)){
-            const op=document.createElement("option");op.value=d.instanceType;op.textContent=d.instanceType+" — Vendor recommended";$("instanceType").appendChild(op);
-          }
-          $("instanceType").value=d.instanceType;
-        }
-        $("keyPairSelect").value="";
-        if(d.rootVolumeSizeGiB) $("storageGiB").value=String(d.rootVolumeSizeGiB);
-        renderOneClickRecommendation(oneClickRecommendation);
-        setMsg("deployMsg","One-click settings prepared from the exact Vodia Marketplace AMI, Marketplace recommendation, and the customer AWS defaults. Review the summary, then validate the plan.");
-      }else{
-        setMsg("deployMsg","AWS network, regional SSH key pairs, and instance types loaded for "+requestedRegion+". Review the selections before creating the deployment plan."+warning);
-      }
-      applyDeploymentMethodUi();
-      updatePlanButton();'''
-s=s.replace(anchor,replacement,1)
+# After the network/type lists are populated, apply one-click defaults.
+# Cumulative UIs use different success-message text, so anchor on the warning
+# declaration and the following updatePlanButton() call rather than the message.
+load_start=s.find('$("loadNetwork").addEventListener("click",async()=>{')
+if load_start<0:
+    raise SystemExit("PATCH ERROR: loadNetwork handler missing during completion patch")
+load_end=s.find('\n  $("planDeployment").addEventListener',load_start)
+if load_end<0:
+    raise SystemExit("PATCH ERROR: loadNetwork handler end missing during completion patch")
+block=s[load_start:load_end]
+warning_text='const warning=r.instanceTypesWarning?" Instance types could not be verified for this region; the deployment DryRun will validate your choice.":"";'
+wpos=block.find(warning_text)
+if wpos<0:
+    raise SystemExit("PATCH ERROR: instanceTypesWarning declaration missing inside loadNetwork handler")
+upos=block.find('updatePlanButton();',wpos)
+if upos<0:
+    raise SystemExit("PATCH ERROR: updatePlanButton missing after instanceTypesWarning")
+uend=upos+len('updatePlanButton();')
+indent=block[block.rfind('\n',0,wpos)+1:wpos]
+
+replacement=indent+warning_text+'''
+'''+indent+'''if(deploymentMethod==="ONE_CLICK_MARKETPLACE" && oneClickRecommendation?.defaults){
+'''+indent+'''  const d=oneClickRecommendation.defaults;
+'''+indent+'''  if(d.vpcId) $("vpcSelect").value=d.vpcId;
+'''+indent+'''  filterNetworkForVpc();
+'''+indent+'''  if(d.subnetId) $("subnetSelect").value=d.subnetId;
+'''+indent+'''  if(d.securityGroupId) $("securityGroupSelect").value=d.securityGroupId;
+'''+indent+'''  if(d.instanceType){
+'''+indent+'''    if(!Array.from($("instanceType").options).some(op=>op.value===d.instanceType)){
+'''+indent+'''      const op=document.createElement("option");
+'''+indent+'''      op.value=d.instanceType;
+'''+indent+'''      op.textContent=d.instanceType+" — Vendor recommended";
+'''+indent+'''      $("instanceType").appendChild(op);
+'''+indent+'''    }
+'''+indent+'''    $("instanceType").value=d.instanceType;
+'''+indent+'''  }
+'''+indent+'''  $("keyPairSelect").value="";
+'''+indent+'''  if(d.rootVolumeSizeGiB) $("storageGiB").value=String(d.rootVolumeSizeGiB);
+'''+indent+'''  renderOneClickRecommendation(oneClickRecommendation);
+'''+indent+'''  setMsg("deployMsg","One-click settings prepared from the exact Vodia Marketplace AMI, Marketplace recommendation, and customer AWS defaults. Review the summary, then validate the plan.");
+'''+indent+'''}else{
+'''+indent+'''  setMsg("deployMsg","AWS network and instance types loaded. Review the selections before creating the deployment plan."+warning);
+'''+indent+'''}
+'''+indent+'''applyDeploymentMethodUi();
+'''+indent+'''updatePlanButton();'''
+
+block=block[:wpos]+replacement+block[uend:]
+s=s[:load_start]+block+s[load_end:]
 
 # Plan arguments: one-click keeps AMI root storage and no SSH key unless we later explicitly add one.
 old='''    const keyName=$("keyPairSelect").value;
