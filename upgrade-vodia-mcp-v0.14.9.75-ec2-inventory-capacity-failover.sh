@@ -324,19 +324,35 @@ if 'capacityAttempts' not in s:
           if (!out) throw new Error("EC2_LAUNCH_NO_RESULT: no EC2 RunInstances result was returned after capacity failover attempts.");'''
     s=s[:m.start()]+replacement+s[m.end():]
 
-    # Include actual subnet/AZ and attempt record in response.
-    old='''            region: plan.region,
-            name: plan.name,
-            agreementId: plan.agreementId || null,''';
-    if old not in s:
-        raise SystemExit("PATCH ERROR: apply response region/name anchor missing")
-    s=s.replace(old,'''            region: plan.region,
-            availabilityZone:instance.Placement?.AvailabilityZone || null,
+    # Include actual subnet/AZ and attempt record in the APPLY success response.
+    # Cumulative v71/v72/v74 builds may insert imageName/marketplaceAmi/
+    # deploymentMethod fields between region and name, so do not depend on
+    # adjacency. Scope the patch to the apply tool's scopedSuccess block.
+    apply_tool_pos=s.find('"aws_marketplace_apply_vodia_pbx_deployment"')
+    if apply_tool_pos<0:
+        raise SystemExit("PATCH ERROR: apply tool registration missing")
+    result_pos=s.find('return scopedSuccess({',apply_tool_pos)
+    if result_pos<0:
+        raise SystemExit("PATCH ERROR: apply success response missing")
+    result_end=s.find('}, { operation: "AWS_MARKETPLACE_APPLY_VODIA_PBX_DEPLOYMENT"',result_pos)
+    if result_end<0:
+        # Accept cumulative source variants with no spaces around the meta object.
+        result_end=s.find('operation:"AWS_MARKETPLACE_APPLY_VODIA_PBX_DEPLOYMENT"',result_pos)
+    if result_end<0:
+        raise SystemExit("PATCH ERROR: apply success response end missing")
+    result_block=s[result_pos:result_end]
+    if 'capacityFailoverUsed:' not in result_block:
+        region_anchor='            region: plan.region,'
+        rp=result_block.find(region_anchor)
+        if rp<0:
+            raise SystemExit("PATCH ERROR: apply success response region anchor missing")
+        insert_at=rp+len(region_anchor)
+        extra='''\n            availabilityZone:instance.Placement?.AvailabilityZone || null,
             subnetId:instance.SubnetId || launchedSubnetId || null,
             capacityFailoverUsed:Boolean(primarySubnet && (instance.SubnetId||launchedSubnetId)!==primarySubnet),
-            capacityAttempts,
-            name: plan.name,
-            agreementId: plan.agreementId || null,''',1)
+            capacityAttempts,'''
+        result_block=result_block[:insert_at]+extra+result_block[insert_at:]
+        s=s[:result_pos]+result_block+s[result_end:]
 
 # Ensure one-click instances carry deployment method tag if v72 did not already patch this exact block.
 if '{ Key: "VodiaDeploymentMethod"' not in s:
