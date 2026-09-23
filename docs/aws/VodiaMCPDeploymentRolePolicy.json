@@ -70,6 +70,17 @@
         "license-manager:GetLicense"
       ],
       "Resource": "*"
+    },
+    {
+      "Sid": "CreateLicenseManagerServiceLinkedRole",
+      "Effect": "Allow",
+      "Action": "iam:CreateServiceLinkedRole",
+      "Resource": "arn:aws:iam::*:role/aws-service-role/license-manager.amazonaws.com/AWSServiceRoleForAWSLicenseManagerRole*",
+      "Condition": {
+        "StringEquals": {
+          "iam:AWSServiceName": "license-manager.amazonaws.com"
+        }
+      }
     }
   ]
 }
