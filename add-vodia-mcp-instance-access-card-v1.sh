@@ -91,7 +91,6 @@ ui,resource,version=Path(sys.argv[1]),Path(sys.argv[2]),sys.argv[3]
 s=ui.read_text()
 t=resource.read_text()
 marker='VODIA_INSTANCE_ACCESS_CARD_V1'
-old_uri=f'ui://vodia/msp-guided/v{version}/mcp-app.html'
 new_uri=f'ui://vodia/msp-guided/v{version}-instance-access-v1/mcp-app.html'
 
 if marker in s:
@@ -282,9 +281,11 @@ s=replace_once(s,'  consolidateGuidedLayout();',
                '  consolidateGuidedLayout();\n  installInstanceAccessNavigationV1();',
                'access navigation initialization')
 
-if t.count(old_uri)!=1:
-    raise SystemExit(f'PATCH ERROR: expected one guided resource URI for {version}, found {t.count(old_uri)}')
-t=t.replace(old_uri,new_uri,1)
+old_uris=re.findall(r'ui://vodia/msp-guided/v0\.14\.9\.\d+/mcp-app\.html',t)
+if len(old_uris)!=1:
+    raise SystemExit(f'PATCH ERROR: expected one guided resource URI, found {len(old_uris)}')
+# v82 updates the connector only, so its guided UI resource may still say v81.
+t=t.replace(old_uris[0],new_uri,1)
 ui.write_text(s)
 resource.write_text(t)
 print('PASS: staged page 5 with instance selection, PBX link and machine link')
