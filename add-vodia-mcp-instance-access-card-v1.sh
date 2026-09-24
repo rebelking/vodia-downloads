@@ -28,7 +28,10 @@ post-boot password-change API; this patch deliberately has no password form.
 This update only modifies the guided UI HTML and its resource URI. It does
 not change AWS permissions, Marketplace agreements, instances, PBX accounts,
 the Chime patch, or the MCP server's reported version. It makes a backup and
-rolls back if the service restart or health check fails.
+rolls back if the service restart or health check fails. Before --apply it
+also REQUIRES the verified, whole-MCP checkpoint created by
+backup-vodia-mcp-pre-instance-access-v1.sh --create. The checkpoint must
+match this server, version and current MCP code; --dry-run makes no changes.
 
   bash this-file.sh --explain
   sudo bash this-file.sh --dry-run
@@ -79,6 +82,43 @@ case "$CURRENT" in
   0.14.9.81|0.14.9.82) ;;
   *) fail "expected v0.14.9.81 or .82, got ${CURRENT:-unknown}; refusing an unknown UI" ;;
 esac
+
+if [[ "$MODE" == --apply ]]; then
+  POINTER="${VODIA_MCP_FULL_BACKUP_ROOT:-/opt/vodia-mcp-backups}/vodia-mcp-pre-instance-access-v1.latest"
+  [[ -f "$POINTER" ]] || fail "create a verified full MCP checkpoint first: backup-vodia-mcp-pre-instance-access-v1.sh --create"
+  ARCHIVE="$(cat "$POINTER")"
+  python3 - "$ARCHIVE" "$CURRENT" "$APP" <<'PY'
+import hashlib,json,os,socket,sys
+from pathlib import Path
+archive,version,app=Path(sys.argv[1]),sys.argv[2],Path(sys.argv[3])
+receipt=Path(str(archive)+'.verified.json')
+assert archive.is_file() and receipt.is_file(),'full MCP backup archive or verification receipt missing'
+assert archive.name.startswith('vodia-mcp-pre-instance-access-v1-')
+assert archive.stat().st_uid==0 and receipt.stat().st_uid==0,'backup must be root owned'
+assert archive.stat().st_mode & 0o777==0o600,'backup must be mode 600'
+r=json.loads(receipt.read_text())
+assert r.get('format')=='vodia-mcp-pre-instance-access-v1' and r.get('verified') is True
+assert r.get('archive')==str(archive.resolve()),'receipt points at a different archive'
+assert r.get('hostname')==socket.gethostname(),'backup belongs to another server'
+assert r.get('version')==version,'backup does not match the current MCP version'
+h=hashlib.sha256()
+with archive.open('rb') as f:
+    for block in iter(lambda:f.read(1024*1024),b''):h.update(block)
+assert h.hexdigest()==r.get('sha256'),'backup archive checksum mismatch'
+required=('index.js','version.js','ui/msp-guided-app.html',
+          'msp-guided-app-v1.js','aws-marketplace-ec2-deploy-v1.js')
+for rel in required:
+    expected=r.get('files',{}).get('opt/vodia-mcp/'+rel)
+    file=app/rel
+    assert expected and file.is_file(),f'backup missing expected live file: {rel}'
+    assert hashlib.sha256(file.read_bytes()).hexdigest()==expected, \
+        f'live {rel} differs from verified backup; create a new checkpoint'
+print('PASS: verified full MCP backup matches current live code and host')
+PY
+  systemctl is-active --quiet "$SERVICE" || fail "MCP service is not running"
+  BEFORE_HEALTH="$(curl -fsS "$HEALTH_URL")" || fail "MCP health is unavailable before patch"
+  grep -Fq "\"version\":\"$CURRENT\"" <<<"$BEFORE_HEALTH" || fail "MCP health version differs from live code"
+fi
 
 mkdir -p "$TMP/staged"
 cp -a "$UI" "$TMP/staged/msp-guided-app.html"
