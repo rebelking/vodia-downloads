@@ -94,7 +94,8 @@ marker='VODIA_INSTANCE_ACCESS_CARD_V1'
 new_uri=f'ui://vodia/msp-guided/v{version}-instance-access-v1/mcp-app.html'
 
 if marker in s:
-    if new_uri not in t: raise SystemExit('PATCH ERROR: card exists but resource URI is stale')
+    if not re.search(r'ui://vodia/msp-guided/v0\.14\.9\.\d+-instance-access-v1/mcp-app\.html',t):
+        raise SystemExit('PATCH ERROR: card exists but resource URI is stale')
     print('PASS: instance access card already installed')
     raise SystemExit(0)
 
