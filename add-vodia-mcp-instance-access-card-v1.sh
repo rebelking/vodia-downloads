@@ -92,27 +92,30 @@ import hashlib,json,os,socket,sys
 from pathlib import Path
 archive,version,app=Path(sys.argv[1]),sys.argv[2],Path(sys.argv[3])
 receipt=Path(str(archive)+'.verified.json')
-assert archive.is_file() and receipt.is_file(),'full MCP backup archive or verification receipt missing'
-assert archive.name.startswith('vodia-mcp-pre-instance-access-v1-')
-assert archive.stat().st_uid==0 and receipt.stat().st_uid==0,'backup must be root owned'
-assert archive.stat().st_mode & 0o777==0o600,'backup must be mode 600'
+def require(ok,message):
+    if not ok: raise SystemExit('FAIL: '+message)
+require(archive.is_file() and receipt.is_file(),'full MCP backup archive or verification receipt missing')
+require(archive.name.startswith('vodia-mcp-pre-instance-access-v1-'),'wrong backup archive name')
+require(archive.stat().st_uid==0 and receipt.stat().st_uid==0,'backup must be root owned')
+require(archive.stat().st_mode & 0o777==0o600,'backup must be mode 600')
 r=json.loads(receipt.read_text())
-assert r.get('format')=='vodia-mcp-pre-instance-access-v1' and r.get('verified') is True
-assert r.get('archive')==str(archive.resolve()),'receipt points at a different archive'
-assert r.get('hostname')==socket.gethostname(),'backup belongs to another server'
-assert r.get('version')==version,'backup does not match the current MCP version'
+require(r.get('format')=='vodia-mcp-pre-instance-access-v1' and r.get('verified') is True,
+        'archive has no verified receipt')
+require(r.get('archive')==str(archive.resolve()),'receipt points at a different archive')
+require(r.get('hostname')==socket.gethostname(),'backup belongs to another server')
+require(r.get('version')==version,'backup does not match the current MCP version')
 h=hashlib.sha256()
 with archive.open('rb') as f:
     for block in iter(lambda:f.read(1024*1024),b''):h.update(block)
-assert h.hexdigest()==r.get('sha256'),'backup archive checksum mismatch'
+require(h.hexdigest()==r.get('sha256'),'backup archive checksum mismatch')
 required=('index.js','version.js','ui/msp-guided-app.html',
           'msp-guided-app-v1.js','aws-marketplace-ec2-deploy-v1.js')
 for rel in required:
     expected=r.get('files',{}).get('opt/vodia-mcp/'+rel)
     file=app/rel
-    assert expected and file.is_file(),f'backup missing expected live file: {rel}'
-    assert hashlib.sha256(file.read_bytes()).hexdigest()==expected, \
-        f'live {rel} differs from verified backup; create a new checkpoint'
+    require(expected and file.is_file(),f'backup missing expected live file: {rel}')
+    require(hashlib.sha256(file.read_bytes()).hexdigest()==expected,
+            f'live {rel} differs from verified backup; create a new checkpoint')
 print('PASS: verified full MCP backup matches current live code and host')
 PY
   systemctl is-active --quiet "$SERVICE" || fail "MCP service is not running"
