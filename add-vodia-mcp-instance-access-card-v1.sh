@@ -132,6 +132,7 @@ panel='''      <!-- VODIA_INSTANCE_ACCESS_CARD_V1: selected-customer, selected-i
             <a id="instanceAccessMachineV1" class="secondary" target="_blank" rel="noopener noreferrer" href="#">Open machine access in AWS</a>
           </div>
           <p class="instance-access-help-v1">EC2 running does not prove the PBX is ready. PBX administrator credentials and Linux machine access are separate. Change the PBX password in its own administrator settings. For vendor access, create a separate administrator account on that PBX. The machine uses your configured Session Manager or SSH access. Confirm the PBX HTTPS certificate before entering credentials.</p>
+          <p class="instance-access-help-v1"><a href="https://doc.vodia.com/docs/login" target="_blank" rel="noopener noreferrer">Vodia administrator login instructions</a> · <a href="https://doc.vodia.com/docs/admin-security-users" target="_blank" rel="noopener noreferrer">Create a separate vendor administrator</a></p>
         </div>
         <div class="nav-actions">
           <button id="instanceAccessBackV1" class="secondary" type="button">Back to customer</button>
