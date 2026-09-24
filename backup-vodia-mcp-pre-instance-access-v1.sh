@@ -100,13 +100,15 @@ verify_archive(){
 import json,sqlite3,sys
 from pathlib import Path
 database,manifest=Path(sys.argv[1]),json.loads(Path(sys.argv[2]).read_text())
-assert manifest.get('format')=='vodia-mcp-pre-instance-access-v1'
-assert manifest.get('version') in ('0.14.9.81','0.14.9.82')
-assert manifest.get('health_before')==manifest.get('version')
-assert manifest.get('health_after')==manifest.get('version')
+def require(ok,message):
+    if not ok: raise SystemExit('FAIL: '+message)
+require(manifest.get('format')=='vodia-mcp-pre-instance-access-v1','wrong backup format')
+require(manifest.get('version') in ('0.14.9.81','0.14.9.82'),'unsupported backup version')
+require(manifest.get('health_before')==manifest.get('version'),'unhealthy before snapshot')
+require(manifest.get('health_after')==manifest.get('version'),'unhealthy after snapshot')
 with sqlite3.connect(f'file:{database}?mode=ro',uri=True) as con:
     result=con.execute('PRAGMA quick_check').fetchone()
-assert result==('ok',),f'auth.db quick_check failed: {result}'
+require(result==('ok',),f'auth.db quick_check failed: {result}')
 print('PASS: extracted code, SQLite database, manifest and file checksums')
 PY
   if [[ "$MODE" == --create ]]; then
