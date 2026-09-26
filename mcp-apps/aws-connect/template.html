@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Connect AWS Account</title>
+<style>
+:root{color-scheme:dark;--bg:#0b121c;--panel:#121d2a;--panel2:#0f1823;--line:#2b3d51;--text:#f3f7fb;--muted:#9fb0c3;--blue:#1684ff;--blue2:#0764d7;--green:#3ed68c;--red:#ff6b6b;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}*{box-sizing:border-box}body{margin:0;background:transparent;color:var(--text);padding:14px}.shell{max-width:760px;margin:auto;background:linear-gradient(180deg,#111c29,#0c151f);border:1px solid #2b3d51;border-radius:18px;box-shadow:0 18px 55px rgba(0,0,0,.3);overflow:hidden}.head{padding:22px 24px 16px;display:flex;gap:14px;align-items:flex-start}.icon{width:46px;height:46px;border-radius:13px;background:#152b43;border:1px solid #315579;display:grid;place-items:center;font-size:25px}.title{font-size:23px;font-weight:780}.sub{color:var(--muted);margin-top:5px;line-height:1.45}.body{padding:4px 24px 22px}.field{margin:15px 0}.field label{display:block;font-weight:700;margin-bottom:7px}.field input{width:100%;padding:13px 14px;border-radius:10px;border:1px solid #3a5068;background:#0c1520;color:var(--text);font:inherit;outline:none}.field input:focus{border-color:#2c8cff;box-shadow:0 0 0 3px rgba(44,140,255,.14)}.help{font-size:12px;color:var(--muted);margin-top:6px}.secret{display:flex}.secret input{border-radius:10px 0 0 10px}.secret button{border:1px solid #3a5068;border-left:0;background:#172435;color:#cbd7e5;padding:0 15px;border-radius:0 10px 10px 0;cursor:pointer}.safe{margin:17px 0;padding:13px 14px;border-radius:11px;background:#102b47;border:1px solid #245a88;color:#a9d5ff;font-size:13px;line-height:1.45}.actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}.primary{border:0;background:linear-gradient(180deg,var(--blue),var(--blue2));color:white;padding:12px 18px;border-radius:10px;font-weight:800;cursor:pointer}.primary:disabled{opacity:.6;cursor:wait}.status{margin-top:16px;border-radius:11px;padding:13px 14px}.status.ok{background:#102d22;border:1px solid #287c5a}.status.error{background:#351a1d;border:1px solid #894047}.status strong{display:block;margin-bottom:4px}.status div{color:#c8d3df;font-size:13px;line-height:1.4}.saved{margin-top:9px;color:var(--muted);font-size:12px}.steps{border-top:1px solid #26384a;background:#0c141e;padding:15px 24px;color:#aebccc;font-size:13px}.steps b{color:#dce7f2}@media(max-width:640px){body{padding:8px}.head,.body{padding-left:16px;padding-right:16px}.actions{display:block}.primary{width:100%}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="head">
+    <div class="icon">☁</div>
+    <div>
+      <div class="title">Connect AWS Account</div>
+      <div class="sub">Enter the customer deployment role once. Vodia MCP will test AWS STS AssumeRole and save the connection for future deployment sessions.</div>
+    </div>
+  </div>
+  <div class="body">
+    <div class="field">
+      <label for="roleArn">Role ARN</label>
+      <input id="roleArn" autocomplete="off" placeholder="arn:aws:iam::123456789012:role/VodiaMCPDeploymentRole">
+      <div class="help">The ARN of VodiaMCPDeploymentRole in the destination AWS account.</div>
+    </div>
+    <div class="field">
+      <label for="externalId">External ID</label>
+      <div class="secret"><input id="externalId" type="password" autocomplete="new-password" placeholder="Customer-specific External ID"><button id="toggle-external" type="button">Show</button></div>
+      <div class="help">Must match the sts:ExternalId condition in the role trust policy.</div>
+    </div>
+    <div class="safe">🔒 The connection test does not create AWS resources. The External ID is encrypted at rest on the MCP server and is not returned by profile-read tools.</div>
+    <div id="status" class="status" hidden><strong id="status-title"></strong><div id="status-detail"></div></div>
+    <div id="saved-note" class="saved"></div>
+    <div class="actions"><button class="primary" id="save-btn">Test &amp; Save Connection</button></div>
+  </div>
+  <div class="steps"><b>Next:</b> Marketplace subscription check → region → VPC/subnet → PBX configuration → DryRun → explicit deploy approval.</div>
+</div>
+<script>__VODIA_APP_BUNDLE__</script>
+</body>
+</html>
