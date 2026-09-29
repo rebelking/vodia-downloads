@@ -58,11 +58,10 @@ for p in g.get('IpPermissions',[]):
  if p.get('IpProtocol') not in ('tcp','-1'):continue
  for port in ports:
   if p.get('IpProtocol')=='-1' or p.get('FromPort',65536)<=port<=p.get('ToPort',-1):
-   ports[port]|=bool(p.get('IpRanges') or p.get('Ipv6Ranges'))
+   ports[port]|=bool(p.get('IpRanges'))
 print('VPC:',s['VpcId'],'Subnet AZ:',s['AvailabilityZone'])
 print('Inbound TCP ports 22/80/443:',ports)
-if not ports[80] or not ports[443]:raise SystemExit('Security group must permit inbound TCP 80 and 443 before launch.')
-if not ports[22]:print('INFO: SSH 22 is not open; use another approved access method.')
+if not all(ports.values()):raise SystemExit('Security group must permit IPv4 TCP 22, 80 and 443 before launch (limit SSH 22 to your admin IP).')
 print('Check Vodia SIP/RTP ports separately before testing calls.')
 PY
 
@@ -93,7 +92,7 @@ fi
 [[ ${INSTALLER_SHA256:-} == "$DOWNLOADED_SHA256" ]] || { echo 'Installer hash changed or INSTALLER_SHA256 was not supplied. Review and plan again.' >&2; exit 1; }
 
 STAGE=$(mktemp -d)
-trap 'rm -rf "$STAGE"' EXIT
+trap 'rm -rf "$STAGE" "$INSTALLER_STAGE"' EXIT
 cat > "$STAGE/user-data.sh" <<'USERDATA'
 #!/usr/bin/env bash
 set -Eeuo pipefail
@@ -116,7 +115,6 @@ printf 'Vodia installation complete at %s\n' "$(date -u +%FT%TZ)"
 USERDATA
 chmod 0600 "$STAGE/user-data.sh"
 # Embed only a digest; no credential is passed in EC2 user data.
-printf '%s  %s\n' "$INSTALLER_SHA256" /root/install-vodia-linux.sh > "$STAGE/installer.sha256"
 # The digest is placed into user data for verification on the instance.
 python3 - "$STAGE/user-data.sh" "$INSTALLER_SHA256" <<'PYHASH'
 from pathlib import Path
