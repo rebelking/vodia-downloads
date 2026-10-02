@@ -1,0 +1,3517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+
+<meta name="viewport"
+content="width=device-width,initial-scale=1,viewport-fit=cover">
+
+<meta name="theme-color" content="#0b0f14">
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+
+<title>Tokyo Hero</title>
+
+<link rel="stylesheet"
+href="https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.css">
+
+
+
+<style>
+
+* { box-sizing:border-box; }
+
+body {
+    margin:0;
+    background:#eef1f4;
+    color:#101418;
+    font-family:-apple-system,BlinkMacSystemFont,
+                "Segoe UI",sans-serif;
+}
+
+.container {
+    max-width:650px;
+    margin:auto;
+    padding:16px 16px 70px;
+}
+
+.hero-header {
+    background:#0b0f14;
+    color:white;
+    padding:20px;
+    border-radius:0 0 24px 24px;
+    margin:-16px -16px 16px;
+}
+
+.title {
+    font-size:27px;
+    font-weight:900;
+}
+
+.subtitle {
+    color:#aeb7c2;
+    margin-top:3px;
+}
+
+.buddy {
+    display:flex;
+    gap:14px;
+    align-items:center;
+    margin-top:18px;
+    padding:14px;
+    border-radius:16px;
+    background:#171d25;
+}
+
+.avatar {
+    width:66px;
+    height:66px;
+    min-width:66px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:white;
+    font-size:40px;
+}
+
+
+.avatar-img {
+    width:78px;
+    height:78px;
+    min-width:78px;
+    border-radius:18px;
+    object-fit:cover;
+    object-position:center 18%;
+    border:3px solid white;
+    background:white;
+    box-shadow:0 4px 14px rgba(0,0,0,.35);
+}
+
+.buddy-name {
+    font-size:16px;
+    font-weight:850;
+}
+
+#buddyText {
+    color:#dfe5ec;
+    margin-top:5px;
+    line-height:1.35;
+}
+
+.card {
+    background:white;
+    border-radius:20px;
+    padding:18px;
+    margin-bottom:15px;
+    box-shadow:0 3px 14px rgba(0,0,0,.06);
+}
+
+.card h2 {
+    margin:0 0 13px;
+    font-size:21px;
+}
+
+.money {
+    border:2px solid #16854b;
+}
+
+.converter {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+}
+
+.field label {
+    display:block;
+    color:#666;
+    font-size:12px;
+    font-weight:700;
+    margin-bottom:5px;
+}
+
+input, textarea, select {
+    width:100%;
+    border:1px solid #d3d8de;
+    border-radius:12px;
+    padding:13px;
+    font-size:18px;
+}
+
+.rate {
+    font-size:13px;
+    color:#667;
+    margin-top:10px;
+}
+
+.hud {
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:8px;
+    margin-bottom:12px;
+}
+
+.hud-item {
+    text-align:center;
+    background:#f1f4f7;
+    padding:10px 5px;
+    border-radius:12px;
+    min-width:0;
+}
+
+.hud-label {
+    color:#69727d;
+    font-size:11px;
+}
+
+.hud-value {
+    font-size:13px;
+    font-weight:800;
+    margin-top:3px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
+#map {
+    height:430px;
+    width:100%;
+    border-radius:17px;
+    overflow:hidden;
+    background:#ddd;
+}
+
+.map-note {
+    font-size:12px;
+    color:#737b85;
+    margin:9px 2px;
+}
+
+button,
+.button {
+    display:block;
+    width:100%;
+    border:0;
+    border-radius:14px;
+    padding:15px;
+    margin-top:9px;
+    font-size:16px;
+    font-weight:800;
+    text-align:center;
+    text-decoration:none;
+    cursor:pointer;
+}
+
+.black { background:#101418;color:white; }
+.blue { background:#1769e0;color:white; }
+.green { background:#16854b;color:white; }
+.red { background:#d62828;color:white; }
+.orange { background:#e87900;color:white; }
+.gray { background:#e8ebef;color:#111; }
+
+.big {
+    padding:18px;
+    font-size:19px;
+}
+
+.grid2 {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:9px;
+}
+
+.tabs {
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:5px;
+    margin-bottom:15px;
+}
+
+.tab {
+    border-radius:12px;
+    border:0;
+    padding:11px 4px;
+    font-size:12px;
+    font-weight:800;
+    background:#dfe3e8;
+    margin:0;
+}
+
+.tab.active {
+    background:#111;
+    color:white;
+}
+
+.page {
+    display:none;
+}
+
+.page.active {
+    display:block;
+}
+
+.step {
+    background:#f3f6fa;
+    padding:15px;
+    border-radius:14px;
+    margin:10px 0;
+}
+
+.step-number {
+    font-size:12px;
+    font-weight:900;
+    color:#1769e0;
+}
+
+.step-main {
+    font-size:18px;
+    font-weight:850;
+    margin-top:4px;
+}
+
+.arrow {
+    text-align:center;
+    font-size:25px;
+}
+
+.show-staff {
+    background:#111;
+    color:white;
+    padding:19px;
+    border-radius:16px;
+    text-align:center;
+}
+
+.japanese {
+    font-size:22px;
+    font-weight:900;
+}
+
+.compass-wrap {
+    display:flex;
+    align-items:center;
+    gap:15px;
+    padding:12px;
+    background:#f2f5f8;
+    border-radius:15px;
+}
+
+.compass {
+    width:76px;
+    height:76px;
+    border:3px solid #111;
+    border-radius:50%;
+    position:relative;
+    flex-shrink:0;
+}
+
+.compass:before {
+    content:"N";
+    position:absolute;
+    top:3px;
+    width:100%;
+    text-align:center;
+    font-weight:900;
+}
+
+#needle {
+    position:absolute;
+    left:35px;
+    top:15px;
+    width:4px;
+    height:28px;
+    background:#d62828;
+    transform-origin:50% 23px;
+    border-radius:5px;
+}
+
+#needle:after {
+    content:"";
+    position:absolute;
+    bottom:-19px;
+    left:0;
+    width:4px;
+    height:20px;
+    background:#222;
+}
+
+.warning {
+    padding:12px;
+    border-radius:12px;
+    background:#fff4d9;
+    font-size:13px;
+    margin-top:10px;
+}
+
+footer {
+    text-align:center;
+    color:#7d858e;
+    font-size:11px;
+    margin-top:25px;
+    line-height:1.5;
+}
+
+@media(max-width:390px) {
+    .converter { grid-template-columns:1fr; }
+    .hud { grid-template-columns:1fr 1fr 1fr; }
+}
+
+
+
+/* ===== TOKYO HERO BACKGROUND ===== */
+
+html,
+body {
+    min-height: 100%;
+}
+
+body {
+    background: #101820;
+    position: relative;
+}
+
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+
+    background-image:
+        url("/assets/tokyo-background.png");
+
+    background-size: cover;
+    background-position: center top;
+    background-repeat: no-repeat;
+}
+
+body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+
+    background:
+        linear-gradient(
+            to bottom,
+            rgba(0,0,0,.14),
+            rgba(0,0,0,.28)
+        );
+
+    pointer-events: none;
+}
+
+
+/* Glass-style cards so Tokyo remains visible */
+
+.card {
+    background: rgba(255,255,255,.91);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+
+    border: 1px solid rgba(255,255,255,.65);
+
+    box-shadow:
+        0 8px 28px rgba(0,0,0,.20);
+}
+
+
+.hero-header {
+    background: rgba(11,15,20,.91);
+
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+
+    border-bottom:
+        1px solid rgba(255,255,255,.20);
+}
+
+
+.buddy {
+    background: rgba(23,29,37,.84);
+}
+
+
+.tabs {
+    background: rgba(255,255,255,.78);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+
+    padding: 6px;
+    border-radius: 15px;
+}
+
+
+.tab {
+    background: rgba(235,239,243,.90);
+}
+
+
+.tab.active {
+    background: rgba(17,17,17,.95);
+}
+
+
+footer {
+    color: white;
+    background: rgba(0,0,0,.48);
+    padding: 12px;
+    border-radius: 14px;
+}
+
+
+/* Desktop: keep the whole composition attractive */
+
+@media (min-width: 900px) {
+
+    body::before {
+        background-position: center center;
+    }
+
+}
+
+
+/* Phone: designed around the vertical Tokyo artwork */
+
+@media (max-width: 600px) {
+
+    body::before {
+        background-position: center top;
+    }
+
+    .container {
+        padding-top: 12px;
+    }
+
+}
+
+
+
+
+/* ===== DARK TOKYO HERO CARDS ===== */
+
+.card {
+    background: rgba(23,29,37,.94) !important;
+    color: #ffffff !important;
+
+    border: 1px solid rgba(255,255,255,.10) !important;
+
+    box-shadow:
+        0 8px 28px rgba(0,0,0,.30) !important;
+}
+
+.card h2,
+.card strong,
+.card p {
+    color: #ffffff;
+}
+
+.rate,
+.small,
+.map-note,
+.hud-label {
+    color: #b9c2cc !important;
+}
+
+.hud-item {
+    background: #10151c !important;
+    color: white !important;
+}
+
+input,
+textarea,
+select {
+    background: #10151c !important;
+    color: white !important;
+    border: 1px solid #39424d !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: #8d98a5;
+}
+
+.tabs {
+    background: rgba(23,29,37,.94) !important;
+}
+
+.tab {
+    background: #252d37 !important;
+    color: #dce3ea !important;
+}
+
+.tab.active {
+    background: #11161d !important;
+    color: white !important;
+    border: 1px solid rgba(255,255,255,.15);
+}
+
+.step {
+    background: #10151c !important;
+    color: white !important;
+}
+
+.compass-wrap {
+    background: #10151c !important;
+    color: white !important;
+}
+
+.warning {
+    background: #2a2417 !important;
+    color: #f6e5b5 !important;
+}
+
+.money {
+    background: rgba(23,29,37,.96) !important;
+    border: 2px solid #16854b !important;
+}
+
+.gray {
+    background: #2a333e !important;
+    color: white !important;
+}
+
+
+
+
+/* =====================================================
+   TOKYO HERO V5 DEBUGGER
+===================================================== */
+
+#debugButton {
+    position: fixed;
+    right: 14px;
+    bottom: 14px;
+    z-index: 99999;
+
+    width: auto;
+    min-width: 86px;
+
+    padding: 12px 15px;
+    margin: 0;
+
+    border-radius: 24px;
+
+    background: #d62828;
+    color: white;
+
+    border: 2px solid rgba(255,255,255,.7);
+
+    box-shadow: 0 5px 18px rgba(0,0,0,.4);
+
+    font-size: 14px;
+    font-weight: 900;
+}
+
+#debugButton.has-errors {
+    animation: debugPulse 1.2s infinite;
+}
+
+@keyframes debugPulse {
+
+    0% {
+        box-shadow:
+        0 0 0 0 rgba(214,40,40,.8);
+    }
+
+    70% {
+        box-shadow:
+        0 0 0 12px rgba(214,40,40,0);
+    }
+
+    100% {
+        box-shadow:
+        0 0 0 0 rgba(214,40,40,0);
+    }
+
+}
+
+
+#debugPanel {
+    display: none;
+
+    position: fixed;
+    inset: 12px;
+
+    z-index: 100000;
+
+    background: #10151c;
+    color: #ffffff;
+
+    border:
+    1px solid rgba(255,255,255,.2);
+
+    border-radius: 18px;
+
+    box-shadow:
+    0 15px 50px rgba(0,0,0,.65);
+
+    overflow: hidden;
+}
+
+
+#debugPanel.open {
+    display: flex;
+    flex-direction: column;
+}
+
+
+.debug-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    padding: 14px 16px;
+
+    background: #171d25;
+
+    border-bottom:
+    1px solid rgba(255,255,255,.12);
+}
+
+
+.debug-title {
+    font-weight: 900;
+    font-size: 18px;
+}
+
+
+.debug-close {
+    width: auto;
+    margin: 0;
+    padding: 8px 12px;
+
+    background: #303a46;
+    color: white;
+}
+
+
+.debug-status {
+    display: grid;
+
+    grid-template-columns:
+    repeat(2, minmax(0,1fr));
+
+    gap: 8px;
+
+    padding: 12px;
+}
+
+
+.debug-item {
+    background: #171d25;
+
+    border-radius: 10px;
+
+    padding: 10px;
+
+    font-size: 12px;
+
+    min-width: 0;
+
+    overflow-wrap: anywhere;
+}
+
+
+.debug-label {
+    color: #8998a8;
+
+    font-size: 10px;
+
+    font-weight: 900;
+
+    margin-bottom: 4px;
+}
+
+
+#debugLog {
+    flex: 1;
+
+    overflow: auto;
+
+    margin: 0 12px 12px;
+
+    padding: 12px;
+
+    background: #05080c;
+
+    color: #b7ffb7;
+
+    border-radius: 12px;
+
+    font-family:
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    monospace;
+
+    font-size: 12px;
+
+    white-space: pre-wrap;
+
+    overflow-wrap: anywhere;
+}
+
+
+.debug-actions {
+    display: grid;
+
+    grid-template-columns:
+    repeat(3,1fr);
+
+    gap: 8px;
+
+    padding: 0 12px 12px;
+}
+
+
+.debug-actions button {
+    margin: 0;
+
+    padding: 11px 6px;
+
+    font-size: 12px;
+}
+
+
+.debug-good {
+    color: #62db8a;
+}
+
+
+.debug-bad {
+    color: #ff6969;
+}
+
+
+@media(max-width:420px) {
+
+    #debugPanel {
+        inset: 5px;
+    }
+
+    .debug-status {
+        grid-template-columns: 1fr;
+    }
+
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="hero-header">
+
+    <div class="title">
+        🇯🇵 Tokyo Hero
+    </div>
+
+    <div class="subtitle">
+        Hamlet's Japan Mission Control
+    </div>
+
+    <div class="buddy">
+
+        <img
+            class="avatar-img"
+            src="/assets/tokyo-buddy.png"
+            alt="Tokyo Hero Buddy">
+
+        <div>
+            <div class="buddy-name">
+                TOKYO HERO BUDDY
+            </div>
+
+            <div id="buddyText">
+                Ready. Activate Hero Mode and I'll help you
+                figure out where you are.
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- MONEY -->
+
+<div class="card money">
+
+<h2>💴 Money</h2>
+
+<div class="converter">
+
+<div class="field">
+<label>🇺🇸 US DOLLARS</label>
+<input id="usdInput"
+       type="number"
+       inputmode="decimal"
+       value="100">
+</div>
+
+<div class="field">
+<label>🇯🇵 JAPANESE YEN</label>
+<input id="jpyInput"
+       type="number"
+       inputmode="decimal">
+</div>
+
+</div>
+
+<div class="rate" id="rateStatus">
+Getting current exchange rate…
+</div>
+
+</div>
+
+
+
+
+<!-- QUICK GPS -->
+<div class="card" id="quickGPSCard">
+
+<h2>📍 HERO LOCATION</h2>
+
+<div class="hud">
+
+<div class="hud-item">
+<div class="hud-label">GPS</div>
+<div class="hud-value" id="quickGPSStatus">OFF</div>
+</div>
+
+<div class="hud-item">
+<div class="hud-label">COMPASS</div>
+<div class="hud-value" id="quickCompassStatus">OFF</div>
+</div>
+
+<div class="hud-item">
+<div class="hud-label">HOTEL</div>
+<div class="hud-value" id="quickHotelDistance">--</div>
+</div>
+
+</div>
+
+<button class="green big" id="quickGPS">
+📍 FIND MY LOCATION
+</button>
+
+<button class="black" id="quickCompass">
+🧭 TURN ON COMPASS
+</button>
+
+<div class="small">
+GPS works best outdoors. Inside Narita Airport, use Airport Mode for floor-by-floor guidance.
+</div>
+
+</div>
+
+<!-- NAVIGATION -->
+
+<div class="tabs">
+
+<button class="tab active" data-page="hero">
+🦸 HERO
+</button>
+
+<button class="tab" data-page="airport">
+✈️ AIRPORT
+</button>
+
+<button class="tab" data-page="nearby">
+📡 RADAR
+</button>
+
+<button class="tab" data-page="tools">
+🧰 TOOLS
+</button>
+
+</div>
+
+
+<!-- HERO PAGE -->
+
+<section class="page active" id="hero">
+
+<div class="card">
+
+<h2>🗺️ Hero Map</h2>
+
+<div class="hud">
+
+<div class="hud-item">
+<div class="hud-label">GPS</div>
+<div class="hud-value" id="gpsHUD">OFF</div>
+</div>
+
+<div class="hud-item">
+<div class="hud-label">HEADING</div>
+<div class="hud-value" id="headingHUD">--</div>
+</div>
+
+<div class="hud-item">
+<div class="hud-label">WEATHER</div>
+<div class="hud-value" id="weatherHUD">--</div>
+</div>
+
+</div>
+
+<div id="map"></div>
+
+<div class="map-note">
+The dashed line is a destination beacon, not a walking
+or train route.
+</div>
+
+<button class="green big" id="heroMode">
+📍 ACTIVATE HERO MODE
+</button>
+
+<button class="black" id="compassButton">
+🧭 ENABLE COMPASS
+</button>
+
+<div class="compass-wrap">
+
+<div class="compass">
+<div id="needle"></div>
+</div>
+
+<div>
+<strong id="compassText">
+Compass inactive
+</strong>
+
+<div class="rate" id="destinationText">
+Destination: The Peninsula Tokyo
+</div>
+</div>
+
+</div>
+
+<a class="button red big"
+href="https://www.google.com/maps/dir/?api=1&destination=35.6747591%2C139.7604704&dir_action=navigate"
+target="_blank">
+🏨 TAKE ME TO MY HOTEL
+</a>
+
+<a class="button blue"
+href="https://www.google.com/maps/dir/?api=1&destination=35.6747591%2C139.7604704&travelmode=transit"target="_blank">
+🚆 LIVE TRANSIT TO HOTEL
+</a>
+
+</div>
+
+</section>
+
+
+<!-- AIRPORT PAGE -->
+
+<section class="page" id="airport">
+
+
+<!-- ===== NARITA TERMINAL FINDER ===== -->
+
+<div class="card" id="naritaFinder">
+
+<h2>🛰️ Narita Terminal Finder</h2>
+
+<p>
+Tell Tokyo Hero which terminal or area you're in.
+I'll bring up the correct official airport map.
+</p>
+
+<div class="narita-search">
+
+<input
+    id="terminalSearch"
+    type="text"
+    autocomplete="off"
+    placeholder="Try: Terminal 1, T2, B1F, North Wing">
+
+<button class="blue big" id="terminalSearchButton">
+🔎 FIND MY TERMINAL
+</button>
+
+</div>
+
+
+<div class="grid2">
+
+<button class="gray terminalQuick" data-terminal="1">
+1️⃣ Terminal 1
+</button>
+
+<button class="gray terminalQuick" data-terminal="2">
+2️⃣ Terminal 2
+</button>
+
+<button class="gray terminalQuick" data-terminal="3">
+3️⃣ Terminal 3
+</button>
+
+<button class="green" id="openNaritaLive">
+📍 LIVE MAP
+</button>
+
+</div>
+
+
+<div id="terminalResult"
+     style="display:none;margin-top:18px">
+
+<div style="
+    background:#10151c;
+    border-radius:15px;
+    padding:16px;
+    margin-bottom:12px;
+">
+
+<div style="
+    color:#8ea4ba;
+    font-size:12px;
+    font-weight:800;
+">
+CURRENT TERMINAL
+</div>
+
+<div id="terminalTitle"
+     style="
+        font-size:25px;
+        font-weight:900;
+        margin-top:3px;
+     ">
+</div>
+
+<div id="terminalBuddy"
+     style="
+        margin-top:8px;
+        color:#d9e0e7;
+        line-height:1.45;
+     ">
+</div>
+
+</div>
+
+
+<div style="
+    border-radius:15px;
+    overflow:hidden;
+    background:#111;
+">
+
+<iframe
+    id="naritaPdf"
+    title="Narita Airport Terminal Map"
+    style="
+        width:100%;
+        height:600px;
+        border:0;
+        background:white;
+    ">
+</iframe>
+
+</div>
+
+
+<a
+    class="button blue"
+    id="fullPdfButton"
+    target="_blank">
+📄 OPEN FULL OFFICIAL PDF
+</a>
+
+
+<a
+    class="button green big"
+    href="https://www.narita-airport.jp/en/map/"
+    target="_blank">
+📍 FIND ME ON NARITA'S LIVE MAP
+</a>
+
+<div class="small">
+On iPhone, allow Location when the official Narita map asks.
+Use its current-location control to see your live airport position.
+</div>
+
+
+<a
+    class="button gray"
+    href="https://www.narita-airport.jp/en/map/"
+    target="_blank">
+🗺️ OPEN INTERACTIVE AIRPORT MAP
+</a>
+
+</div>
+
+</div>
+
+
+
+<div class="card">
+
+<h2>✈️ Narita Terminal 1</h2>
+
+<div class="step">
+<div class="step-number">STEP 1</div>
+<div class="step-main">
+🛂 Immigration → baggage → customs
+</div>
+</div>
+
+<div class="arrow">↓</div>
+
+<div class="step">
+<div class="step-number">STEP 2</div>
+<div class="step-main">
+🚪 International Arrivals — 1F
+</div>
+</div>
+
+<div class="arrow">↓</div>
+
+<div class="step">
+<div class="step-number">STEP 3</div>
+<div class="step-main">
+🚆 Look for RAILWAYS / TRAIN
+</div>
+</div>
+
+<div class="arrow">↓</div>
+
+<div class="step">
+<div class="step-number">STEP 4</div>
+<div class="step-main">
+⬇️ Go downstairs to B1F
+</div>
+</div>
+
+<div class="arrow">↓</div>
+
+<div class="step">
+<div class="step-number">STEP 5</div>
+<div class="step-main">
+🎫 Narita Airport Station — JR / Keisei
+</div>
+</div>
+
+
+<a class="button blue"
+href="https://www.narita-airport.jp/en/map/"
+target="_blank">
+🗺️ OFFICIAL LIVE NARITA MAP
+</a>
+
+<a class="button gray"
+href="https://www.narita-airport.jp/en/access/train/railway-route-1/"
+target="_blank">
+📷 SHOW ME THE REAL SIGNS & ROUTE
+</a>
+
+
+<a class="button black big"
+href="https://www.google.com/maps/dir/Narita+International+Airport,+1-1+Furugome,+Narita,+Chiba+282-0004,+Japan/The+Peninsula+Tokyo,+1+Chome-8-1+Yurakucho,+Chiyoda+City,+Tokyo+100-0006,+Japan/"
+target="_blank">
+🚆 NARITA → PENINSULA
+</a>
+
+<div class="warning">
+<strong>Inside the airport:</strong>
+GPS may not tell you which floor you're on.
+Trust the airport signs and this T1 → B1F guide.
+</div>
+
+</div>
+
+
+<div class="card">
+
+<h2>👤 Show Airport Staff</h2>
+
+<div class="show-staff">
+
+<div class="japanese">
+ザ・ペニンシュラ東京
+</div>
+
+<p>
+The Peninsula Tokyo
+</p>
+
+<div class="japanese">
+このホテルへ行く電車を教えてください。
+</div>
+
+<p>
+Please show me which train I should take
+to this hotel.
+</p>
+
+</div>
+
+</div>
+
+</section>
+
+
+<!-- RADAR -->
+
+<section class="page" id="nearby">
+
+<div class="card">
+
+<h2>📡 What's Around Me?</h2>
+
+<p>
+One tap searches around your current area.
+</p>
+
+<div class="grid2">
+
+<button class="gray nearby"
+data-query="train station">
+🚉 Station
+</button>
+
+<button class="gray nearby"
+data-query="subway station">
+🚇 Subway
+</button>
+
+<button class="gray nearby"
+data-query="ATM">
+🏧 ATM
+</button>
+
+<button class="gray nearby"
+data-query="convenience store">
+🏪 Store
+</button>
+
+<button class="gray nearby"
+data-query="restaurant">
+🍜 Food
+</button>
+
+<button class="gray nearby"
+data-query="pharmacy">
+💊 Pharmacy
+</button>
+
+<button class="gray nearby"
+data-query="toilet">
+🚻 Toilet
+</button>
+
+<button class="gray nearby"
+data-query="police station">
+👮 Police
+</button>
+
+</div>
+
+<a class="button orange"
+href="https://www.japan.travel/en/japan-safe-travel-information/"
+target="_blank">
+🚨 JAPAN SAFETY INFORMATION
+</a>
+
+</div>
+
+</section>
+
+
+<!-- TOOLS -->
+
+<section class="page" id="tools">
+
+<div class="card">
+
+<h2>🕐 Time</h2>
+
+<div>
+🇯🇵 Tokyo
+<div style="font-size:27px;font-weight:850"
+id="tokyoClock"></div>
+</div>
+
+<br>
+
+<div>
+🇺🇸 Massachusetts
+<div style="font-size:27px;font-weight:850"
+id="homeClock"></div>
+</div>
+
+</div>
+
+
+<div class="card">
+
+<h2>📸 Translation</h2>
+
+<p>
+Camera translation is still on our build list.
+Navigation comes first.
+</p>
+
+<a class="button black"
+href="https://translate.google.com/"
+target="_blank">
+🗣️ OPEN TRANSLATOR
+</a>
+
+</div>
+
+</section>
+
+
+<footer>
+
+Map data © OpenStreetMap contributors •
+Map display via MapLibre / OpenFreeMap<br>
+
+Exchange-rate reference via Frankfurter •
+Weather via Open-Meteo
+
+</footer>
+
+</div>
+
+
+<script type="module">
+import * as maplibregl from "https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.mjs";
+/* =====================================================
+   CONSTANTS
+===================================================== */
+
+const HOTEL = {
+    name: "The Peninsula Tokyo",
+    lng: 139.7604704,
+    lat: 35.6747591
+};
+
+const NARITA = {
+    name: "Narita International Airport",
+    lng: 140.3843215,
+    lat: 35.770178
+};
+
+let currentPosition = null;
+let deviceHeading = null;
+let userMarker = null;
+let gpsWatch = null;
+let exchangeRate = 157.8;
+let lastWeatherUpdate = 0;
+
+
+/* =====================================================
+   TABS
+===================================================== */
+
+document.querySelectorAll(".tab").forEach(button => {
+
+    button.addEventListener("click", () => {
+
+        document.querySelectorAll(".tab")
+            .forEach(x => x.classList.remove("active"));
+
+        document.querySelectorAll(".page")
+            .forEach(x => x.classList.remove("active"));
+
+        button.classList.add("active");
+
+        const id = button.dataset.page;
+
+        document.getElementById(id).classList.add("active");
+
+        if (id === "hero") {
+            setTimeout(() => map.resize(), 100);
+        }
+
+    });
+
+});
+
+
+/* =====================================================
+   MONEY
+===================================================== */
+
+const usdInput =
+    document.getElementById("usdInput");
+
+const jpyInput =
+    document.getElementById("jpyInput");
+
+const rateStatus =
+    document.getElementById("rateStatus");
+
+
+function convertUSD() {
+
+    const usd =
+        parseFloat(usdInput.value) || 0;
+
+    jpyInput.value =
+        Math.round(usd * exchangeRate);
+
+}
+
+
+function convertJPY() {
+
+    const jpy =
+        parseFloat(jpyInput.value) || 0;
+
+    usdInput.value =
+        (jpy / exchangeRate).toFixed(2);
+
+}
+
+
+usdInput.addEventListener("input", convertUSD);
+jpyInput.addEventListener("input", convertJPY);
+
+
+async function getExchangeRate() {
+
+    try {
+
+        const response = await fetch(
+            "https://api.frankfurter.dev/v2/rate/USD/JPY"
+        );
+
+        if (!response.ok)
+            throw new Error("rate");
+
+        const data = await response.json();
+
+        exchangeRate = Number(data.rate);
+
+        rateStatus.textContent =
+            "Live reference • $1 = ¥" +
+            exchangeRate.toFixed(2) +
+            " • " + data.date;
+
+    }
+
+    catch (error) {
+
+        rateStatus.textContent =
+            "Offline fallback • $1 ≈ ¥" +
+            exchangeRate.toFixed(2);
+
+    }
+
+    convertUSD();
+
+}
+
+getExchangeRate();
+
+
+/* =====================================================
+   CLOCKS
+===================================================== */
+
+function clocks() {
+
+    const now = new Date();
+
+    const format = {
+        hour:"numeric",
+        minute:"2-digit",
+        second:"2-digit"
+    };
+
+    document.getElementById("tokyoClock")
+        .textContent =
+        new Intl.DateTimeFormat(
+            "en-US",
+            {
+                ...format,
+                timeZone:"Asia/Tokyo"
+            }
+        ).format(now);
+
+    document.getElementById("homeClock")
+        .textContent =
+        new Intl.DateTimeFormat(
+            "en-US",
+            {
+                ...format,
+                timeZone:"America/New_York"
+            }
+        ).format(now);
+
+}
+
+clocks();
+setInterval(clocks,1000);
+
+
+/* =====================================================
+   MAP
+===================================================== */
+
+const map = new maplibregl.Map({
+
+    container:"map",
+
+    style:
+        "https://tiles.openfreemap.org/styles/liberty",
+
+    center:[
+        HOTEL.lng,
+        HOTEL.lat
+    ],
+
+    zoom:15.3,
+
+    pitch:55,
+
+    bearing:-15,
+
+    antialias:true
+
+});
+
+
+map.addControl(
+    new maplibregl.NavigationControl({
+        visualizePitch:true
+    }),
+    "top-right"
+);
+
+
+new maplibregl.Marker({
+    color:"#d62828"
+})
+.setLngLat([
+    HOTEL.lng,
+    HOTEL.lat
+])
+.setPopup(
+    new maplibregl.Popup()
+        .setHTML(
+            "<b>🏨 The Peninsula Tokyo</b>"
+        )
+)
+.addTo(map);
+
+
+new maplibregl.Marker({
+    color:"#1769e0"
+})
+.setLngLat([
+    NARITA.lng,
+    NARITA.lat
+])
+.setPopup(
+    new maplibregl.Popup()
+        .setHTML(
+            "<b>✈️ Narita Airport</b>"
+        )
+)
+.addTo(map);
+
+
+/*
+Attempt 3D building extrusion from
+the OpenMapTiles building layer.
+The map still works if the layer is unavailable.
+*/
+
+map.on("load", () => {
+
+    try {
+
+        const style = map.getStyle();
+
+        const sourceId =
+            Object.keys(style.sources)
+                .find(id =>
+                    style.sources[id].type === "vector"
+                );
+
+        const labelLayer =
+            style.layers.find(layer =>
+                layer.type === "symbol" &&
+                layer.layout &&
+                layer.layout["text-field"]
+            );
+
+        if (sourceId) {
+
+            map.addLayer({
+
+                id:"tokyo-3d-buildings",
+
+                source:sourceId,
+
+                "source-layer":"building",
+
+                type:"fill-extrusion",
+
+                minzoom:14,
+
+                paint:{
+
+                    "fill-extrusion-color":"#c7cdd4",
+
+                    "fill-extrusion-height":[
+                        "case",
+                        ["has","render_height"],
+                        ["get","render_height"],
+                        ["has","height"],
+                        ["get","height"],
+                        10
+                    ],
+
+                    "fill-extrusion-base":[
+                        "case",
+                        ["has","render_min_height"],
+                        ["get","render_min_height"],
+                        0
+                    ],
+
+                    "fill-extrusion-opacity":0.76
+
+                }
+
+            },
+            labelLayer ? labelLayer.id : undefined);
+
+        }
+
+    }
+
+    catch (error) {
+
+        console.log(
+            "3D building layer unavailable",
+            error
+        );
+
+    }
+
+});
+
+
+/* =====================================================
+   GPS
+===================================================== */
+
+document.getElementById("heroMode")
+.addEventListener("click", startGPS);
+
+
+function startGPS() {
+
+    if (!navigator.geolocation) {
+
+        setBuddy(
+            "GPS isn't supported on this device."
+        );
+
+        return;
+
+    }
+
+    document.getElementById("gpsHUD")
+        .textContent="SEARCHING";
+
+    setBuddy(
+        "Looking for you…"
+    );
+
+
+    if (gpsWatch !== null)
+        navigator.geolocation.clearWatch(gpsWatch);
+
+
+    gpsWatch =
+        navigator.geolocation.watchPosition(
+
+            gpsSuccess,
+
+            gpsError,
+
+            {
+                enableHighAccuracy:true,
+                timeout:15000,
+                maximumAge:5000
+            }
+
+        );
+
+}
+
+
+function gpsSuccess(position) {
+
+    currentPosition = {
+
+        lat:position.coords.latitude,
+        lng:position.coords.longitude,
+        accuracy:Math.round(
+            position.coords.accuracy
+        )
+
+    };
+
+
+    document.getElementById("gpsHUD")
+        .textContent =
+        "±" +
+        currentPosition.accuracy +
+        "m";
+
+
+    if (!userMarker) {
+
+        userMarker =
+            new maplibregl.Marker({
+                color:"#16854b"
+            })
+            .setLngLat([
+                currentPosition.lng,
+                currentPosition.lat
+            ])
+            .addTo(map);
+
+    }
+
+    else {
+
+        userMarker.setLngLat([
+            currentPosition.lng,
+            currentPosition.lat
+        ]);
+
+    }
+
+
+    map.easeTo({
+
+        center:[
+            currentPosition.lng,
+            currentPosition.lat
+        ],
+
+        zoom:17,
+
+        pitch:60,
+
+        duration:1000
+
+    });
+
+
+    drawBeacon();
+
+    updateBuddy();
+
+    getWeather();
+
+}
+
+
+function gpsError(error) {
+
+    document.getElementById("gpsHUD")
+        .textContent="ERROR";
+
+    if (error.code === 1) {
+
+        setBuddy(
+            "Location permission is off. " +
+            "Allow Location for jp.audiomercy.com."
+        );
+
+    }
+
+    else {
+
+        setBuddy(
+            "I can't get a GPS fix yet. " +
+            "Try again near a window or outside."
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+   BEACON
+===================================================== */
+
+function drawBeacon() {
+
+    if (!currentPosition)
+        return;
+
+
+    const geojson = {
+
+        type:"Feature",
+
+        geometry:{
+
+            type:"LineString",
+
+            coordinates:[
+                [
+                    currentPosition.lng,
+                    currentPosition.lat
+                ],
+                [
+                    HOTEL.lng,
+                    HOTEL.lat
+                ]
+            ]
+
+        }
+
+    };
+
+
+    if (map.getSource("hotel-beacon")) {
+
+        map.getSource("hotel-beacon")
+            .setData(geojson);
+
+    }
+
+    else {
+
+        map.addSource(
+            "hotel-beacon",
+            {
+                type:"geojson",
+                data:geojson
+            }
+        );
+
+        map.addLayer({
+
+            id:"hotel-beacon-line",
+
+            type:"line",
+
+            source:"hotel-beacon",
+
+            paint:{
+
+                "line-color":"#d62828",
+
+                "line-width":4,
+
+                "line-dasharray":[
+                    2,
+                    2
+                ]
+
+            }
+
+        });
+
+    }
+
+}
+
+
+/* =====================================================
+   COMPASS
+===================================================== */
+
+document.getElementById("compassButton")
+.addEventListener("click", enableCompass);
+
+
+async function enableCompass() {
+
+    try {
+
+        if (
+            typeof DeviceOrientationEvent !==
+            "undefined" &&
+            typeof DeviceOrientationEvent
+                .requestPermission === "function"
+        ) {
+
+            const permission =
+                await DeviceOrientationEvent
+                    .requestPermission();
+
+            if (permission !== "granted") {
+
+                setBuddy(
+                    "Compass permission wasn't granted."
+                );
+
+                return;
+
+            }
+
+        }
+
+
+        window.addEventListener(
+            "deviceorientationabsolute",
+            compassEvent,
+            true
+        );
+
+        window.addEventListener(
+            "deviceorientation",
+            compassEvent,
+            true
+        );
+
+
+        document.getElementById("compassText")
+            .textContent =
+            "Move the phone in a figure-eight once.";
+
+    }
+
+    catch (error) {
+
+        setBuddy(
+            "Compass isn't available in this browser."
+        );
+
+    }
+
+}
+
+
+function compassEvent(event) {
+
+    let heading = null;
+
+
+    if (        typeof event.webkitCompassHeading ===
+        "number"
+    ) {
+
+        heading =
+            event.webkitCompassHeading;
+
+    }
+
+    else if (
+        typeof event.alpha === "number"
+    ) {
+
+        heading =
+            360 - event.alpha;
+
+    }
+
+
+    if (heading === null)
+        return;
+
+
+    deviceHeading =
+        (heading + 360) % 360;
+
+
+    document.getElementById("headingHUD")
+        .textContent =
+        Math.round(deviceHeading) + "°";
+
+
+    document.getElementById("needle")
+        .style.transform =
+        "rotate(" +
+        deviceHeading +
+        "deg)";
+
+
+    document.getElementById("compassText")
+        .textContent =
+        cardinal(deviceHeading) +
+        " • " +
+        Math.round(deviceHeading) +
+        "°";
+
+
+    updateBuddy();
+
+}
+
+
+/* =====================================================
+   BUDDY
+===================================================== */
+
+function setBuddy(text) {
+
+    document.getElementById("buddyText")
+        .textContent=text;
+
+}
+
+
+function updateBuddy() {
+
+    if (!currentPosition) {
+
+        setBuddy(
+            "Activate Hero Mode so I can locate you."
+        );
+
+        return;
+
+    }
+
+
+    const distance =
+        distanceKm(
+            currentPosition.lat,
+            currentPosition.lng,
+            HOTEL.lat,
+            HOTEL.lng
+        );
+
+
+    const hotelBearing =
+        bearingTo(
+            currentPosition.lat,
+            currentPosition.lng,
+            HOTEL.lat,
+            HOTEL.lng
+        );
+
+
+    if (distance < .2) {
+
+        setBuddy(
+            "You're basically at the Peninsula. 🏨"
+        );
+
+        return;
+
+    }
+
+
+    if (deviceHeading === null) {
+
+        setBuddy(
+            "GPS locked. The Peninsula is about " +
+            distance.toFixed(1) +
+            " km away, toward " +
+            cardinal(hotelBearing) +
+            ". Enable Compass for turn guidance."
+        );
+
+        return;
+
+    }
+
+
+    let turn =
+        ((hotelBearing -
+          deviceHeading +
+          540) % 360) - 180;
+
+
+    let instruction;
+
+
+    if (Math.abs(turn) < 12) {
+
+        instruction =
+            "The hotel beacon is almost straight ahead.";
+
+    }
+
+    else if (turn > 0) {
+
+        instruction =
+            "Turn right about " +
+            Math.round(Math.abs(turn)) +
+            "° toward the hotel beacon.";
+
+    }
+
+    else {
+
+        instruction =
+            "Turn left about " +
+            Math.round(Math.abs(turn)) +
+            "° toward the hotel beacon.";
+
+    }
+
+
+    setBuddy(
+        instruction +
+        " Distance " +
+        distance.toFixed(1) +
+        " km. Use Live Transit for the real route."
+    );
+
+}
+
+
+/* =====================================================
+   WEATHER
+===================================================== */
+
+async function getWeather() {
+
+    if (!currentPosition)
+        return;
+
+
+    if (
+        Date.now() -
+        lastWeatherUpdate <
+        600000
+    )
+        return;
+
+
+    lastWeatherUpdate=Date.now();
+
+
+    try {
+
+        const url =
+            "https://api.open-meteo.com/v1/forecast" +
+            "?latitude=" +
+            currentPosition.lat +
+            "&longitude=" +
+            currentPosition.lng +
+            "&current=temperature_2m,wind_speed_10m" +
+            "&timezone=Asia%2FTokyo";
+
+
+        const response =
+            await fetch(url);
+
+
+        const data =
+            await response.json();
+
+
+        document.getElementById("weatherHUD")
+            .textContent =
+            Math.round(
+                data.current.temperature_2m
+            ) +
+            "°C";
+
+
+    }
+
+    catch {
+
+        document.getElementById("weatherHUD")
+            .textContent="--";
+
+    }
+
+}
+
+
+/* =====================================================
+   NEARBY RADAR
+===================================================== */
+
+document.querySelectorAll(".nearby")
+.forEach(button => {
+
+    button.addEventListener("click", () => {
+
+        const query =
+            button.dataset.query;
+
+
+        let search =
+            query;
+
+
+        if (currentPosition) {
+
+            search +=
+                " near " +
+                currentPosition.lat +
+                "," +
+                currentPosition.lng;
+
+        }
+
+
+        const url =
+            "https://www.google.com/maps/search/?api=1&query=" +
+            encodeURIComponent(search);
+
+
+        window.open(
+            url,
+            "_blank"
+        );
+
+    });
+
+});
+
+
+/* =====================================================
+   GEO MATH
+===================================================== */
+
+function degreesToRadians(d) {
+    return d * Math.PI / 180;
+}
+
+
+function radiansToDegrees(r) {
+    return r * 180 / Math.PI;
+}
+
+
+function distanceKm(
+    lat1,
+    lon1,
+    lat2,
+    lon2
+) {
+
+    const R=6371;
+
+    const dLat=
+        degreesToRadians(lat2-lat1);
+
+    const dLon=
+        degreesToRadians(lon2-lon1);
+
+    const a=
+        Math.sin(dLat/2) *
+        Math.sin(dLat/2) +
+
+        Math.cos(
+            degreesToRadians(lat1)
+        ) *
+
+        Math.cos(
+            degreesToRadians(lat2)
+        ) *
+
+        Math.sin(dLon/2) *
+        Math.sin(dLon/2);
+
+
+    return R * 2 *
+        Math.atan2(
+            Math.sqrt(a),
+            Math.sqrt(1-a)
+        );
+
+}
+
+
+function bearingTo(
+    lat1,
+    lon1,
+    lat2,
+    lon2
+) {
+
+    const φ1=
+        degreesToRadians(lat1);
+
+    const φ2=
+        degreesToRadians(lat2);
+
+    const λ=
+        degreesToRadians(
+            lon2-lon1
+        );
+
+
+    const y=
+        Math.sin(λ) *
+        Math.cos(φ2);
+
+
+    const x=
+        Math.cos(φ1) *
+        Math.sin(φ2) -
+
+        Math.sin(φ1) *
+        Math.cos(φ2) *
+        Math.cos(λ);
+
+
+    return (
+        radiansToDegrees(
+            Math.atan2(y,x)
+        ) + 360
+    ) % 360;
+
+}
+
+
+function cardinal(degrees) {
+
+    const directions=[
+        "N","NE","E","SE",
+        "S","SW","W","NW"
+    ];
+
+    return directions[
+        Math.round(
+            degrees / 45
+        ) % 8
+    ];
+
+}
+
+
+
+/* =====================================================
+   ALWAYS-VISIBLE GPS CONTROLS
+===================================================== */
+
+const quickGPSButton =
+    document.getElementById("quickGPS");
+
+const quickCompassButton =
+    document.getElementById("quickCompass");
+
+
+if (quickGPSButton) {
+
+    quickGPSButton.addEventListener("click", () => {
+
+        document.getElementById("quickGPSStatus")
+            .textContent = "SEARCHING";
+
+        startGPS();
+
+    });
+
+}
+
+
+if (quickCompassButton) {
+
+    quickCompassButton.addEventListener("click", () => {
+
+        document.getElementById("quickCompassStatus")
+            .textContent = "STARTING";
+
+        enableCompass();
+
+    });
+
+}
+
+
+/*
+Mirror Hero Mode GPS/Compass status into
+the always-visible card at the top.
+*/
+
+setInterval(() => {
+
+    const quickGPS =
+        document.getElementById("quickGPSStatus");
+
+    const quickCompass =
+        document.getElementById("quickCompassStatus");
+
+    const quickDistance =
+        document.getElementById("quickHotelDistance");
+
+
+    if (currentPosition) {
+
+        quickGPS.textContent =
+            "LOCKED ±" +
+            currentPosition.accuracy +
+            "m";
+
+
+        const distance =
+            distanceKm(
+                currentPosition.lat,
+                currentPosition.lng,
+                HOTEL.lat,
+                HOTEL.lng
+            );
+
+
+        if (distance < 1) {
+
+            quickDistance.textContent =
+                Math.round(distance * 1000) +
+                " m";
+
+        }
+
+        else {
+
+            quickDistance.textContent =
+                distance.toFixed(1) +
+                " km";
+
+        }
+
+    }
+
+
+    if (deviceHeading !== null) {
+
+        quickCompass.textContent =
+            cardinal(deviceHeading) +
+            " " +
+            Math.round(deviceHeading) +
+            "°";
+
+    }
+
+}, 500);
+
+
+
+
+/* =====================================================
+   NARITA TERMINAL FINDER
+===================================================== */
+
+const NARITA_PDFS = {
+
+    1: {
+        title: "Terminal 1",
+
+        pdf:
+        "https://www.narita-airport.jp/files/4e6da04111c6ab858e9a933949e4f5c7bca4749a50b6054ee88d616b4f583f00",
+
+        buddy:
+        "Terminal 1 selected. International arrivals are on 1F. " +
+        "Narita Airport Station for JR and Keisei is on B1F. " +
+        "If you just landed, follow the RAILWAYS / TRAIN signs downstairs."
+    },
+
+    2: {
+        title: "Terminal 2",
+
+        pdf:
+        "https://www.narita-airport.jp/files/71a02161766199dbb8fa552410d0f20c28675dab8d793c092e4111cae520d1e5",
+
+        buddy:
+        "Terminal 2 selected. International arrivals are on 1F. " +
+        "Airport Terminal 2 Station for JR and Keisei is on B1F."
+    },
+
+    3: {
+        title: "Terminal 3",
+
+        pdf:
+        "https://www.narita-airport.jp/files/eb16e9fc7adfff4871d7cc26bf6872a54da35dd34831db6d5c2e144971303592",
+
+        buddy:
+        "Terminal 3 selected. Terminal 3 has no railway station inside it. " +
+        "Use Airport Terminal 2・3 Station near Terminal 2. " +
+        "Follow the official airport signs toward Terminal 2 / railway."
+    }
+
+};
+
+
+function showNaritaTerminal(number) {
+
+    const data = NARITA_PDFS[number];
+
+    if (!data)
+        return;
+
+
+    document.getElementById("terminalResult")
+        .style.display = "block";
+
+
+    document.getElementById("terminalTitle")
+        .textContent = data.title;
+
+
+    document.getElementById("terminalBuddy")
+        .textContent = data.buddy;
+
+
+    document.getElementById("naritaPdf")
+        .src = data.pdf;
+
+
+    document.getElementById("fullPdfButton")
+        .href = data.pdf;
+
+
+    const buddy = document.getElementById("buddyText");
+
+    if (buddy) {
+        buddy.textContent = data.buddy;
+    }
+
+
+    setTimeout(() => {
+
+        document.getElementById("terminalResult")
+            .scrollIntoView({
+                behavior:"smooth",
+                block:"start"
+            });
+
+    }, 150);
+
+}
+
+
+function terminalFromSearch(value) {
+
+    const text =
+        value
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g," ");
+
+
+    if (!text)
+        return null;
+
+
+    /*
+       Terminal 1 aliases
+    */
+
+    if (
+        text === "1" ||
+        text.includes("terminal 1") ||
+        text.includes("t1") ||
+        text.includes("1ptb") ||
+        text.includes("north wing") ||
+        text.includes("south wing")
+    ) {
+        return 1;
+    }
+
+
+    /*
+       Terminal 2 aliases
+    */
+
+    if (
+        text === "2" ||
+        text.includes("terminal 2") ||
+        text.includes("t2") ||
+        text.includes("2ptb")
+    ) {
+        return 2;
+    }
+
+
+    /*
+       Terminal 3 aliases
+    */
+
+    if (
+        text === "3" ||
+        text.includes("terminal 3") ||
+        text.includes("t3") ||
+        text.includes("3ptb")
+    ) {
+        return 3;
+    }
+
+
+    return null;
+
+}
+
+
+const terminalSearch =
+    document.getElementById("terminalSearch");
+
+
+const terminalSearchButton =
+    document.getElementById("terminalSearchButton");
+
+
+if (terminalSearchButton) {
+
+    terminalSearchButton
+    .addEventListener("click", () => {
+
+        const terminal =
+            terminalFromSearch(
+                terminalSearch.value
+            );
+
+
+        if (terminal) {
+
+            showNaritaTerminal(terminal);
+
+        }
+
+        else {
+
+            alert(
+                "I couldn't identify the terminal.\n\n" +
+                "Try Terminal 1, Terminal 2, Terminal 3, T1, T2 or T3."
+            );
+
+        }
+
+    });
+
+}
+
+
+if (terminalSearch) {
+
+    terminalSearch
+    .addEventListener("keydown", event => {
+
+        if (event.key === "Enter") {
+            terminalSearchButton.click();
+        }
+
+    });
+
+}
+
+
+document
+.querySelectorAll(".terminalQuick")
+.forEach(button => {
+
+    button.addEventListener("click", () => {
+
+        showNaritaTerminal(
+            Number(button.dataset.terminal)
+        );
+
+    });
+
+});
+
+
+const openNaritaLive =
+    document.getElementById("openNaritaLive");
+
+
+if (openNaritaLive) {
+
+    openNaritaLive.addEventListener("click", () => {
+
+        window.open(
+            "https://www.narita-airport.jp/en/map/",
+            "_blank"
+        );
+
+    });
+
+}
+
+
+
+
+/* =====================================================
+   TOKYO HERO V5 DEBUG ENGINE
+===================================================== */
+
+(() => {
+
+    const debugErrors = [];
+
+    const button =
+        document.getElementById("debugButton");
+
+    const panel =
+        document.getElementById("debugPanel");
+
+    const log =
+        document.getElementById("debugLog");
+
+
+    function safeValue(value) {
+
+        try {
+
+            if (value instanceof Error) {
+
+                return (
+                    value.name +
+                    ": " +
+                    value.message +
+                    "\n" +
+                    (value.stack || "")
+                );
+
+            }
+
+
+            if (typeof value === "object") {
+
+                return JSON.stringify(
+                    value,
+                    null,
+                    2
+                );
+
+            }
+
+
+            return String(value);
+
+        }
+
+        catch {
+
+            return "[Unable to display value]";
+
+        }
+
+    }
+
+
+    function addDebug(
+        type,
+        message
+    ) {
+
+        const timestamp =
+            new Date()
+            .toLocaleTimeString();
+
+
+        const entry =
+            "[" +
+            timestamp +
+            "] " +
+            type.toUpperCase() +
+            "\n" +
+            message;
+
+
+        debugErrors.push(entry);
+
+
+        if (debugErrors.length > 100) {
+
+            debugErrors.shift();
+
+        }
+
+
+        updateLog();
+
+
+        if (
+            type === "error" ||
+            type === "network"
+        ) {
+
+            button.classList.add(
+                "has-errors"
+            );
+
+        }
+
+    }
+
+
+    function updateLog() {
+
+        log.textContent =
+            debugErrors.length
+            ?
+            debugErrors.join(
+                "\n\n--------------------\n\n"
+            )
+            :
+            "No errors captured yet. ✅";
+
+    }
+
+
+    /* -----------------------------------------
+       JavaScript errors
+    ----------------------------------------- */
+
+    window.addEventListener(
+        "error",
+        event => {
+
+            addDebug(
+                "error",
+
+                (event.message ||
+                 "Unknown JavaScript error") +
+
+                "\nFile: " +
+                (event.filename || "unknown") +
+
+                "\nLine: " +
+                (event.lineno || "?") +
+
+                ":" +
+                (event.colno || "?")
+            );
+
+        }
+    );
+
+
+    /* -----------------------------------------
+       Promise errors
+    ----------------------------------------- */
+
+    window.addEventListener(
+        "unhandledrejection",
+        event => {
+
+            addDebug(
+                "error",
+
+                "Unhandled Promise Rejection\n" +
+                safeValue(event.reason)
+            );
+
+        }
+    );
+
+
+    /* -----------------------------------------
+       Capture console.error / console.warn
+    ----------------------------------------- */
+
+    const originalError =
+        console.error.bind(console);
+
+    const originalWarn =
+        console.warn.bind(console);
+
+
+    console.error = (...args) => {
+
+        originalError(...args);
+
+        addDebug(
+            "error",
+            args.map(safeValue).join(" ")
+        );
+
+    };
+
+
+    console.warn = (...args) => {
+
+        originalWarn(...args);
+
+        addDebug(
+            "warning",
+            args.map(safeValue).join(" ")
+        );
+
+    };
+
+
+    /* -----------------------------------------
+       Capture failed FETCH calls
+    ----------------------------------------- */
+
+    if (window.fetch) {
+
+        const originalFetch =
+            window.fetch.bind(window);
+
+
+        window.fetch =
+            async (...args) => {
+
+                const resource =
+                    args[0];
+
+
+                try {
+
+                    const response =
+                        await originalFetch(...args);
+
+
+                    if (!response.ok) {
+
+                        addDebug(
+                            "network",
+
+                            "HTTP " +
+                            response.status +
+                            "\n" +
+                            response.url
+                        );
+
+                    }
+
+
+                    return response;
+
+                }
+
+                catch (error) {
+
+                    addDebug(
+                        "network",
+
+                        "Fetch failed:\n" +
+                        safeValue(resource) +
+                        "\n\n" +
+                        safeValue(error)
+                    );
+
+
+                    throw error;
+
+                }
+
+            };
+
+    }
+
+
+    /* -----------------------------------------
+       Diagnostic status
+    ----------------------------------------- */
+
+    async function diagnostics() {
+        document.getElementById(
+            "dbgPage"
+        ).textContent =
+            location.href;
+
+
+        const secure =
+            window.isSecureContext;
+
+
+        const secureEl =
+            document.getElementById(
+                "dbgSecure"
+            );
+
+
+        secureEl.textContent =
+            secure
+            ?
+            "✅ Secure HTTPS"
+            :
+            "❌ NOT secure";
+
+
+        secureEl.className =
+            secure
+            ?
+            "debug-good"
+            :
+            "debug-bad";
+
+
+        document.getElementById(
+            "dbgOnline"
+        ).textContent =
+            navigator.onLine
+            ?
+            "✅ Online"
+            :
+            "❌ Offline";
+
+
+        document.getElementById(
+            "dbgScreen"
+        ).textContent =
+            window.innerWidth +
+            " × " +
+            window.innerHeight +
+            " CSS px";
+
+
+        document.getElementById(
+            "dbgBrowser"
+        ).textContent =
+            navigator.userAgent;
+
+
+        /* GPS */
+
+        let gpsText =
+            navigator.geolocation
+            ?
+            "Available"
+            :
+            "Unavailable";
+
+
+        try {
+
+            if (
+                navigator.permissions &&
+                navigator.permissions.query
+            ) {
+
+                const permission =
+                    await navigator.permissions.query({
+                        name:"geolocation"
+                    });
+
+
+                gpsText +=
+                    " • Permission: " +
+                    permission.state;
+
+            }
+
+        }
+
+        catch {
+
+            gpsText +=
+                " • Permission state unavailable";
+
+        }
+
+
+        if (
+            typeof currentPosition !==
+            "undefined" &&
+            currentPosition
+        ) {
+
+            gpsText +=
+                "\nLocked: " +
+                currentPosition.lat.toFixed(6) +
+                ", " +
+                currentPosition.lng.toFixed(6) +
+                "\nAccuracy ±" +
+                currentPosition.accuracy +
+                "m";
+
+        }
+
+
+        document.getElementById(
+            "dbgGPS"
+        ).textContent =
+            gpsText;
+
+
+        /* Compass */
+
+        let compassText =
+            (
+                typeof DeviceOrientationEvent !==
+                "undefined"
+            )
+            ?
+            "Available"
+            :
+            "Unavailable";
+
+
+        if (
+            typeof deviceHeading !==
+            "undefined" &&
+            deviceHeading !== null
+        ) {
+
+            compassText +=
+                "\nHeading: " +
+                Math.round(deviceHeading) +
+                "°";
+
+        }
+
+
+        document.getElementById(
+            "dbgCompass"
+        ).textContent =
+            compassText;
+
+
+        /* MapLibre */
+
+        let mapText =
+            typeof maplibregl !==
+            "undefined"
+            ?
+            "MapLibre loaded"
+            :
+            "MapLibre NOT loaded";
+
+
+        try {
+
+            if (
+                typeof map !==
+                "undefined" &&
+                map
+            ) {
+
+                mapText +=
+                    map.loaded()
+                    ?
+                    " • Map loaded"
+                    :
+                    " • Map loading/not ready";
+
+            }
+
+        }
+
+        catch (error) {
+
+            mapText +=
+                " • Map diagnostic error";
+
+        }
+
+
+        document.getElementById(
+            "dbgMap"
+        ).textContent =
+            mapText;
+
+    }
+
+
+    /* -----------------------------------------
+       Debug report
+    ----------------------------------------- */
+
+    function makeReport() {
+
+        return [
+            "TOKYO HERO V5 DEBUG REPORT",
+            "==========================",
+            "",
+            "Time: " +
+            new Date().toISOString(),
+            "",
+            "URL: " +
+            location.href,
+            "",
+            "Secure Context: " +
+            window.isSecureContext,
+            "",
+            "Online: " +
+            navigator.onLine,
+            "",
+            "Screen: " +
+            window.innerWidth +
+            "x" +
+            window.innerHeight,
+            "",
+            "User Agent:",
+            navigator.userAgent,
+            "",
+            "ERROR LOG",
+            "---------",
+            debugErrors.length
+                ?
+                debugErrors.join(
+                    "\n\n----------------\n\n"
+                )
+                :
+                "No captured errors."
+        ].join("\n");
+
+    }
+
+
+    /* -----------------------------------------
+       Controls
+    ----------------------------------------- */
+
+    button.addEventListener(
+        "click",
+        async () => {
+
+            panel.classList.add(
+                "open"
+            );
+
+
+            button.classList.remove(
+                "has-errors"
+            );
+
+
+            await diagnostics();
+
+        }
+    );
+
+
+    document.getElementById(
+        "debugClose"
+    )
+    .addEventListener(
+        "click",
+        () => {
+
+            panel.classList.remove(
+                "open"
+            );
+
+        }
+    );
+
+
+    document.getElementById(
+        "debugRefresh"
+    )
+    .addEventListener(
+        "click",
+        diagnostics
+    );
+
+
+    document.getElementById(
+        "debugClear"
+    )
+    .addEventListener(
+        "click",
+        () => {
+
+            debugErrors.length = 0;
+
+            updateLog();
+
+            button.classList.remove(
+                "has-errors"
+            );
+
+        }
+    );
+
+
+    document.getElementById(
+        "debugCopy"
+    )
+    .addEventListener(
+        "click",
+        async () => {
+
+            const report =
+                makeReport();
+
+
+            try {
+
+                await navigator.clipboard
+                    .writeText(report);
+
+
+                addDebug(
+                    "info",
+                    "Debug report copied."
+                );
+
+            }
+
+            catch {
+
+                /*
+                   Clipboard can be restricted
+                   on some iPhone/browser states.
+                */
+
+                log.textContent =
+                    report;
+
+                alert(
+                    "Clipboard access was blocked. " +
+                    "The full report is now shown " +
+                    "in the debug window."
+                );
+
+            }
+
+        }
+    );
+
+
+    window.addEventListener(
+        "online",
+        diagnostics
+    );
+
+
+    window.addEventListener(
+        "offline",
+        diagnostics
+    );
+
+
+    addDebug(
+        "info",
+        "Tokyo Hero V5 debugger initialized."
+    );
+
+})();
+
+</script>
+
+
+
+<!-- ==================================================
+     TOKYO HERO V5 DEBUG PANEL
+=================================================== -->
+
+<button id="debugButton" type="button">
+🐞 DEBUG
+</button>
+
+
+<div id="debugPanel">
+
+<div class="debug-header">
+
+<div>
+
+<div class="debug-title">
+🐞 Tokyo Hero Debugger
+</div>
+
+<div style="
+color:#8f9ba8;
+font-size:11px;
+margin-top:3px;
+">
+V5 diagnostic console
+</div>
+
+</div>
+
+
+<button
+id="debugClose"
+type="button"
+class="debug-close">
+✕ Close
+</button>
+
+</div>
+
+
+<div class="debug-status">
+
+<div class="debug-item">
+<div class="debug-label">
+PAGE
+</div>
+<div id="dbgPage"></div>
+</div>
+
+
+<div class="debug-item">
+<div class="debug-label">
+HTTPS
+</div>
+<div id="dbgSecure"></div>
+</div>
+
+
+<div class="debug-item">
+<div class="debug-label">
+INTERNET
+</div>
+<div id="dbgOnline"></div>
+</div>
+
+
+<div class="debug-item">
+<div class="debug-label">
+GPS
+</div>
+<div id="dbgGPS"></div>
+</div>
+
+
+<div class="debug-item">
+<div class="debug-label">
+COMPASS
+</div>
+<div id="dbgCompass"></div>
+</div>
+
+
+<div class="debug-item">
+<div class="debug-label">
+MAP
+</div>
+<div id="dbgMap"></div>
+</div>
+
+
+<div class="debug-item">
+<div class="debug-label">
+SCREEN
+</div>
+<div id="dbgScreen"></div>
+</div>
+
+
+<div class="debug-item">
+<div class="debug-label">
+BROWSER
+</div>
+<div id="dbgBrowser"></div>
+</div>
+
+</div>
+
+
+<pre id="debugLog">Debug console ready.</pre>
+
+
+<div class="debug-actions">
+
+<button
+id="debugRefresh"
+type="button"
+class="blue">
+🔄 Refresh
+</button>
+
+<button
+id="debugCopy"
+type="button"
+class="green">
+📋 Copy Report
+</button>
+
+<button
+id="debugClear"
+type="button"
+class="gray">
+🧹 Clear
+</button>
+
+</div>
+
+</div>
+
+</body>
+</html>
