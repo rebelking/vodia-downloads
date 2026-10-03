@@ -798,10 +798,7 @@ textarea::placeholder {
 
 /* ===== TOKYO HERO QUICK TIME BAR ===== */
 .quick-time-bar {
-    display:grid;
-    grid-template-columns:1fr auto 1fr;
-    gap:8px;
-    align-items:center;
+    display:block;
     background:rgba(23,29,37,.96);
     border:1px solid rgba(255,255,255,.10);
     border-radius:16px;
@@ -809,6 +806,33 @@ textarea::placeholder {
     margin-bottom:15px;
     box-shadow:0 8px 28px rgba(0,0,0,.25);
     color:white;
+}
+
+.quick-time-title {
+    font-size:10px;
+    font-weight:900;
+    color:#62db8a;
+    letter-spacing:.7px;
+    margin-bottom:8px;
+}
+
+.quick-time-grid {
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:10px;
+    align-items:start;
+}
+
+.quick-time-zone {
+    min-width:0;
+}
+
+.quick-time-zone:nth-child(2) {
+    text-align:center;
+}
+
+.quick-time-zone:nth-child(3) {
+    text-align:right;
 }
 
 .quick-time-city {
@@ -837,11 +861,13 @@ textarea::placeholder {
 
 .quick-time-gap {
     text-align:center;
-    font-size:11px;
-    font-weight:900;
-    color:#62db8a;
-    white-space:nowrap;
-    padding:0 3px;
+    font-size:10px;
+    font-weight:800;
+    color:#aeb7c2;
+    white-space:normal;
+    padding-top:8px;
+    margin-top:8px;
+    border-top:1px solid rgba(255,255,255,.08);
 }
 
 @media(max-width:390px) {
@@ -891,20 +917,36 @@ textarea::placeholder {
 
 
 <!-- QUICK TIME DIFFERENCE -->
-<div class="quick-time-bar" aria-label="Tokyo and Massachusetts live time">
+<div class="quick-time-bar" aria-label="World clock for Tokyo, Massachusetts and Sydney">
 
-    <div>
-        <div class="quick-time-city">🇯🇵 TOKYO</div>
-        <div class="quick-time-value" id="quickTokyoClock">--:--</div>
-        <div class="quick-time-date" id="quickTokyoDate"></div>
+    <div class="quick-time-title">
+        🌐 WORLD CLOCK
     </div>
 
-    <div class="quick-time-gap" id="quickTimeGap">LIVE</div>
+    <div class="quick-time-grid">
 
-    <div class="quick-time-home">
-        <div class="quick-time-city">🇺🇸 MASSACHUSETTS</div>
-        <div class="quick-time-value" id="quickHomeClock">--:--</div>
-        <div class="quick-time-date" id="quickHomeDate"></div>
+        <div class="quick-time-zone">
+            <div class="quick-time-city">🇯🇵 TOKYO</div>
+            <div class="quick-time-value" id="quickTokyoClock">--:--</div>
+            <div class="quick-time-date" id="quickTokyoDate"></div>
+        </div>
+
+        <div class="quick-time-zone">
+            <div class="quick-time-city">🇺🇸 MASSACHUSETTS</div>
+            <div class="quick-time-value" id="quickHomeClock">--:--</div>
+            <div class="quick-time-date" id="quickHomeDate"></div>
+        </div>
+
+        <div class="quick-time-zone">
+            <div class="quick-time-city">🇦🇺 SYDNEY</div>
+            <div class="quick-time-value" id="quickSydneyClock">--:--</div>
+            <div class="quick-time-date" id="quickSydneyDate"></div>
+        </div>
+
+    </div>
+
+    <div class="quick-time-gap" id="quickTimeGap">
+        Comparing time zones…
     </div>
 
 </div>
@@ -1418,6 +1460,14 @@ id="tokyoClock"></div>
 id="homeClock"></div>
 </div>
 
+<br>
+
+<div>
+🇦🇺 Australia — Sydney
+<div style="font-size:27px;font-weight:850"
+id="sydneyClock"></div>
+</div>
+
 </div>
 
 
@@ -1629,11 +1679,23 @@ function clocks() {
             }
         ).format(now);
 
+    const sydneyTime =
+        new Intl.DateTimeFormat(
+            "en-US",
+            {
+                ...format,
+                timeZone:"Australia/Sydney"
+            }
+        ).format(now);
+
     const tokyoClock =
         document.getElementById("tokyoClock");
 
     const homeClock =
         document.getElementById("homeClock");
+
+    const sydneyClock =
+        document.getElementById("sydneyClock");
 
     if (tokyoClock)
         tokyoClock.textContent = tokyoTime;
@@ -1641,17 +1703,26 @@ function clocks() {
     if (homeClock)
         homeClock.textContent = homeTime;
 
+    if (sydneyClock)
+        sydneyClock.textContent = sydneyTime;
+
     const quickTokyo =
         document.getElementById("quickTokyoClock");
 
     const quickHome =
         document.getElementById("quickHomeClock");
 
+    const quickSydney =
+        document.getElementById("quickSydneyClock");
+
     const quickTokyoDate =
         document.getElementById("quickTokyoDate");
 
     const quickHomeDate =
         document.getElementById("quickHomeDate");
+
+    const quickSydneyDate =
+        document.getElementById("quickSydneyDate");
 
     if (quickTokyo) {
         quickTokyo.textContent =
@@ -1671,6 +1742,17 @@ function clocks() {
                 {
                     ...quickFormat,
                     timeZone:"America/New_York"
+                }
+            ).format(now);
+    }
+
+    if (quickSydney) {
+        quickSydney.textContent =
+            new Intl.DateTimeFormat(
+                "en-US",
+                {
+                    ...quickFormat,
+                    timeZone:"Australia/Sydney"
                 }
             ).format(now);
     }
@@ -1697,48 +1779,87 @@ function clocks() {
             ).format(now);
     }
 
+    if (quickSydneyDate) {
+        quickSydneyDate.textContent =
+            new Intl.DateTimeFormat(
+                "en-US",
+                {
+                    ...dateFormat,
+                    timeZone:"Australia/Sydney"
+                }
+            ).format(now);
+    }
+
     const gap =
         document.getElementById("quickTimeGap");
 
     if (gap) {
-        const easternOffsetName =
-            new Intl.DateTimeFormat(
-                "en-US",
-                {
-                    timeZone:"America/New_York",
-                    timeZoneName:"shortOffset"
-                }
-            )
-            .formatToParts(now)
-            .find(
-                part =>
-                    part.type === "timeZoneName"
-            )
-            ?.value || "GMT-5";
 
-        const match =
-            easternOffsetName.match(
-                /GMT([+-])(\d{1,2})(?::(\d{2}))?/
-            );
+        function zoneOffsetHours(timeZone) {
 
-        let easternHours = -5;
+            const value =
+                new Intl.DateTimeFormat(
+                    "en-US",
+                    {
+                        timeZone,
+                        timeZoneName:"shortOffset"
+                    }
+                )
+                .formatToParts(now)
+                .find(
+                    part =>
+                        part.type === "timeZoneName"
+                )
+                ?.value || "GMT+0";
 
-        if (match) {
+            const match =
+                value.match(
+                    /GMT([+-])(\d{1,2})(?::(\d{2}))?/
+                );
+
+            if (!match)
+                return 0;
+
             const sign =
                 match[1] === "+" ? 1 : -1;
 
-            easternHours =
-                sign *
+            return sign *
                 (
                     Number(match[2]) +
                     Number(match[3] || 0) / 60
                 );
+
+        }
+
+        const massOffset =
+            zoneOffsetHours("America/New_York");
+
+        const tokyoOffset =
+            zoneOffsetHours("Asia/Tokyo");
+
+        const sydneyOffset =
+            zoneOffsetHours("Australia/Sydney");
+
+        const tokyoVsMass =
+            tokyoOffset - massOffset;
+
+        const sydneyVsTokyo =
+            sydneyOffset - tokyoOffset;
+
+        function signedHours(value) {
+            return (
+                value >= 0 ? "+" : ""
+            ) +
+            value +
+            "h";
         }
 
         gap.textContent =
-            "+" +
-            (9 - easternHours) +
-            "h";
+            "Tokyo " +
+            signedHours(tokyoVsMass) +
+            " vs MA  •  Sydney " +
+            signedHours(sydneyVsTokyo) +
+            " vs Tokyo";
     }
 
 }
