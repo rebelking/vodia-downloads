@@ -1578,22 +1578,11 @@ const map = new maplibregl.Map({
 
 });
 
-/* Silence known harmless OpenFreeMap Liberty missing-POI sprite warnings. */
-const missingPoiFallbacks = new Set([
-    "office",
-    "gate",
-    "sports_centre",
-    "ice_rink",
-    "swimming_pool",
-    "lift_gate",
-    "bollard",
-    "bicycle_parking",
-    "running",
-    "toll_booth"
-]);
-
+/* Silence harmless OpenFreeMap Liberty missing-POI sprite warnings.
+   Custom Tokyo Hero markers are HTML markers and are unaffected. */
 map.setMissingStyleImageResolver((id) => {
-    if (!missingPoiFallbacks.has(id) || map.hasImage(id)) return;
+    if (map.hasImage(id)) return;
+
     map.addImage(id, {
         width: 1,
         height: 1,
