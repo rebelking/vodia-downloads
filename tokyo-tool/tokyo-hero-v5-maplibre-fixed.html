@@ -795,6 +795,60 @@ textarea::placeholder {
 
 }
 
+
+/* ===== TOKYO HERO QUICK TIME BAR ===== */
+.quick-time-bar {
+    display:grid;
+    grid-template-columns:1fr auto 1fr;
+    gap:8px;
+    align-items:center;
+    background:rgba(23,29,37,.96);
+    border:1px solid rgba(255,255,255,.10);
+    border-radius:16px;
+    padding:11px 12px;
+    margin-bottom:15px;
+    box-shadow:0 8px 28px rgba(0,0,0,.25);
+    color:white;
+}
+
+.quick-time-city {
+    font-size:10px;
+    font-weight:900;
+    color:#aeb7c2;
+    letter-spacing:.5px;
+}
+
+.quick-time-value {
+    font-size:20px;
+    font-weight:900;
+    margin-top:2px;
+    white-space:nowrap;
+}
+
+.quick-time-date {
+    font-size:10px;
+    color:#8f9ba8;
+    margin-top:2px;
+}
+
+.quick-time-home {
+    text-align:right;
+}
+
+.quick-time-gap {
+    text-align:center;
+    font-size:11px;
+    font-weight:900;
+    color:#62db8a;
+    white-space:nowrap;
+    padding:0 3px;
+}
+
+@media(max-width:390px) {
+    .quick-time-value { font-size:17px; }
+    .quick-time-gap { font-size:10px; }
+}
+
 </style>
 </head>
 
@@ -834,6 +888,26 @@ textarea::placeholder {
 
 </div>
 
+
+
+<!-- QUICK TIME DIFFERENCE -->
+<div class="quick-time-bar" aria-label="Tokyo and Massachusetts live time">
+
+    <div>
+        <div class="quick-time-city">🇯🇵 TOKYO</div>
+        <div class="quick-time-value" id="quickTokyoClock">--:--</div>
+        <div class="quick-time-date" id="quickTokyoDate"></div>
+    </div>
+
+    <div class="quick-time-gap" id="quickTimeGap">LIVE</div>
+
+    <div class="quick-time-home">
+        <div class="quick-time-city">🇺🇸 MASSACHUSETTS</div>
+        <div class="quick-time-value" id="quickHomeClock">--:--</div>
+        <div class="quick-time-date" id="quickHomeDate"></div>
+    </div>
+
+</div>
 
 <!-- MONEY -->
 
@@ -1526,8 +1600,18 @@ function clocks() {
         second:"2-digit"
     };
 
-    document.getElementById("tokyoClock")
-        .textContent =
+    const quickFormat = {
+        hour:"numeric",
+        minute:"2-digit"
+    };
+
+    const dateFormat = {
+        weekday:"short",
+        month:"short",
+        day:"numeric"
+    };
+
+    const tokyoTime =
         new Intl.DateTimeFormat(
             "en-US",
             {
@@ -1536,8 +1620,7 @@ function clocks() {
             }
         ).format(now);
 
-    document.getElementById("homeClock")
-        .textContent =
+    const homeTime =
         new Intl.DateTimeFormat(
             "en-US",
             {
@@ -1545,6 +1628,118 @@ function clocks() {
                 timeZone:"America/New_York"
             }
         ).format(now);
+
+    const tokyoClock =
+        document.getElementById("tokyoClock");
+
+    const homeClock =
+        document.getElementById("homeClock");
+
+    if (tokyoClock)
+        tokyoClock.textContent = tokyoTime;
+
+    if (homeClock)
+        homeClock.textContent = homeTime;
+
+    const quickTokyo =
+        document.getElementById("quickTokyoClock");
+
+    const quickHome =
+        document.getElementById("quickHomeClock");
+
+    const quickTokyoDate =
+        document.getElementById("quickTokyoDate");
+
+    const quickHomeDate =
+        document.getElementById("quickHomeDate");
+
+    if (quickTokyo) {
+        quickTokyo.textContent =
+            new Intl.DateTimeFormat(
+                "en-US",
+                {
+                    ...quickFormat,
+                    timeZone:"Asia/Tokyo"
+                }
+            ).format(now);
+    }
+
+    if (quickHome) {
+        quickHome.textContent =
+            new Intl.DateTimeFormat(
+                "en-US",
+                {
+                    ...quickFormat,
+                    timeZone:"America/New_York"
+                }
+            ).format(now);
+    }
+
+    if (quickTokyoDate) {
+        quickTokyoDate.textContent =
+            new Intl.DateTimeFormat(
+                "en-US",
+                {
+                    ...dateFormat,
+                    timeZone:"Asia/Tokyo"
+                }
+            ).format(now);
+    }
+
+    if (quickHomeDate) {
+        quickHomeDate.textContent =
+            new Intl.DateTimeFormat(
+                "en-US",
+                {
+                    ...dateFormat,
+                    timeZone:"America/New_York"
+                }
+            ).format(now);
+    }
+
+    const gap =
+        document.getElementById("quickTimeGap");
+
+    if (gap) {
+        const easternOffsetName =
+            new Intl.DateTimeFormat(
+                "en-US",
+                {
+                    timeZone:"America/New_York",
+                    timeZoneName:"shortOffset"
+                }
+            )
+            .formatToParts(now)
+            .find(
+                part =>
+                    part.type === "timeZoneName"
+            )
+            ?.value || "GMT-5";
+
+        const match =
+            easternOffsetName.match(
+                /GMT([+-])(\d{1,2})(?::(\d{2}))?/
+            );
+
+        let easternHours = -5;
+
+        if (match) {
+            const sign =
+                match[1] === "+" ? 1 : -1;
+
+            easternHours =
+                sign *
+                (
+                    Number(match[2]) +
+                    Number(match[3] || 0) / 60
+                );
+        }
+
+        gap.textContent =
+            "+" +
+            (9 - easternHours) +
+            "h";
+    }
 
 }
 
