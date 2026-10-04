@@ -42,7 +42,15 @@ else
   git clone --depth 1 --branch "$BRANCH" "$REPO" "$DIR"
 fi
 chmod -R a+rX "$DIR"
-[ -f "$DIR/public/index.html" ] || { echo "No public/index.html in the repository. Is this the right repo?"; exit 1; }
+# The guide can sit at the top of the repository or inside a folder (e.g. vodia-user-guide-site/)
+SITE="$DIR"
+if [ ! -f "$SITE/public/index.html" ]; then
+  # look for the guide's own content file, so other projects in the same repo are never picked
+  FOUND=$(find "$DIR" -maxdepth 5 -path "$DIR/.git" -prune -o -path '*/public/data/guide.json' -print | sort | head -n 1)
+  [ -n "$FOUND" ] && SITE=$(dirname "$(dirname "$(dirname "$FOUND")")")
+fi
+[ -f "$SITE/public/index.html" ] || { echo "No public/index.html found in the repository. Is this the right repo?"; exit 1; }
+echo "Serving: $SITE/public"
 
 say "Configuring nginx on port 80"
 LISTEN6=""
@@ -53,7 +61,7 @@ server {
     $LISTEN6
     server_name ${DOMAIN:-_};
 
-    root $DIR/public;
+    root $SITE/public;
     index index.html;
 
     location / {
