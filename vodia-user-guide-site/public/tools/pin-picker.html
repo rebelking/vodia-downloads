@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pin picker · Vodia User Portal Guide</title>
+<link rel="stylesheet" href="../css/style.css">
+<style>
+  body{padding:24px}
+  .wrap{max-width:1280px;margin:0 auto}
+  .bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:12px 0 20px}
+  .bar input[type=text]{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);min-width:260px}
+  .btn{font:600 14px var(--font);padding:8px 14px;border-radius:8px;border:1px solid var(--brand);background:var(--brand);color:#fff;cursor:pointer}
+  .btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+  .grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(300px,1fr);gap:24px;align-items:start}
+  .stage{position:relative;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface);min-height:200px;cursor:crosshair}
+  .stage img{display:block;width:100%;height:auto;user-select:none;-webkit-user-drag:none}
+  .stage .pin{cursor:grab}
+  .empty-stage{display:grid;place-items:center;min-height:240px;color:var(--muted);padding:24px;text-align:center}
+  .rows{display:flex;flex-direction:column;gap:10px}
+  .row{display:grid;grid-template-columns:30px 1fr 30px;gap:8px;align-items:start}
+  .row .num{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:13px;background:var(--pin);color:var(--pin-ink)}
+  .row textarea{font:inherit;font-size:14.5px;width:100%;min-height:56px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);resize:vertical}
+  .row small{grid-column:2;color:var(--muted);font-size:12.5px}
+  .row .del{background:none;border:0;color:var(--muted);font-size:20px;cursor:pointer}
+  pre{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px;overflow:auto;font-size:12.5px;max-height:320px}
+  .hint{color:var(--muted);font-size:14px}
+  @media (max-width:900px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 style="font-size:28px">Pin picker</h1>
+  <p class="hint">Load a screenshot, click to drop numbered pins, drag them to adjust, and write each step. Copy the JSON into a topic's <code>steps</code> in <code>data/guide.json</code>. Pins are saved as percentages, so they stay in place at any screen size.</p>
+  <div class="bar">
+    <input type="file" id="file" accept="image/*">
+    <input type="text" id="path" placeholder="or a path like images/transfer-a.webp">
+    <button class="btn ghost" id="load" type="button">Load path</button>
+    <button class="btn ghost" id="clear" type="button">Clear pins</button>
+  </div>
+  <div class="grid">
+    <div>
+      <div class="stage" id="stage"><div class="empty-stage">Choose a screenshot to start.</div></div>
+      <p class="hint">Click to add a pin. Drag a pin to move it. Pins only mark a spot. Put the pin beside a button rather than on top of it, so the button stays visible.</p>
+    </div>
+    <div>
+      <div class="rows" id="rows"></div>
+      <p class="hint" id="nopins">No pins yet.</p>
+      <div class="bar"><button class="btn" id="copy" type="button">Copy steps JSON</button><button class="btn ghost" id="addText" type="button">Add a step without a pin</button></div>
+      <pre id="out">[]</pre>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  const $=s=>document.querySelector(s), stage=$('#stage'), rows=$('#rows'), out=$('#out');
+  let steps=[], img=null, drag=null;
+  const r1 = v => Math.round(v*10)/10;
+  function setImage(src){
+    stage.innerHTML=''; img=new Image(); img.src=src; img.alt='Screenshot'; img.draggable=false;
+    img.onerror=()=>{ stage.innerHTML='<div class="empty-stage">Could not load that image.</div>'; img=null; };
+    stage.appendChild(img); render();
+  }
+  $('#file').addEventListener('change', e=>{ const f=e.target.files[0]; if(f) setImage(URL.createObjectURL(f)); });
+  $('#load').addEventListener('click', ()=>{ const p=$('#path').value.trim(); if(p) setImage(p.startsWith('http')||p.startsWith('/')?p:'../'+p); });
+  $('#clear').addEventListener('click', ()=>{ steps=steps.filter(s=>s.x===undefined); render(); });
+  $('#addText').addEventListener('click', ()=>{ steps.push({text:''}); render(); });
+  function pos(e){ const r=img.getBoundingClientRect(); return { x: r1(Math.min(100,Math.max(0,(e.clientX-r.left)/r.width*100))), y: r1(Math.min(100,Math.max(0,(e.clientY-r.top)/r.height*100))) }; }
+  stage.addEventListener('pointerdown', e=>{
+    if(!img) return;
+    const pin=e.target.closest('.pin');
+    if(pin){ drag=+pin.dataset.i; pin.setPointerCapture(e.pointerId); return; }
+    if(e.target!==img) return;
+    const p=pos(e); steps.push({text:'', x:p.x, y:p.y}); render();
+    const ta=rows.querySelectorAll('textarea'); ta[ta.length-1] && ta[ta.length-1].focus();
+  });
+  stage.addEventListener('pointermove', e=>{ if(drag===null) return; const p=pos(e); steps[drag].x=p.x; steps[drag].y=p.y; render(true); });
+  stage.addEventListener('pointerup', ()=>{ drag=null; });
+  function render(pinsOnly){
+    stage.querySelectorAll('.pin').forEach(p=>p.remove());
+    steps.forEach((s,i)=>{ if(s.x===undefined) return; const b=document.createElement('button'); b.type='button'; b.className='pin'; b.dataset.i=i; b.textContent=i+1; b.style.left=s.x+'%'; b.style.top=s.y+'%'; stage.appendChild(b); });
+    if(!pinsOnly){
+      rows.innerHTML=steps.map((s,i)=>`<div class="row"><span class="num">${i+1}</span><textarea data-i="${i}" placeholder="Label. What it does, in one or two sentences.">${s.text.replace(/</g,'&lt;')}</textarea><button class="del" data-del="${i}" type="button" aria-label="Remove step ${i+1}">×</button><small>${s.x===undefined?'No pin':'x '+s.x+'%, y '+s.y+'%'}</small></div>`).join('');
+    } else {
+      rows.querySelectorAll('small').forEach((el,i)=>{ const s=steps[i]; el.textContent = s.x===undefined?'No pin':'x '+s.x+'%, y '+s.y+'%'; });
+    }
+    $('#nopins').hidden = steps.length>0;
+    out.textContent = JSON.stringify(steps.map(s=> s.x===undefined ? {text:s.text} : {text:s.text, x:s.x, y:s.y}), null, 2);
+  }
+  rows.addEventListener('input', e=>{ const t=e.target.closest('textarea'); if(t){ steps[+t.dataset.i].text=t.value; out.textContent=JSON.stringify(steps.map(s=> s.x===undefined ? {text:s.text} : {text:s.text, x:s.x, y:s.y}), null, 2); } });
+  rows.addEventListener('click', e=>{ const d=e.target.closest('[data-del]'); if(d){ steps.splice(+d.dataset.del,1); render(); } });
+  $('#copy').addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(out.textContent); $('#copy').textContent='Copied'; setTimeout(()=>$('#copy').textContent='Copy steps JSON',1500); }catch(e){ window.getSelection().selectAllChildren(out); } });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1841 @@
+{
+  "title": "Vodia User Portal Guide",
+  "subtitle": "How to get around your phone system from the web",
+  "chapters": [
+    {
+      "id": "getting-started",
+      "title": "Getting started",
+      "intro": "Find your sign-in details, sign in to the user portal, and learn where everything lives.",
+      "scenarios": [
+        {
+          "id": "welcome-email",
+          "title": "Read your welcome email",
+          "summary": "When your extension is created, the phone system emails you everything you need to get started: your extension number, the portal address, and your first-time password and PIN.",
+          "image": "images/welcome-email.webp",
+          "alt": "Vodia welcome email listing the account name, extension number, domain, company details, voicemail number, login URL, temporary password and PIN",
+          "caption": "Example welcome email in Japanese. The password and PIN are hidden here.",
+          "steps": [
+            {
+              "text": "Name on your account. This is how you appear to colleagues in the directory and on internal caller ID.",
+              "x": 87.5,
+              "y": 37.8
+            },
+            {
+              "text": "Extension number. The short number colleagues dial to reach you. You also use it as your username when you sign in.",
+              "x": 87.5,
+              "y": 43.3
+            },
+            {
+              "text": "Domain name. Your company's address on the phone system.",
+              "x": 87.5,
+              "y": 49.0
+            },
+            {
+              "text": "Company, title, building and department. Directory details your administrator entered. It's normal for some to be blank.",
+              "x": 87.5,
+              "y": 61.3
+            },
+            {
+              "text": "Voicemail number. Dial this to reach your mailbox and listen to messages.",
+              "x": 87.5,
+              "y": 74.0
+            },
+            {
+              "text": "Login URL. Open this address in your browser to reach the user portal.",
+              "x": 87.5,
+              "y": 81.7
+            },
+            {
+              "text": "Temporary password. Use it with your extension number the first time you sign in, then change it to something only you know.",
+              "x": 87.5,
+              "y": 89.2
+            },
+            {
+              "text": "PIN. A number code for voicemail and for signing in on a desk phone.",
+              "x": 87.5,
+              "y": 94.9
+            }
+          ],
+          "tips": [
+            "The email is sent in the language set for your account. The fields appear in the same order in every language.",
+            "It contains your password and PIN, so don't forward it. Delete it once you've changed both.",
+            "Didn't get the email, or lost it? Ask your administrator to send it again.",
+            "Bookmark the login URL so the portal is one click away."
+          ]
+        },
+        {
+          "id": "log-in",
+          "title": "Sign in to the user portal",
+          "summary": "Open the login URL from your welcome email in your browser. You'll land on the sign-in page, where you can sign in with your extension and password, a passkey, or your Microsoft account.",
+          "image": "images/log-in.webp",
+          "alt": "Vodia PBX Login page with Account and Password fields, a language selector, Remember login information, Forgot your password, Login, Passkey and Microsoft buttons",
+          "caption": "The sign-in page. Your company may show fewer sign-in options.",
+          "steps": [
+            {
+              "text": "Language. Choose the language the portal is shown in. You can change it at any time.",
+              "x": 90,
+              "y": 25.7
+            },
+            {
+              "text": "Account. Type your extension number from the welcome email, for example 2001.",
+              "x": 90,
+              "y": 37.6
+            },
+            {
+              "text": "Password. Type your password. The first time, use the temporary password from the welcome email. Select the eye icon to check what you typed.",
+              "x": 90,
+              "y": 50.0
+            },
+            {
+              "text": "Remember login information. Tick this only on your own computer, so you don't have to type your details next time.",
+              "x": 11,
+              "y": 56.2
+            },
+            {
+              "text": "Forgot your password? Start a password reset if you can't remember your password.",
+              "x": 90,
+              "y": 56.2
+            },
+            {
+              "text": "Login. Select this to sign in with your account and password.",
+              "x": 90,
+              "y": 62.4
+            },
+            {
+              "text": "Passkey. Sign in with your fingerprint, face, or device PIN instead of a password, once you've set up a passkey.",
+              "x": 58,
+              "y": 71.6
+            },
+            {
+              "text": "Microsoft. Sign in with your Microsoft 365 work account, if your company has turned this on.",
+              "x": 90,
+              "y": 86.5
+            }
+          ],
+          "tips": [
+            "Can't sign in? Check that you're using the exact login URL from your welcome email.",
+            "Passwords are case-sensitive. Use the eye icon to make sure Caps Lock isn't on.",
+            "After your first sign-in, change your temporary password to one only you know.",
+            "On a shared or public computer, leave “Remember login information” unticked and sign out when you're done."
+          ]
+        },
+        {
+          "id": "dashboard-tour",
+          "title": "Tour the home screen",
+          "summary": "After you sign in, you land on Home. The screen has four parts: the navigation bar on the far left, your colleagues next to it, the call analytics dashboard in the middle, and your current and recent calls on the right.",
+          "parts": [
+            {
+              "title": "The whole screen",
+              "image": "images/dashboard-tour-a.webp",
+              "alt": "Vodia user portal home screen with navigation bar, colleague list, Enterprise Call Analytics dashboard, a current call card and recent calls",
+              "steps": [
+                {
+                  "text": "Navigation bar. Move between sections: Home, History (your call log), Voicemail, Messages, Contacts, Recordings, Statistics and Queue Management. Red numbers show new missed calls and voicemails.",
+                  "x": 1.8,
+                  "y": 44.2
+                },
+                {
+                  "text": "Dial box. Type a phone number or extension, then select the green phone button to call.",
+                  "x": 8.0,
+                  "y": 2.7
+                },
+                {
+                  "text": "Filter, departments and groups. Find colleagues quickly by name, extension, department or group.",
+                  "x": 25.0,
+                  "y": 10.6
+                },
+                {
+                  "text": "Colleagues. Each tile shows a colleague's name and extension. A green phone icon, like the one next to Grant Zoey, means they're on a call right now.",
+                  "x": 17.6,
+                  "y": 74.5
+                },
+                {
+                  "text": "Main area. On Home, it shows Enterprise Call Analytics, a summary of your calls. See stage B for details.",
+                  "x": 38.0,
+                  "y": 8.0
+                },
+                {
+                  "text": "Settings. Open your personal settings.",
+                  "x": 87.8,
+                  "y": 2.7
+                },
+                {
+                  "text": "Your account. Your name and extension. The ⋮ menu holds Do Not Disturb, Settings, Wallboard and Logout.",
+                  "x": 97.8,
+                  "y": 5.3
+                },
+                {
+                  "text": "Current call. While you're on a call, a card shows who you're talking to, the call length, and quick buttons to hang up, hold and more.",
+                  "x": 95.6,
+                  "y": 13.7
+                },
+                {
+                  "text": "Recent. Your latest calls. Missed calls are marked in red.",
+                  "x": 88.7,
+                  "y": 17.3
+                },
+                {
+                  "text": "Live calls. Calls in progress, showing the other party (Remote).",
+                  "x": 93.8,
+                  "y": 27.4
+                }
+              ],
+              "wide": true,
+              "caption": "The home screen during a call with Grant Zoey (2033)."
+            },
+            {
+              "title": "The call analytics dashboard",
+              "image": "images/dashboard-tour-b.webp",
+              "alt": "Enterprise Call Analytics dashboard with summary cards, hourly distribution, call type and status charts, extension performance and call details",
+              "steps": [
+                {
+                  "text": "Period. Choose the time range to report on, such as Last 7 Days.",
+                  "x": 71.7,
+                  "y": 3.1
+                },
+                {
+                  "text": "Refresh updates the numbers. Export saves the report.",
+                  "x": 91.8,
+                  "y": 6.0
+                },
+                {
+                  "text": "Summary cards. Total calls, inbound and outbound, missed calls, longest and shortest talk time, busiest and quietest hour, the top extension by calls and by talk time, and the answer rate.",
+                  "x": 17.3,
+                  "y": 20.2
+                },
+                {
+                  "text": "Hourly Call Distribution. How many calls came in at each hour of the day, so you can spot busy times.",
+                  "x": 26.6,
+                  "y": 26.9
+                },
+                {
+                  "text": "Call Types. How calls split between inbound, outbound and internal.",
+                  "x": 60.0,
+                  "y": 26.9
+                },
+                {
+                  "text": "Call Status. How many calls were answered, missed or not answered.",
+                  "x": 92.6,
+                  "y": 26.9
+                },
+                {
+                  "text": "Extension Performance. The 10 extensions handling the most calls.",
+                  "x": 26.6,
+                  "y": 57.2
+                },
+                {
+                  "text": "Call Details. A list of individual calls. Use Filters to narrow it down, or Export CSV to download it as a spreadsheet.",
+                  "x": 81.0,
+                  "y": 88.4
+                },
+                {
+                  "text": "Filter by extension or number, call type, status, or minimum length, then select Apply. Reset clears the filters.",
+                  "x": 66.2,
+                  "y": 95.5
+                }
+              ],
+              "wide": true,
+              "intro": "The middle of the home screen gives you a live overview of call activity."
+            }
+          ],
+          "tips": [
+            "Select Home in the navigation bar at any time to come back to this screen.",
+            "Below Extensions, the list has more sections: Park Orbits, Call Queues, Conference Rooms, Service Flags and External Accounts. Use the arrow on a section to open or close it.",
+            "The colleague list stays in place while you move between sections, so you can always see who's free.",
+            "What the dashboard includes depends on your account's permissions."
+          ]
+        },
+        {
+          "id": "web-phone",
+          "title": "Use the web phone",
+          "summary": "The portal is also a phone. You can call and talk straight from your browser using your computer's microphone and speakers or a headset, with no desk phone needed.",
+          "image": "images/web-phone.webp",
+          "alt": "Dial pad open with extension 2019 typed in the number box, and a red 1 badge on History",
+          "caption": "Dialing extension 2019 from the browser.",
+          "steps": [
+            {
+              "text": "Number box. The digits you click or type appear here. This example dials 2019.",
+              "x": 63.0,
+              "y": 5.2
+            },
+            {
+              "text": "Keys light up as you press them, so you can see each digit went in.",
+              "x": 81.7,
+              "y": 18.2
+            },
+            {
+              "text": "Call. Select the green button on the dial pad, or the one in the number box, to place the call through your computer.",
+              "x": 63.0,
+              "y": 67.2
+            },
+            {
+              "text": "Missed calls. A red number on History counts calls you missed. Select History to see them and call back.",
+              "x": 10.9,
+              "y": 23.2
+            }
+          ],
+          "tips": [
+            "The first time you call, your browser asks to use the microphone. Select Allow, or the other person won't hear you.",
+            "A headset gives much clearer sound than laptop speakers, and it stops echo.",
+            "Keep the portal tab open. If you close it, calls can't ring in the browser.",
+            "For the full dial pad walkthrough, see “Make a call from the dial pad” under Everyday calling."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "calling",
+      "title": "Everyday calling",
+      "intro": "Make, move, and look back on your calls.",
+      "scenarios": [
+        {
+          "id": "make-call",
+          "title": "Make a call from the dial pad",
+          "summary": "Call any extension or phone number from the box at the top of the screen, using your keyboard or the on-screen dial pad.",
+          "image": "images/make-call.webp",
+          "alt": "The Number box at the top of the portal with the on-screen dial pad open below it",
+          "caption": "The dial pad opens under the Number box.",
+          "steps": [
+            {
+              "text": "Number box. Click it to open the dial pad. You can also type a number or extension straight into the box and select the green phone button next to it.",
+              "x": 87.0,
+              "y": 6.4
+            },
+            {
+              "text": "Keypad. Click the digits to enter the number you want to call. The + under the 0 is for international numbers.",
+              "x": 87.0,
+              "y": 40.9
+            },
+            {
+              "text": "Star and pound keys. Use these for feature codes and for phone menus that ask you to press * or #.",
+              "x": 87.0,
+              "y": 77.3
+            },
+            {
+              "text": "Backspace. Delete the last digit if you make a mistake.",
+              "x": 36.2,
+              "y": 91.4
+            },
+            {
+              "text": "Call. Select the green button to place the call.",
+              "x": 66.4,
+              "y": 91.4
+            },
+            {
+              "text": "Close. Hide the dial pad without calling.",
+              "x": 87.0,
+              "y": 91.4
+            }
+          ],
+          "tips": [
+            "To call a colleague, dial their extension, for example 2002. You don't need the full phone number.",
+            "Your computer keyboard works too. Type the number and press Enter.",
+            "When calling outside the company, dial the number the way you would on a normal phone."
+          ]
+        },
+        {
+          "id": "answer-call",
+          "summary": "When someone calls you, the portal shows who's calling in the middle of the screen and on a card at the top right. Your browser can also pop up a notification.",
+          "tips": [
+            "Allow notifications when your browser asks, so you see incoming calls even when the portal is in a background tab.",
+            "Declined calls follow your forwarding settings, usually to voicemail. See “Forward your calls”."
+          ],
+          "image": "images/answer-call.webp",
+          "alt": "Incoming call from Brooks Jackson with answer and decline buttons, a call card at the top right, and a Google Chrome notification",
+          "steps": [
+            {
+              "text": "Incoming call. The caller's name and extension, with a label saying the call is ringing.",
+              "x": 35.3,
+              "y": 55.0
+            },
+            {
+              "text": "Answer. Select the green button to pick up.",
+              "x": 28.1,
+              "y": 89.1
+            },
+            {
+              "text": "Decline. Select the red button if you can't take the call.",
+              "x": 31.4,
+              "y": 89.1
+            },
+            {
+              "text": "Call card. The same answer and decline buttons, plus ⋮ for more options.",
+              "x": 64.1,
+              "y": 7.8
+            },
+            {
+              "text": "Browser notification. Appears even when you're working in another tab. It shows who's calling and who they're calling.",
+              "x": 73.9,
+              "y": 80.9
+            }
+          ],
+          "caption": "An incoming call, with the Chrome notification at the bottom right.",
+          "wide": true,
+          "title": "Answer an incoming call"
+        },
+        {
+          "id": "in-call",
+          "title": "Use the call controls",
+          "summary": "Once a call connects, the controls along the bottom of the screen let you hold, mute, add people, transfer and more.",
+          "parts": [
+            {
+              "title": "While you're talking",
+              "image": "images/in-call-a.webp",
+              "alt": "Connected call to Bennett Noah with call controls along the bottom and a call card at the top right",
+              "steps": [
+                {
+                  "text": "Who you're talking to, with their extension and how long the call has lasted.",
+                  "x": 46.4,
+                  "y": 56.7
+                },
+                {
+                  "text": "Hang up. End the call.",
+                  "x": 25.1,
+                  "y": 88.9
+                },
+                {
+                  "text": "Hold. Put the caller on hold.",
+                  "x": 29.6,
+                  "y": 84.2
+                },
+                {
+                  "text": "Conference. Join all your calls into one conference call. See “Join and host conferences”.",
+                  "x": 34.0,
+                  "y": 88.9
+                },
+                {
+                  "text": "Mute. Stop the caller hearing you. Select it again to unmute.",
+                  "x": 38.5,
+                  "y": 84.2
+                },
+                {
+                  "text": "Record. Start recording the call. The button turns orange while the call is being recorded.",
+                  "x": 42.9,
+                  "y": 88.9
+                },
+                {
+                  "text": "Keypad. Press digits during the call, for example to answer a phone menu.",
+                  "x": 47.4,
+                  "y": 84.2
+                },
+                {
+                  "text": "Transfer. Send the call to someone else. See “Transfer a call”.",
+                  "x": 51.9,
+                  "y": 88.9
+                },
+                {
+                  "text": "Call card. Quick hang-up and hold buttons, and ⋮ for more options. This card stays visible while you move around the portal.",
+                  "x": 86.5,
+                  "y": 8.0
+                },
+                {
+                  "text": "Transfer handle. Drag it onto a colleague to transfer the call.",
+                  "x": 97.5,
+                  "y": 8.0
+                }
+              ],
+              "caption": "A connected call to extension 2002.",
+              "wide": true
+            },
+            {
+              "title": "When the call is on hold",
+              "image": "images/in-call-b.webp",
+              "alt": "Call to Bennett Noah on hold, with a Held label, red hold buttons and a live calls table",
+              "steps": [
+                {
+                  "text": "Held. This label shows the caller is on hold and can't hear you.",
+                  "x": 30.8,
+                  "y": 52.1
+                },
+                {
+                  "text": "Hold button. It turns red while the call is on hold. Select it again to take the caller off hold.",
+                  "x": 16.5,
+                  "y": 88.8
+                },
+                {
+                  "text": "The hold button on the call card turns red too.",
+                  "x": 55.7,
+                  "y": 7.7
+                },
+                {
+                  "text": "Live calls. Calls in progress, showing the other party (Remote), who's on the call on your side (Local), when it started and how long it has lasted.",
+                  "x": 75.4,
+                  "y": 26.8
+                }
+              ],
+              "caption": "The same call on hold.",
+              "wide": true
+            }
+          ],
+          "tips": [
+            "The call card at the top right follows you, so you can check your voicemail or look up a contact while you're on a call.",
+            "Hover over any button to see its name."
+          ]
+        },
+        {
+          "id": "transfer",
+          "title": "Transfer a call",
+          "summary": "Send a call to a colleague, either by typing their extension or by dragging the call onto their name.",
+          "parts": [
+            {
+              "title": "Open the call menu",
+              "image": "images/transfer-a.webp",
+              "alt": "Call card menu with Show call on top, Transfer, Conference and Add a note",
+              "steps": [
+                {
+                  "text": "More options. Select ⋮ on the call card.",
+                  "x": 17.1,
+                  "y": 21.2
+                },
+                {
+                  "text": "Show call on top. Bring this call to the top of the list when you have several.",
+                  "x": 65.9,
+                  "y": 40.3
+                },
+                {
+                  "text": "Transfer. A box where you type who to send the call to.",
+                  "x": 65.9,
+                  "y": 51.6
+                },
+                {
+                  "text": "Conference. Add another person to the call.",
+                  "x": 65.9,
+                  "y": 62.8
+                },
+                {
+                  "text": "Add a note. Write a note about the call.",
+                  "x": 65.9,
+                  "y": 72.8
+                }
+              ],
+              "intro": "While you're on the call, open the menu on the call card at the top right."
+            },
+            {
+              "title": "Type the extension",
+              "image": "images/transfer-b.webp",
+              "alt": "Transfer box filled in with extension 2022 and the green transfer button",
+              "steps": [
+                {
+                  "text": "Type the extension or phone number of the person you want to send the call to, for example 2022.",
+                  "x": 66.3,
+                  "y": 45.1
+                },
+                {
+                  "text": "Select the green phone button to transfer the call.",
+                  "x": 57.1,
+                  "y": 56.6
+                }
+              ]
+            },
+            {
+              "title": "Check it worked",
+              "image": "images/transfer-c.webp",
+              "alt": "Home screen after the transfer, with Brooks Jackson's tile showing he's talking to Bennett Noah",
+              "steps": [
+                {
+                  "text": "The call leaves your call card, and you're free for the next call."
+                },
+                {
+                  "text": "Colleague tiles update. Brooks Jackson's tile now shows a green phone and a red tag with the name of the caller he's talking to.",
+                  "x": 37.3,
+                  "y": 73.0
+                },
+                {
+                  "text": "The live calls list shows the change as well.",
+                  "x": 69.5,
+                  "y": 26.5
+                }
+              ],
+              "caption": "After transferring the call to Brooks Jackson (2022).",
+              "wide": true
+            },
+            {
+              "title": "Or drag and drop: grab the handle",
+              "image": "images/transfer-d.webp",
+              "alt": "Call card with the Transfer handle highlighted",
+              "steps": [
+                {
+                  "text": "Press and hold the transfer handle at the bottom right of the call card. Hover over it to see the Transfer label.",
+                  "x": 95.5,
+                  "y": 31.1
+                }
+              ],
+              "intro": "Faster when the person you want is on screen."
+            },
+            {
+              "title": "Drop it on a colleague",
+              "image": "images/transfer-e.webp",
+              "alt": "Colleague tiles highlighted in blue, with the transfer handle over Collado Elda",
+              "steps": [
+                {
+                  "text": "Drag the handle onto the colleague's tile and let go. The call goes straight to them.",
+                  "x": 28.5,
+                  "y": 60.6
+                },
+                {
+                  "text": "All tiles turn blue while you're dragging, to show where you can drop the call.",
+                  "x": 69.7,
+                  "y": 60.6
+                }
+              ]
+            }
+          ],
+          "tips": [
+            "This sends the call straight through without talking to the colleague first. To introduce the caller first, put them on hold, call your colleague, then transfer.",
+            "Check the colleague's tile before transferring. A green phone icon means they're already on a call."
+          ]
+        },
+        {
+          "id": "who-is-busy",
+          "summary": "The colleague list shows at a glance who's free and who's on the phone, so you know before you call or transfer.",
+          "image": "images/who-is-busy.webp",
+          "alt": "Colleague tiles, with Bennett Noah on a call and a menu button on the 440 tile",
+          "steps": [
+            {
+              "text": "On a call. A green phone icon and a red tag with the name of the person they're talking to.",
+              "x": 30.9,
+              "y": 51.0
+            },
+            {
+              "text": "More options. Hover over a colleague to show ⋮ with more actions.",
+              "x": 27.3,
+              "y": 26.7
+            }
+          ],
+          "tips": [
+            "Use the Filter box and the department list above the tiles to find people quickly."
+          ],
+          "title": "See who's on a call"
+        },
+        {
+          "id": "park-pickup",
+          "title": "Park a call and pick it up",
+          "summary": "Parking puts a caller on hold in a shared spot, called a park orbit, where anyone on the team can see them and pick them up. It's handy when the person the caller wants is away from their desk.",
+          "parts": [
+            {
+              "title": "Find the park orbits",
+              "image": "images/park-pickup-a.webp",
+              "alt": "Colleague list with the Park Orbits section open, showing orbits 100, 200, 300, 400 and Sales 1",
+              "steps": [
+                {
+                  "text": "Park Orbits. This section of the colleague list shows your company's parking spots. Use the arrow to open or close it.",
+                  "x": 89.9,
+                  "y": 36.4
+                },
+                {
+                  "text": "An empty orbit shows just its number, like 100.",
+                  "x": 50.1,
+                  "y": 44.9
+                },
+                {
+                  "text": "Orbits can also have a name, like Sales 1 (5002).",
+                  "x": 50.1,
+                  "y": 64.4
+                },
+                {
+                  "text": "The sections below, such as Call Queues, work the same way.",
+                  "x": 89.9,
+                  "y": 73.1
+                }
+              ],
+              "intro": "On Home, scroll the colleague list down to Park Orbits and open it."
+            },
+            {
+              "title": "Grab the call",
+              "image": "images/park-pickup-b.webp",
+              "alt": "Call card for Brooks Jackson with the drag handle being pulled away",
+              "steps": [
+                {
+                  "text": "While you're on the call, press and hold the handle on the call card.",
+                  "x": 92.8,
+                  "y": 44.4
+                },
+                {
+                  "text": "Drag it out of the card. A copy of the handle follows your pointer.",
+                  "x": 78.0,
+                  "y": 78.4
+                }
+              ]
+            },
+            {
+              "title": "Drop it on an orbit",
+              "image": "images/park-pickup-c.webp",
+              "alt": "Park orbit tiles highlighted in blue with the drag handle over orbit 200",
+              "steps": [
+                {
+                  "text": "Drag the handle onto a park orbit and let go.",
+                  "x": 90.5,
+                  "y": 64.2
+                },
+                {
+                  "text": "The orbits turn blue while you're dragging, to show where you can drop the call.",
+                  "x": 48.9,
+                  "y": 77.0
+                }
+              ]
+            },
+            {
+              "title": "The call is parked",
+              "image": "images/park-pickup-d.webp",
+              "alt": "Park orbit 100 now showing Brooks Jackson 2022",
+              "steps": [
+                {
+                  "text": "The orbit now shows the parked caller's name and extension instead of its number. Here, Brooks Jackson is waiting in orbit 100.",
+                  "x": 44.6,
+                  "y": 21.2
+                },
+                {
+                  "text": "The call leaves your call card, so you're free for your next call."
+                }
+              ],
+              "intro": "Tell your colleague where the caller is waiting, for example “Brooks is parked on 100”."
+            }
+          ],
+          "tips": [
+            "Parked callers hear hold music while they wait.",
+            "Everyone who can see the park orbits can see who's parked, so a colleague can pick up the call from their own screen.",
+            "Don't leave callers parked for long. Let the person they're waiting for know right away."
+          ]
+        },
+        {
+          "id": "call-history",
+          "title": "Review your call history",
+          "summary": "Select History in the navigation bar to see every call you've made, received or missed. The red number on History counts your new missed calls.",
+          "parts": [
+            {
+              "title": "Your call list",
+              "image": "images/call-history-a.webp",
+              "alt": "Call history list with a toolbar, date range, call direction icons, Call buttons and an open options menu",
+              "steps": [
+                {
+                  "text": "Select all. Tick this to select every call, or tick single calls on the left of each row.",
+                  "x": 2.5,
+                  "y": 7.7
+                },
+                {
+                  "text": "Delete. Remove the calls you've ticked from your history.",
+                  "x": 6.8,
+                  "y": 7.7
+                },
+                {
+                  "text": "Mark. Update the ticked calls, for example to mark them as seen.",
+                  "x": 10.5,
+                  "y": 7.7
+                },
+                {
+                  "text": "Download. Save your call list as a file.",
+                  "x": 14.2,
+                  "y": 7.7
+                },
+                {
+                  "text": "Refresh. Load the latest calls.",
+                  "x": 18.0,
+                  "y": 7.7
+                },
+                {
+                  "text": "Call type. Show all calls, or only one kind, such as missed calls.",
+                  "x": 23.5,
+                  "y": 7.7
+                },
+                {
+                  "text": "Search. Find calls by name or number.",
+                  "x": 60.1,
+                  "y": 4.0
+                },
+                {
+                  "text": "Date range. Pick the From and To dates to look at.",
+                  "x": 73.2,
+                  "y": 7.7
+                },
+                {
+                  "text": "Call icons. A blue arrow is a call you made. A green arrow is a call you answered. A red phone means a missed call.",
+                  "x": 50.4,
+                  "y": 31.4
+                },
+                {
+                  "text": "Call. Call the person back straight away.",
+                  "x": 73.9,
+                  "y": 46.2
+                },
+                {
+                  "text": "More options (⋮). Audio Call, Text (send a message), Add a note, or Delete this call.",
+                  "x": 98.9,
+                  "y": 31.5
+                },
+                {
+                  "text": "The number of calls in the date range.",
+                  "x": 73.7,
+                  "y": 97.3
+                }
+              ],
+              "caption": "The call history, with the ⋮ menu open.",
+              "wide": true
+            },
+            {
+              "title": "See all contact with one person",
+              "image": "images/call-history-b.webp",
+              "alt": "Conversation view with DESK ACCOUNT HOT 2000 showing call bubbles grouped by date and a message box",
+              "steps": [
+                {
+                  "text": "Who you're looking at. Select the green phone to call them.",
+                  "x": 38.6,
+                  "y": 4.7
+                },
+                {
+                  "text": "Close. Go back to your call list.",
+                  "x": 93.6,
+                  "y": 4.7
+                },
+                {
+                  "text": "Calls are grouped by day.",
+                  "x": 59.3,
+                  "y": 20.4
+                },
+                {
+                  "text": "Grey bubbles on the left are calls from them, with the call length and time.",
+                  "x": 24.1,
+                  "y": 14.3
+                },
+                {
+                  "text": "Blue bubbles on the right are calls you made to them.",
+                  "x": 75.9,
+                  "y": 33.2
+                },
+                {
+                  "text": "Missed calls are marked in red.",
+                  "x": 71.3,
+                  "y": 69.7
+                },
+                {
+                  "text": "Message. Type here to send them a text message.",
+                  "x": 83.7,
+                  "y": 96.0
+                },
+                {
+                  "text": "Attach a file and other message options.",
+                  "x": 92.8,
+                  "y": 93.3
+                }
+              ],
+              "intro": "Select a name in your call list to see every call and message between you and that person, like a chat.",
+              "wide": true
+            },
+            {
+              "title": "Add a note to a call",
+              "image": "images/call-history-c.webp",
+              "alt": "Add a note box for a call with Brooks Jackson",
+              "steps": [
+                {
+                  "text": "Type a note about the call, for example what was agreed.",
+                  "x": 92.9,
+                  "y": 43.3
+                },
+                {
+                  "text": "Save. Keep the note with this call.",
+                  "x": 7.3,
+                  "y": 72.3
+                },
+                {
+                  "text": "Cancel. Close without saving.",
+                  "x": 28.3,
+                  "y": 84.4
+                }
+              ],
+              "intro": "Select ⋮ next to a call, then Add a note."
+            }
+          ],
+          "tips": [
+            "Missed calls also show under Recent on the right side of every screen.",
+            "To see older calls, change the From date, because the list only shows the date range you pick.",
+            "Deleting a call only removes it from your list. It doesn't affect anyone else's history."
+          ]
+        },
+        {
+          "id": "recordings",
+          "title": "Listen to call recordings",
+          "summary": "Select Recordings in the navigation bar to find and play back recorded calls you have access to.",
+          "image": "images/recordings.webp",
+          "alt": "Recordings list with From, To, Agent, Date, Time and Duration columns and Play buttons",
+          "caption": "Three recordings of calls from Grant Zoey (2033).",
+          "wide": true,
+          "steps": [
+            {
+              "text": "Select all. Tick this to select every recording, or tick single recordings on the left of each row.",
+              "x": 2.4,
+              "y": 4.6
+            },
+            {
+              "text": "Delete. Remove the recordings you've ticked.",
+              "x": 6.9,
+              "y": 4.6
+            },
+            {
+              "text": "Refresh. Load the latest recordings.",
+              "x": 10.9,
+              "y": 4.6
+            },
+            {
+              "text": "Search. Find a recording by name or number.",
+              "x": 95.9,
+              "y": 16.3
+            },
+            {
+              "text": "From and To. Who made the call, and who it was to.",
+              "x": 40.8,
+              "y": 31.4
+            },
+            {
+              "text": "Agent. The extension that handled the call. This matters for calls that came through a queue.",
+              "x": 59.3,
+              "y": 31.4
+            },
+            {
+              "text": "Play. Listen to the recording through your speakers or headset.",
+              "x": 92.8,
+              "y": 36.0
+            },
+            {
+              "text": "More options (⋮). For example, download or delete this recording.",
+              "x": 96.9,
+              "y": 36.0
+            },
+            {
+              "text": "A length of 00:00 means the recording is empty. Nothing was captured, so there's nothing to play.",
+              "x": 80.2,
+              "y": 76.9
+            },
+            {
+              "text": "The number of recordings in your list.",
+              "x": 89.6,
+              "y": 92.3
+            }
+          ],
+          "tips": [
+            "To record a call, select the Record button while you're on it. See “Use the call controls”.",
+            "Your company may record some calls automatically, such as queue calls. These appear here too.",
+            "Recordings can contain personal information. Only download or share them when your company allows it."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "voicemail",
+      "title": "Voicemail",
+      "intro": "Check messages, record greetings, and get voicemail by email.",
+      "scenarios": [
+        {
+          "id": "listen-messages",
+          "title": "Listen to and manage messages",
+          "summary": "Select Voicemail in the navigation bar to see your messages. The red number on Voicemail tells you how many new messages are waiting.",
+          "parts": [
+            {
+              "title": "Your voicemail list",
+              "image": "images/listen-messages-a.webp",
+              "alt": "Voicemail list with three new messages and one older message",
+              "steps": [
+                {
+                  "text": "Select all. Tick this to select every message, or tick single messages on the left of each row.",
+                  "x": 2.1,
+                  "y": 19.9
+                },
+                {
+                  "text": "Delete. Remove the messages you've ticked.",
+                  "x": 5.8,
+                  "y": 19.9
+                },
+                {
+                  "text": "Mark. Update the ticked messages, for example to mark them as listened to.",
+                  "x": 9.1,
+                  "y": 19.9
+                },
+                {
+                  "text": "Refresh. Check for new messages.",
+                  "x": 12.4,
+                  "y": 19.9
+                },
+                {
+                  "text": "Search. Find a message by name or number.",
+                  "x": 95.3,
+                  "y": 8.2
+                },
+                {
+                  "text": "New messages. Shown with a blue background, a bold name and a blue bar on the left. Select a message to open it.",
+                  "x": 30.9,
+                  "y": 48.4
+                },
+                {
+                  "text": "Star. Marks a message you haven't listened to yet.",
+                  "x": 84.1,
+                  "y": 33.1
+                },
+                {
+                  "text": "Call. Call the person back straight away. The ⋮ next to it has more options.",
+                  "x": 89.0,
+                  "y": 79.0
+                },
+                {
+                  "text": "The number of messages in your mailbox.",
+                  "x": 88.0,
+                  "y": 93.2
+                }
+              ],
+              "caption": "Three new messages and one older one.",
+              "wide": true
+            },
+            {
+              "title": "Open a message",
+              "image": "images/listen-messages-b.webp",
+              "alt": "Voicemail from Bennett Noah 2002 with a player and Delete, Close, Call, Take note, Forward and Download buttons",
+              "steps": [
+                {
+                  "text": "Who left the message, who it was for, how long it is, and when it arrived.",
+                  "x": 29.4,
+                  "y": 30.2
+                },
+                {
+                  "text": "Play. Listen to the message through your computer's speakers or headset.",
+                  "x": 5.8,
+                  "y": 53.3
+                },
+                {
+                  "text": "Progress. How far you are through the message. Click the bar to jump ahead or back.",
+                  "x": 91.1,
+                  "y": 53.3
+                },
+                {
+                  "text": "Delete. Remove the message.",
+                  "x": 24.2,
+                  "y": 74.5
+                },
+                {
+                  "text": "Close. Go back to your list.",
+                  "x": 33.3,
+                  "y": 74.5
+                },
+                {
+                  "text": "Call. Call the person back.",
+                  "x": 41.6,
+                  "y": 74.5
+                },
+                {
+                  "text": "Take note. Write a note about the message.",
+                  "x": 51.4,
+                  "y": 74.5
+                },
+                {
+                  "text": "Forward. Send the message to a colleague.",
+                  "x": 62.2,
+                  "y": 74.5
+                },
+                {
+                  "text": "Download. Save the message as an audio file.",
+                  "x": 74.4,
+                  "y": 74.5
+                }
+              ],
+              "intro": "Select a message in the list to open it."
+            },
+            {
+              "title": "Take a note",
+              "image": "images/listen-messages-c.webp",
+              "alt": "Take note box with Save and Cancel buttons",
+              "steps": [
+                {
+                  "text": "Type your note, for example what the caller needs.",
+                  "x": 91.9,
+                  "y": 48.1
+                },
+                {
+                  "text": "Save. Keep the note with the message.",
+                  "x": 7.5,
+                  "y": 66.0
+                },
+                {
+                  "text": "Cancel. Close without saving.",
+                  "x": 24.2,
+                  "y": 79.6
+                }
+              ],
+              "intro": "Select Take note on an open message."
+            },
+            {
+              "title": "Forward to a colleague",
+              "image": "images/listen-messages-d.webp",
+              "alt": "Forward box with a message, the Create a copy and keep original switch, an Extension field and a Send button",
+              "steps": [
+                {
+                  "text": "A message to send along with the voicemail, like “Call Jim”.",
+                  "x": 90.7,
+                  "y": 36.8
+                },
+                {
+                  "text": "Create a copy and keep original. Leave this on to keep the message in your mailbox too. Turn it off to move it to your colleague.",
+                  "x": 57.4,
+                  "y": 52.8
+                },
+                {
+                  "text": "Extension. The extension of the colleague who should get the message.",
+                  "x": 90.7,
+                  "y": 66.3
+                },
+                {
+                  "text": "Send. Forward the message.",
+                  "x": 9.1,
+                  "y": 72.7
+                }
+              ],
+              "intro": "Select Forward on an open message."
+            }
+          ],
+          "tips": [
+            "You can also listen from your desk phone by dialing the voicemail number in your welcome email. You'll need your PIN.",
+            "Delete old messages from time to time, so your mailbox doesn't fill up.",
+            "To get new messages by email as well, see “Get voicemail by email”."
+          ]
+        },
+        {
+          "id": "greetings",
+          "title": "Record your greetings",
+          "summary": "Record the greetings callers hear when you can't answer, and other personal announcements. You set them up by dialing a short code.",
+          "image": "images/greetings.webp",
+          "alt": "Dial pad open with *98 typed in the number box",
+          "caption": "Dialing *98 to reach announcements and recordings.",
+          "steps": [
+            {
+              "text": "Type *98 in the number box. To go straight to one greeting, type *98*1 for greeting 1, *98*2 for greeting 2, and so on up to *98*5.",
+              "x": 62.9,
+              "y": 6.9
+            },
+            {
+              "text": "The * key. Use it on the dial pad, or type * on your keyboard.",
+              "x": 40.8,
+              "y": 74.2
+            },
+            {
+              "text": "Call. Select the green button to connect to the recording menu.",
+              "x": 71.6,
+              "y": 87.9
+            },
+            {
+              "text": "When asked, enter your PIN from your welcome email."
+            },
+            {
+              "text": "Follow the voice prompts to listen to your current recordings and record new ones."
+            }
+          ],
+          "tips": [
+            "Shortcut codes: *98 opens the full recording menu. *98*1 to *98*5 go straight to personal greetings 1 to 5.",
+            "Record in a quiet room with a headset, so your greeting sounds clear.",
+            "Keep it short. For example: “You've reached Lopez Maya in Accounting. Please leave your name, number and a short message, and I'll call you back.”",
+            "Forgot your PIN? Ask your administrator to reset it. You can't get into the recording menu without it."
+          ]
+        },
+        {
+          "id": "voicemail-email",
+          "title": "Get voicemail by email",
+          "summary": "When someone leaves you a message, the phone system can email it to you with the recording attached. You can listen to it on any device, even away from the office.",
+          "parts": [
+            {
+              "title": "The voicemail email",
+              "image": "images/voicemail-email-a.webp",
+              "alt": "Voicemail email from Vodia PBX with the caller's details and message length; the caller's number is hidden",
+              "steps": [
+                {
+                  "text": "Subject. Starts with “Voicemail from”, followed by the caller's name and number and who the message is for.",
+                  "x": 3.9,
+                  "y": 6.2
+                },
+                {
+                  "text": "Sender. The email comes from your phone system, here Vodia PBX <noreply@vodia.com>. Don't reply to it, because nobody reads that mailbox.",
+                  "x": 24.8,
+                  "y": 14.4
+                },
+                {
+                  "text": "The caller and who the message was left for, repeated at the top of the email.",
+                  "x": 74.4,
+                  "y": 62.5
+                },
+                {
+                  "text": "The caller's number and how long the message is. The recording itself is attached.",
+                  "x": 78.3,
+                  "y": 77.3
+                }
+              ],
+              "caption": "The caller's phone number is hidden in this example.",
+              "wide": true
+            },
+            {
+              "title": "Play the recording",
+              "image": "images/voicemail-email-b.webp",
+              "alt": "Gmail attachment area showing one .ogg audio file and an Add to Drive button",
+              "steps": [
+                {
+                  "text": "The attachment. Click it to play the message, or download it to keep. The file is an .ogg audio file.",
+                  "x": 42.9,
+                  "y": 44.6
+                },
+                {
+                  "text": "In Gmail, Add to Drive saves the recording to your Google Drive.",
+                  "x": 80.7,
+                  "y": 13.1
+                }
+              ],
+              "intro": "Scroll to the bottom of the email to find the attachment."
+            }
+          ],
+          "tips": [
+            "The email goes to the address on your account. Ask your administrator if you need it changed.",
+            "Add the sender address to your contacts, so these emails don't end up in your spam folder.",
+            ".ogg files play in most web browsers and on Android. If a file won't play on your computer, try opening it in your browser or in VLC.",
+            "The message stays in the portal too. See “Listen to and manage messages”."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "availability",
+      "title": "Availability and call routing",
+      "intro": "Control when and where your phone rings.",
+      "scenarios": [
+        {
+          "id": "dnd",
+          "summary": "Stop your phones from ringing while you're busy. The switch is in your account menu, which also holds Settings, the Wallboard and Logout.",
+          "image": "images/dnd.webp",
+          "alt": "Account menu with DND switch, Settings, Wallboard and Logout",
+          "steps": [
+            {
+              "text": "Select ⋮ next to your name at the top right to open the account menu."
+            },
+            {
+              "text": "DND. Turn this on to stop calls ringing. Turn it off again when you're ready.",
+              "x": 95.8,
+              "y": 36.2
+            },
+            {
+              "text": "Settings. Your personal settings, such as forwarding, voicemail and apps.",
+              "x": 95.8,
+              "y": 51.3
+            },
+            {
+              "text": "Wallboard. A full-screen live view of calls and queues.",
+              "x": 95.8,
+              "y": 61.8
+            },
+            {
+              "text": "Logout. Sign out of the portal, especially on a shared computer.",
+              "x": 95.8,
+              "y": 75.7
+            }
+          ],
+          "tips": [
+            "While DND is on, callers are usually sent to your voicemail.",
+            "When you turn DND on, you can also set how long it lasts, a reason, and a number to send calls to. See “Set your status”."
+          ],
+          "title": "Turn on Do Not Disturb"
+        },
+        {
+          "id": "presence",
+          "title": "Set your status",
+          "summary": "Let colleagues know you're unavailable and why, and choose where your calls go in the meantime. Open the ⋮ menu next to your name and turn on DND. Three more options then appear: how long it lasts, the reason, and a redirect number.",
+          "parts": [
+            {
+              "title": "Turn on DND and set the options",
+              "image": "images/presence-a.webp",
+              "alt": "DND switched on with Duration set to 30 min, Reason set to Break and Redirect number 456",
+              "narrow": true,
+              "steps": [
+                {
+                  "text": "DND switch. Turn it on. The Duration, Reason and Redirect number options appear underneath.",
+                  "x": 72.4,
+                  "y": 23.0
+                },
+                {
+                  "text": "Duration. How long DND stays on before it switches off by itself. See stage B.",
+                  "x": 38.7,
+                  "y": 43.7
+                },
+                {
+                  "text": "Reason for DND. Tell colleagues why you're away, such as Break. See stage C.",
+                  "x": 36.4,
+                  "y": 66.0
+                },
+                {
+                  "text": "Redirect number. Calls go to this extension or number while DND is on, for example 456. Leave it empty to send calls to the usual place, normally your voicemail.",
+                  "x": 86.6,
+                  "y": 88.8
+                }
+              ],
+              "intro": "This example sets DND for a 30-minute break, with calls sent to extension 456."
+            },
+            {
+              "title": "Choose how long",
+              "image": "images/presence-b.webp",
+              "alt": "Duration list from Default through 1 minute to 24 hours, For the rest of the day, and No automatic reset",
+              "narrow": true,
+              "steps": [
+                {
+                  "text": "Default. Use your company's standard DND time.",
+                  "x": 9.7,
+                  "y": 28.1
+                },
+                {
+                  "text": "1 min to 24 hr. DND switches off automatically after the time you pick.",
+                  "x": 9.7,
+                  "y": 54.7
+                },
+                {
+                  "text": "For the rest of the day. DND switches off at the end of today.",
+                  "x": 9.7,
+                  "y": 92.2
+                },
+                {
+                  "text": "No automatic reset. DND stays on until you turn it off yourself.",
+                  "x": 63.8,
+                  "y": 97.5
+                }
+              ]
+            },
+            {
+              "title": "Choose a reason",
+              "image": "images/presence-c.webp",
+              "alt": "Reason for DND list with None, Break, Lunch, Meeting, Vacation and Custom",
+              "narrow": true,
+              "steps": [
+                {
+                  "text": "None. No reason is given.",
+                  "x": 44.8,
+                  "y": 28.6
+                },
+                {
+                  "text": "Break, Lunch, Meeting and Vacation. Ready-made reasons you can pick with one click.",
+                  "x": 44.8,
+                  "y": 58.9
+                },
+                {
+                  "text": "Custom. Type your own reason.",
+                  "x": 44.8,
+                  "y": 88.6
+                }
+              ]
+            },
+            {
+              "title": "Check that DND is on",
+              "image": "images/presence-d.webp",
+              "alt": "Top right of the portal showing a red no-entry icon next to the settings gear and a red badge on the profile picture",
+              "intro": "Once DND is on, the top of the screen changes so you can see it at a glance.",
+              "steps": [
+                {
+                  "text": "DND icon. A red no-entry sign appears next to the settings gear while DND is on.",
+                  "x": 24.9,
+                  "y": 40.5
+                },
+                {
+                  "text": "Your picture. A small red sign on your profile picture also shows you're on Do Not Disturb.",
+                  "x": 56.2,
+                  "y": 84.5
+                },
+                {
+                  "text": "Both disappear when DND switches off, either at the end of the duration you chose or when you turn it off yourself."
+                }
+              ]
+            }
+          ],
+          "tips": [
+            "Pick a duration so you don't forget to turn DND off. The portal does it for you.",
+            "Use the redirect number to cover your calls, for example to a colleague or the front desk, while you're at lunch or in a meeting.",
+            "To turn DND off early, open the ⋮ menu and switch DND off."
+          ]
+        },
+        {
+          "id": "forwarding",
+          "summary": "Send your calls somewhere else: always, when you're busy, when you don't answer, or when your phone is offline. Open it from the account menu: Settings, then Call Forwarding.",
+          "image": "images/forwarding.webp",
+          "alt": "Settings window on the Call Forwarding page, with forwarding fields and switches",
+          "steps": [
+            {
+              "text": "Settings sections. Call Forwarding is the first one. Mailbox, Mobile Apps, Cell phone numbers and your other settings are listed here too.",
+              "x": 17.9,
+              "y": 10.8
+            },
+            {
+              "text": "Forward all calls to. Every call goes straight to this number without ringing you.",
+              "x": 97.9,
+              "y": 19.1
+            },
+            {
+              "text": "Forward calls when busy to. Where calls go when you're already on a call.",
+              "x": 97.9,
+              "y": 24.3
+            },
+            {
+              "text": "Forward on no answer to. Where calls go if you don't pick up in time.",
+              "x": 97.9,
+              "y": 29.5
+            },
+            {
+              "text": "Forward when not registered. Where calls go when your phone or app is offline.",
+              "x": 97.9,
+              "y": 34.8
+            },
+            {
+              "text": "Hot desking at. The extension of the phone you're working at today, so your calls ring there.",
+              "x": 97.9,
+              "y": 40.0
+            },
+            {
+              "text": "Include following extensions when this extension is being called. Other extensions that ring along with yours.",
+              "x": 97.9,
+              "y": 47.7
+            },
+            {
+              "text": "Disconnect call with busy when extension is busy. Callers hear a busy signal instead of waiting while you're on a call.",
+              "x": 46.7,
+              "y": 56.7
+            },
+            {
+              "text": "Disable calling mobile phone numbers, the app, or VoIP phones. Stop calls ringing on those devices.",
+              "x": 46.7,
+              "y": 71.0
+            },
+            {
+              "text": "Save. Nothing changes until you select Save.",
+              "x": 30.0,
+              "y": 93.9
+            }
+          ],
+          "caption": "Settings, Call Forwarding.",
+          "wide": true,
+          "tips": [
+            "Type an extension (like 2002) or a full phone number.",
+            "Clear a field and save to stop forwarding.",
+            "“Forward all calls” overrides the other options. Remember to clear it when you're back."
+          ],
+          "title": "Forward your calls"
+        },
+        {
+          "id": "cell-phone",
+          "title": "Ring your cell phone too",
+          "summary": "Have your calls ring your mobile phone as well as your desk phone or the portal, so you don't miss calls away from your desk. Open the ⋮ menu next to your name, then Settings, then Cell phone numbers.",
+          "image": "images/cell-phone.webp",
+          "alt": "Settings window on the Cell phone numbers page with number fields, a special menu switch and options for when to call the cell phone",
+          "caption": "Settings, Cell phone numbers.",
+          "wide": true,
+          "steps": [
+            {
+              "text": "Cell phone numbers. In Settings, open this section.",
+              "x": 19.5,
+              "y": 63.7
+            },
+            {
+              "text": "Cell phone numbers. Type your mobile number here. This is the number the system rings and recognizes as you.",
+              "x": 95.2,
+              "y": 21.5
+            },
+            {
+              "text": "Cell phone numbers (inbound only). Numbers the system recognizes as you when they call in, but never rings.",
+              "x": 95.2,
+              "y": 28.9
+            },
+            {
+              "text": "Offer special menu when call is answered on cell phone. When it's on, you hear a short menu after you answer on your mobile. This stops calls from ending up in your mobile's own voicemail.",
+              "x": 49.5,
+              "y": 38.0
+            },
+            {
+              "text": "When this cell phone calls the PBX. What happens when you call the company number from your mobile, for example Offer personal virtual assistant.",
+              "x": 67.3,
+              "y": 47.0
+            },
+            {
+              "text": "When calling the extension directly. Whether your mobile rings when someone dials your extension. Pick an option from the list to turn it on. “Don't call cell phone” leaves it off.",
+              "x": 61.4,
+              "y": 56.2
+            },
+            {
+              "text": "When calling the extension in a ring group. The same choice, for calls that reach you through a ring group.",
+              "x": 61.4,
+              "y": 65.2
+            },
+            {
+              "text": "When calling the extension in a call queue. The same choice, for calls that reach you through a call queue.",
+              "x": 61.4,
+              "y": 74.3
+            },
+            {
+              "text": "Include cell phone for web callback. Whether callback requests from your company's website can ring your mobile.",
+              "x": 61.4,
+              "y": 83.3
+            },
+            {
+              "text": "Save. Nothing changes until you select Save.",
+              "x": 32.2,
+              "y": 92.9
+            }
+          ],
+          "tips": [
+            "Set the three “When calling the extension” options separately. For example, ring your mobile for direct calls but not for queue calls.",
+            "Turn on the special menu if your calls sometimes go to your mobile's voicemail instead of yours.",
+            "To pause mobile ringing, set the options back to “Don't call cell phone”. You can also turn on DND or use “Disable calling mobile phone numbers” under Call Forwarding.",
+            "If calls to your mobile fail, check the number is typed the way your company dials out."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "contacts",
+      "title": "Contacts and collaboration",
+      "intro": "Reach people quickly and work together.",
+      "scenarios": [
+        {
+          "id": "address-book",
+          "title": "Use the address book",
+          "summary": "Select Contacts in the navigation bar to see your address book. It lists your colleagues and any contacts added by you or your company.",
+          "image": "images/address-book.webp",
+          "alt": "Contacts list with a toolbar for delete, add, refresh, import and export, a search box, and Open buttons on each contact",
+          "caption": "The address book, showing 50 of 61 contacts.",
+          "wide": true,
+          "steps": [
+            {
+              "text": "Select all. Tick this to select every contact, or tick single contacts on the left of each row.",
+              "x": 2.4,
+              "y": 1.6
+            },
+            {
+              "text": "Delete. Remove the contacts you've ticked.",
+              "x": 7.1,
+              "y": 1.6
+            },
+            {
+              "text": "Add. Create a new contact.",
+              "x": 11.1,
+              "y": 1.6
+            },
+            {
+              "text": "Refresh. Load the latest contacts.",
+              "x": 15.1,
+              "y": 1.6
+            },
+            {
+              "text": "Import. Add contacts from a file.",
+              "x": 19.1,
+              "y": 1.6
+            },
+            {
+              "text": "Export. Save your contacts to a file.",
+              "x": 23.2,
+              "y": 1.6
+            },
+            {
+              "text": "Search. Find a contact by name, number or company.",
+              "x": 96.1,
+              "y": 5.6
+            },
+            {
+              "text": "Name. The contact's name, with their number or extension underneath.",
+              "x": 28.7,
+              "y": 10.3
+            },
+            {
+              "text": "Company and category. The company name, with the person's title or department underneath.",
+              "x": 50.1,
+              "y": 10.3
+            },
+            {
+              "text": "Speed dial. A short code you can dial to reach this contact quickly, if one is set.",
+              "x": 81.1,
+              "y": 10.3
+            },
+            {
+              "text": "Open. See and edit the contact's details.",
+              "x": 87.4,
+              "y": 14.9
+            },
+            {
+              "text": "More options (⋮). Other actions for this contact.",
+              "x": 96.8,
+              "y": 11.8
+            },
+            {
+              "text": "How many contacts there are. Use the arrow to see the next page.",
+              "x": 83.8,
+              "y": 97.7
+            }
+          ],
+          "tips": [
+            "Searching is the quickest way to find someone in a long list.",
+            "Add customers and suppliers you call often. Their names then show up when they call you.",
+            "Export your contacts before deleting a lot of them, so you have a backup."
+          ]
+        },
+        {
+          "id": "chat-sms",
+          "title": "Chat and send text messages",
+          "summary": "Send instant messages to colleagues, and text messages to outside numbers if your company has SMS set up, all from the portal. Each conversation also shows your calls with that person.",
+          "parts": [
+            {
+              "title": "Send a message",
+              "image": "images/chat-sms-a.webp",
+              "alt": "Chat with Elda Collado 2019 showing past calls and a sent message Hi there, with the message box at the bottom",
+              "intro": "Open a conversation with a colleague, for example by selecting a name in History or Messages. Then type at the bottom.",
+              "steps": [
+                {
+                  "text": "Who you're chatting with. Select the green phone to call them instead.",
+                  "x": 75.6,
+                  "y": 7.0
+                },
+                {
+                  "text": "Messages and calls are grouped by day.",
+                  "x": 67.4,
+                  "y": 20.1
+                },
+                {
+                  "text": "Grey bubbles show your calls with this person, including how long each lasted.",
+                  "x": 52.9,
+                  "y": 31.3
+                },
+                {
+                  "text": "Your messages appear in blue on the right, with the time they were sent.",
+                  "x": 48.8,
+                  "y": 76.4
+                },
+                {
+                  "text": "Message box. Type your message and press Enter to send.",
+                  "x": 61.8,
+                  "y": 92.4
+                },
+                {
+                  "text": "Extras. Attach a file and other message options.",
+                  "x": 82.9,
+                  "y": 86.2
+                }
+              ]
+            },
+            {
+              "title": "Read your messages",
+              "image": "images/chat-sms-b.webp",
+              "wide": true,
+              "alt": "Messages list with a new message from DESK ACCOUNT HOT and a text from an outside number",
+              "intro": "Select Messages in the navigation bar. A red number on Messages tells you how many new messages are waiting.",
+              "caption": "The receiving side: Collado Elda's messages. The outside phone number is hidden.",
+              "steps": [
+                {
+                  "text": "New message. Start a new conversation.",
+                  "x": 15.2,
+                  "y": 31.7
+                },
+                {
+                  "text": "Own. Choose which messages to show.",
+                  "x": 21.9,
+                  "y": 31.7
+                },
+                {
+                  "text": "Search. Find messages by name, number or text.",
+                  "x": 96.2,
+                  "y": 13.8
+                },
+                {
+                  "text": "New messages are shown with a blue background, a bold name and a blue bar on the left.",
+                  "x": 36.9,
+                  "y": 57.5
+                },
+                {
+                  "text": "Message. A preview of the latest message in the conversation.",
+                  "x": 71.1,
+                  "y": 57.5
+                },
+                {
+                  "text": "Text messages (SMS) from outside phone numbers appear in the same list.",
+                  "x": 36.9,
+                  "y": 85.0
+                },
+                {
+                  "text": "Open. Read the whole conversation and reply. The ⋮ next to it has more options.",
+                  "x": 86.9,
+                  "y": 57.5
+                }
+              ]
+            }
+          ],
+          "tips": [
+            "New messages also appear under Recent on the right side of the screen, with a speech-bubble icon.",
+            "A small green speech bubble on a colleague's picture means there's a message you haven't read yet.",
+            "Text messages to outside numbers only work if your company has SMS set up. Ask your administrator if you're not sure."
+          ]
+        },
+        {
+          "id": "conferences",
+          "title": "Join and host conferences",
+          "summary": "Bring two callers together into one three-way call. First get both people on the line, either because they called you or because you called them. Then join everyone with the Conference button.",
+          "parts": [
+            {
+              "title": "Get two callers on the line",
+              "image": "images/conferences-a.webp",
+              "alt": "Two calls on the call cards: Richardson John active and Grant Zoey on hold",
+              "steps": [
+                {
+                  "text": "Your active call. You're talking with Richardson John (2003).",
+                  "x": 93.3,
+                  "y": 5.4
+                },
+                {
+                  "text": "Your second call, on hold. Grant Zoey (2033) is waiting. The pale red hold button shows the call is held.",
+                  "x": 93.3,
+                  "y": 22.1
+                },
+                {
+                  "text": "The middle of the screen shows the call you're talking on right now.",
+                  "x": 50.6,
+                  "y": 38.1
+                },
+                {
+                  "text": "Live calls lists everyone on the line.",
+                  "x": 89.7,
+                  "y": 52.5
+                }
+              ],
+              "intro": "Take or make the first call, put it on hold, then take or make the second call. You now have two calls, one active and one on hold.",
+              "caption": "Two calls ready to be joined.",
+              "wide": true
+            },
+            {
+              "title": "Press Conference",
+              "image": "images/conferences-b.webp",
+              "alt": "Call control buttons with the Conference button and an orange Record button",
+              "steps": [
+                {
+                  "text": "Conference. The button with three people. Select it to join all your calls together.",
+                  "x": 39.1,
+                  "y": 14.2
+                },
+                {
+                  "text": "Record. Orange means this call is being recorded.",
+                  "x": 61.5,
+                  "y": 14.2
+                }
+              ],
+              "intro": "With both calls on your call cards, use the controls at the bottom of the screen."
+            },
+            {
+              "title": "Confirm",
+              "image": "images/conferences-c.webp",
+              "alt": "Confirm action box asking to bring all your calls into a conference, with Ok and Cancel",
+              "steps": [
+                {
+                  "text": "The portal checks that you want to bring all your calls into a conference.",
+                  "x": 77.9,
+                  "y": 23.8
+                },
+                {
+                  "text": "Ok. Start the conference.",
+                  "x": 12.3,
+                  "y": 59.6
+                },
+                {
+                  "text": "Cancel. Keep the calls separate.",
+                  "x": 41.6,
+                  "y": 73.5
+                }
+              ]
+            },
+            {
+              "title": "You're in a conference",
+              "image": "images/conferences-d.webp",
+              "alt": "Conference *53 screen listing Grant Zoey and Richardson John as participants with mute buttons",
+              "steps": [
+                {
+                  "text": "The conference has its own number, shown here as *53, plus a timer.",
+                  "x": 40.6,
+                  "y": 39.3
+                },
+                {
+                  "text": "Participants. Everyone in the conference and when they joined.",
+                  "x": 38.8,
+                  "y": 57.9
+                },
+                {
+                  "text": "Mute. Select the microphone next to a person to mute them, for example if there's background noise on their line.",
+                  "x": 51.3,
+                  "y": 62.6
+                },
+                {
+                  "text": "The call card now shows a single Conference call instead of two separate calls.",
+                  "x": 84.0,
+                  "y": 4.0
+                },
+                {
+                  "text": "Live calls lists all three people: both callers and you.",
+                  "x": 90.0,
+                  "y": 33.2
+                },
+                {
+                  "text": "Hang up. Leave the conference when you're done.",
+                  "x": 21.5,
+                  "y": 89.1
+                }
+              ],
+              "caption": "A three-way conference with Grant Zoey and Richardson John.",
+              "wide": true
+            }
+          ],
+          "tips": [
+            "Conference joins all of your current calls, including ones on hold. Hang up any call you don't want included first.",
+            "Let each caller know before you join them, so nobody is surprised to hear a third person.",
+            "Use the mute buttons in the participant list rather than asking someone to mute themselves."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "apps",
+      "title": "Apps",
+      "intro": "Use your extension on your mobile phone.",
+      "scenarios": [
+        {
+          "id": "apps",
+          "summary": "Make and take calls on your mobile phone with the Vodia app for iPhone or Android. You pair the app with a QR code from the portal: open the ⋮ menu next to your name, then Settings, then Mobile Apps.",
+          "image": "images/apps.webp",
+          "alt": "Settings window on the Mobile Apps page, with store buttons, a hidden QR code, a timer and Copy buttons",
+          "steps": [
+            {
+              "text": "Mobile Apps. The Settings section for pairing apps.",
+              "x": 18.1,
+              "y": 30.6
+            },
+            {
+              "text": "Get the app. Install it from Google Play (Android) or the App Store (iPhone).",
+              "x": 72.5,
+              "y": 32.1
+            },
+            {
+              "text": "QR code. Open the Vodia app on your phone and scan this code to connect it to your extension.",
+              "x": 71.7,
+              "y": 63.0
+            },
+            {
+              "text": "Timer. For your safety, the code only works for a short time. Reopen this page to get a new one.",
+              "x": 63.0,
+              "y": 86.0
+            },
+            {
+              "text": "Copy. Copy the code to paste into the app, if you can't use the camera.",
+              "x": 46.3,
+              "y": 90.7
+            },
+            {
+              "text": "Copy for VodiaHub. Copy the pairing code for VodiaHub, Vodia's Windows desktop app.",
+              "x": 72.1,
+              "y": 90.7
+            }
+          ],
+          "caption": "Settings, Mobile Apps. The QR code is hidden in this picture.",
+          "wide": true,
+          "tips": [
+            "The app needs a data connection (Wi-Fi or mobile data).",
+            "Never share the QR code or copied code. Anyone with it can use your extension."
+          ],
+          "title": "Pair the mobile app"
+        }
+      ]
+    }
+  ]
+}

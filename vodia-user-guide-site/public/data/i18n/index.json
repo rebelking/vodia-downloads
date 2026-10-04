@@ -1,0 +1,9 @@
+{
+  "languages": {
+    "日本語": {
+      "file": "ja.json",
+      "code": "ja",
+      "flag": "JP"
+    }
+  }
+}

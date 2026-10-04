@@ -1,0 +1,14 @@
+{
+  "name": "vodia-user-portal-guide",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Interactive end-user guide for the Vodia PBX user portal, in English and Japanese.",
+  "scripts": {
+    "start": "node server/server.js",
+    "check": "node tools/check-guide.js",
+    "strings": "node tools/strings.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

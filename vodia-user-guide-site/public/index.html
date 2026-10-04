@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vodia User Portal Guide</title>
+<meta name="description" content="Step-by-step guide to the Vodia phone system user portal, with annotated screenshots.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%9E%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<script src="js/app.js" defer></script>
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar" id="sidebar" aria-label="Guide navigation">
+    <a class="brand" href="#/" aria-label="Vodia User Portal Guide"><svg class="vlogo" viewBox="0 0 205.87 100.71" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Vodia"><circle class="vl-red" cx="155.09" cy="45.22" r="6.45"/><circle class="vl-red" cx="193.59" cy="12.28" r="12.28"/><circle class="vl-red" cx="184.98" cy="36.61" r="9.71"/><circle class="vl-red" cx="165.39" cy="30.43" r="7.64"/><path class="vl-ink" d="M104.85,56.91L84.68,115.48H69.73L49.8,56.91H64L76.22,97.67a29.24,29.24,0,0,1,1.18,5.84h0.25a33,33,0,0,1,1.27-6L91,56.91h13.8Z" transform="translate(-49.8 -15.79)"/><path class="vl-ink" d="M120.11,116.5q-10.46,0-16.44-5.86t-6-15.91q0-10.37,6.21-16.23t16.79-5.86q10.41,0,16.34,5.86T142.94,94q0,10.41-6.11,16.46T120.11,116.5Zm0.33-34a8.61,8.61,0,0,0-7.11,3.14q-2.53,3.15-2.53,8.9,0,12,9.72,12,9.27,0,9.27-12.38Q129.79,82.52,120.44,82.52Z" transform="translate(-49.8 -15.79)"/><path class="vl-ink" d="M190.24,115.48H177.33v-5.76h-0.16q-4.41,6.78-12.95,6.78A15.85,15.85,0,0,1,151.6,111q-4.78-5.53-4.78-15.46,0-10.37,5.27-16.62a17.18,17.18,0,0,1,13.8-6.25q8.09,0,11.27,5.8h0.16V53.56h12.91v61.92ZM177.57,95.14V92a9.9,9.9,0,0,0-2.37-6.78,8.37,8.37,0,0,0-12.87.67q-2.41,3.37-2.41,9.25,0,5.51,2.33,8.5a8.27,8.27,0,0,0,12.84-.16A13.11,13.11,0,0,0,177.57,95.14Z" transform="translate(-49.8 -15.79)"/><rect class="vl-ink" x="147.3" y="57.86" width="12.91" height="41.82"/><path class="vl-ink" d="M251.67,115.48H239.45v-6h-0.16a13.63,13.63,0,0,1-12.46,7q-6.09,0-9.58-3.45a12.37,12.37,0,0,1-3.49-9.21q0-12.17,14.42-14l11.35-1.51q0-6.86-7.43-6.86a25.38,25.38,0,0,0-14.21,4.45V76.15a32,32,0,0,1,7.37-2.45,38.75,38.75,0,0,1,8.52-1.06q17.89,0,17.89,17.85v25Zm-12.13-17V95.67l-7.6,1q-6.29.82-6.29,5.68a4.69,4.69,0,0,0,1.53,3.61,5.89,5.89,0,0,0,4.15,1.41,7.64,7.64,0,0,0,5.92-2.51A9.07,9.07,0,0,0,239.54,98.49Z" transform="translate(-49.8 -15.79)"/></svg><span class="brand-div" aria-hidden="true"></span><span><b data-i18n="User Portal Guide">User Portal Guide</b></span></a>
+    <div class="lang-switch" role="group" aria-label="Language" data-lang-switch></div>
+    <div class="search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Search the guide" aria-label="Search the guide" data-i18n-ph="Search the guide" autocomplete="off">
+    </div>
+    <nav id="nav"></nav>
+  </aside>
+
+  <div>
+    <div class="topbar">
+      <button class="menu-btn" id="menuBtn" aria-expanded="false" aria-controls="sidebar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span data-i18n="Menu">Menu</span>
+      </button>
+      <svg class="vlogo" viewBox="0 0 205.87 100.71" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Vodia"><circle class="vl-red" cx="155.09" cy="45.22" r="6.45"/><circle class="vl-red" cx="193.59" cy="12.28" r="12.28"/><circle class="vl-red" cx="184.98" cy="36.61" r="9.71"/><circle class="vl-red" cx="165.39" cy="30.43" r="7.64"/><path class="vl-ink" d="M104.85,56.91L84.68,115.48H69.73L49.8,56.91H64L76.22,97.67a29.24,29.24,0,0,1,1.18,5.84h0.25a33,33,0,0,1,1.27-6L91,56.91h13.8Z" transform="translate(-49.8 -15.79)"/><path class="vl-ink" d="M120.11,116.5q-10.46,0-16.44-5.86t-6-15.91q0-10.37,6.21-16.23t16.79-5.86q10.41,0,16.34,5.86T142.94,94q0,10.41-6.11,16.46T120.11,116.5Zm0.33-34a8.61,8.61,0,0,0-7.11,3.14q-2.53,3.15-2.53,8.9,0,12,9.72,12,9.27,0,9.27-12.38Q129.79,82.52,120.44,82.52Z" transform="translate(-49.8 -15.79)"/><path class="vl-ink" d="M190.24,115.48H177.33v-5.76h-0.16q-4.41,6.78-12.95,6.78A15.85,15.85,0,0,1,151.6,111q-4.78-5.53-4.78-15.46,0-10.37,5.27-16.62a17.18,17.18,0,0,1,13.8-6.25q8.09,0,11.27,5.8h0.16V53.56h12.91v61.92ZM177.57,95.14V92a9.9,9.9,0,0,0-2.37-6.78,8.37,8.37,0,0,0-12.87.67q-2.41,3.37-2.41,9.25,0,5.51,2.33,8.5a8.27,8.27,0,0,0,12.84-.16A13.11,13.11,0,0,0,177.57,95.14Z" transform="translate(-49.8 -15.79)"/><rect class="vl-ink" x="147.3" y="57.86" width="12.91" height="41.82"/><path class="vl-ink" d="M251.67,115.48H239.45v-6h-0.16a13.63,13.63,0,0,1-12.46,7q-6.09,0-9.58-3.45a12.37,12.37,0,0,1-3.49-9.21q0-12.17,14.42-14l11.35-1.51q0-6.86-7.43-6.86a25.38,25.38,0,0,0-14.21,4.45V76.15a32,32,0,0,1,7.37-2.45,38.75,38.75,0,0,1,8.52-1.06q17.89,0,17.89,17.85v25Zm-12.13-17V95.67l-7.6,1q-6.29.82-6.29,5.68a4.69,4.69,0,0,0,1.53,3.61,5.89,5.89,0,0,0,4.15,1.41,7.64,7.64,0,0,0,5.92-2.51A9.07,9.07,0,0,0,239.54,98.49Z" transform="translate(-49.8 -15.79)"/></svg><b style="font-size:15px" data-i18n="User Portal Guide">User Portal Guide</b>
+      <div class="lang-switch" role="group" aria-label="Language" data-lang-switch></div>
+    </div>
+    <main id="main"><div class="wrap" id="view"></div></main>
+  </div>
+</div>
+
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Enlarged screenshot">
+  <button class="close" id="lbClose" data-i18n="Close">Close</button>
+  <div class="frame" id="lbFrame"></div>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+</body>
+</html>
